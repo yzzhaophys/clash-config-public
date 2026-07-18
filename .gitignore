@@ -1,0 +1,16 @@
+nodes.yaml
+clash-vps.generated.yaml
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Never commit VPS source configuration or credentials.
+vps-*/
+host.env
+keys/
+*.key
+*.pem
+id_rsa*
+
