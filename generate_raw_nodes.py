@@ -15,6 +15,7 @@ import yaml
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
 FALLBACK_REGIONS = ("UK", "AU", "TW", "SG", "NL", "DE")
+AIRPORT_REGION_ALIASES = {"GB": "UK"}
 
 REGION_CN = {
     "hk": "香港",
@@ -29,6 +30,7 @@ REGION_CN = {
 }
 
 REGION_CODE = {key: key.upper() for key in REGION_CN}
+AIRPORT_REGION_PRIORITY = ("HK", "TW", "SG", "JP", "US", "UK", "AU", "DE", "NL")
 
 
 def load_env(path: Path) -> dict[str, str]:
@@ -64,7 +66,7 @@ def node_name(region: str, protocol: str, index: int) -> str:
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -120,7 +122,7 @@ def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
         "reality-opts",
     ]
     items = [(key, proxy[key]) for key in order if key in proxy]
-    items.extend((key, proxy[key]) for key in proxy if key not in order)
+    items.extend((key, proxy[key]) for key in proxy if key not in order and not key.startswith("_"))
     return items
 
 
@@ -235,14 +237,202 @@ def collect_proxies(hosts_dir: Path) -> list[dict[str, Any]]:
     return proxies
 
 
+def airport_region(name: str) -> str | None:
+    match = re.search(r"\b([A-Z]{2})\s*$", name)
+    if not match:
+        return None
+    code = match.group(1)
+    return AIRPORT_REGION_ALIASES.get(code, code)
+
+
+def airport_policy_matches(policy_key: str, hostname: str) -> bool:
+    key = policy_key.strip().lower()
+    host = hostname.rstrip(".").lower()
+    if key.startswith(("*.", "+.")):
+        suffix = key[2:]
+        return host == suffix or host.endswith("." + suffix)
+    return key == host
+
+
+def matching_airport_dns_policy(
+    subscription: dict[str, Any], selected: list[dict[str, Any]]
+) -> dict[str, Any]:
+    source_policy = ((subscription.get("dns") or {}).get("nameserver-policy") or {})
+    hostnames = {
+        str(proxy.get("server", "")).strip()
+        for proxy in selected
+        if proxy.get("server") and not re.fullmatch(r"[0-9a-fA-F:.]+", str(proxy["server"]))
+    }
+    return {
+        str(key): copy.deepcopy(value)
+        for key, value in source_policy.items()
+        if any(airport_policy_matches(str(key), hostname) for hostname in hostnames)
+    }
+
+
+def normalize_airport_nodes(selected: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counters: dict[tuple[str, str], int] = {}
+    normalized: list[dict[str, Any]] = []
+    for source in selected:
+        original_name = str(source.get("name", "")).strip()
+        region = airport_region(original_name)
+        protocol = str(source.get("type", "")).upper()
+        if not region or not protocol:
+            print(f"已跳过无法识别的机场节点：{original_name or '<unnamed>'}")
+            continue
+        key = (region, protocol)
+        index = counters.get(key, 0)
+        counters[key] = index + 1
+        description = f"{REGION_CN.get(region.lower(), region)}中转节点"
+        source_label = original_name.replace("]", "）")
+        proxy = copy.deepcopy(source)
+        proxy["name"] = (
+            f"VPS-[{region}.Relay]-{protocol}-{index:02d}-({description})"
+            f"-[Airport={source_label}]"
+        )
+        # Airport nodes remain independently selectable, but never participate
+        # in dialer-proxy chains because many relay airports reject VPS ingress.
+        proxy["_chain-role"] = "none"
+        normalized.append(proxy)
+    return normalized
+
+
+def interactive_airport_import(
+    hosts_dir: Path,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    airport_dir = hosts_dir / "airport"
+    subscription_path = airport_dir / "subscription.yaml"
+    if not subscription_path.exists():
+        return [], {}
+
+    answer = input(
+        f"是否导入机场订阅？已发现 {subscription_path} [y/N]："
+    ).strip().lower()
+    if answer not in {"y", "yes", "1", "是"}:
+        return [], {}
+
+    try:
+        subscription = yaml.safe_load(subscription_path.read_text()) or {}
+    except Exception as exc:
+        print(f"无法读取机场订阅：{exc}")
+        return [], {}
+    source_nodes = [
+        proxy
+        for proxy in (subscription.get("proxies") or [])
+        if isinstance(proxy, dict) and proxy.get("name") and proxy.get("server")
+    ]
+    if not source_nodes:
+        print("机场订阅中没有可用的 proxies。")
+        return [], {}
+    print(f"机场订阅包含 {len(source_nodes)} 个节点。")
+
+    selection_path = airport_dir / "selected-nodes.yaml"
+    selected: list[dict[str, Any]] = []
+    if selection_path.exists():
+        try:
+            saved = yaml.safe_load(selection_path.read_text()) or {}
+            saved_names = [str(name) for name in saved.get("selected-names", [])]
+        except Exception:
+            saved_names = []
+        if saved_names:
+            use_saved = input(
+                f"已保存 {len(saved_names)} 个机场节点，是否继续使用？ [Y/n]："
+            ).strip().lower()
+            if use_saved not in {"n", "no", "0", "否"}:
+                by_name = {str(proxy["name"]): proxy for proxy in source_nodes}
+                selected = [by_name[name] for name in saved_names if name in by_name]
+                missing = [name for name in saved_names if name not in by_name]
+                if missing:
+                    print(f"警告：{len(missing)} 个已保存节点在当前订阅中已不存在。")
+
+    if not selected:
+        counts: dict[str, int] = {}
+        for proxy in source_nodes:
+            region = airport_region(str(proxy["name"]))
+            if region:
+                counts[region] = counts.get(region, 0) + 1
+        priority_regions = [code for code in AIRPORT_REGION_PRIORITY if code in counts]
+        other_regions = sorted(code for code in counts if code not in priority_regions)
+        regions = priority_regions + other_regions
+        print("\n机场节点地区：")
+        for region in priority_regions:
+            print(f"  {region}（{counts[region]} 个）")
+        if other_regions:
+            print(f"  另有 {len(other_regions)} 个其他地区代码；输入 ? 查看")
+        while True:
+            raw_regions = input(
+                "请输入地区代码（如 HK,JP,US；?=查看全部；all=全部；0=取消）："
+            ).strip().upper()
+            if raw_regions in {"?", "HELP", "LIST", "查看"}:
+                print("其他地区代码：")
+                for start in range(0, len(other_regions), 12):
+                    chunk = other_regions[start : start + 12]
+                    print("  " + "  ".join(f"{code}({counts[code]})" for code in chunk))
+                continue
+            if raw_regions in {"0", "N", "NONE", "取消"}:
+                return [], {}
+            requested = set(regions) if raw_regions in {"ALL", "A", "全部"} else {
+                AIRPORT_REGION_ALIASES.get(token.strip(), token.strip())
+                for token in raw_regions.split(",")
+                if token.strip()
+            }
+            invalid = sorted(requested - set(regions))
+            if requested and not invalid:
+                break
+            print("地区输入无效" + (f"：{', '.join(invalid)}" if invalid else "。"))
+        candidates = [
+            proxy for proxy in source_nodes if airport_region(str(proxy["name"])) in requested
+        ]
+        print(f"\n候选机场节点（{len(candidates)} 个）：")
+        for index, proxy in enumerate(candidates, 1):
+            print(f"  {index:>3}. {proxy['name']}")
+        chosen = prompt_number_selection(len(candidates))
+        selected = [proxy for index, proxy in enumerate(candidates) if index in chosen]
+        if not selected:
+            print("未选择机场节点。")
+            return [], {}
+        save = input(f"是否保存这 {len(selected)} 个节点的选择？ [Y/n]：").strip().lower()
+        if save not in {"n", "no", "0", "否"}:
+            secure_write(
+                selection_path,
+                yaml.safe_dump(
+                    {
+                        "selected-names": [proxy["name"] for proxy in selected],
+                    },
+                    allow_unicode=True,
+                    sort_keys=False,
+                ),
+            )
+            print(f"已保存选择到 {selection_path}。")
+
+    dns_policy = matching_airport_dns_policy(subscription, selected)
+    normalized = normalize_airport_nodes(selected)
+    print(
+        f"已导入 {len(normalized)} 个机场独立节点（不参与代理链），"
+        f"匹配 {len(dns_policy)} 条节点专用 DNS 策略；请手动合入 home.yaml。"
+    )
+    return normalized, dns_policy
+
+
 def secure_write(output: Path, content: str) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(content)
     output.chmod(0o600)
 
 
+def clean_proxy(proxy: dict[str, Any]) -> dict[str, Any]:
+    return {key: copy.deepcopy(value) for key, value in proxy.items() if not key.startswith("_")}
+
+
 def write_plain(proxies: list[dict[str, Any]], output: Path) -> None:
-    secure_write(output, yaml.safe_dump({"proxies": proxies}, allow_unicode=True, sort_keys=False))
+    secure_write(
+        output,
+        yaml.safe_dump(
+            {"proxies": [clean_proxy(proxy) for proxy in proxies]},
+            allow_unicode=True,
+            sort_keys=False,
+        ),
+    )
 
 
 def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
@@ -264,6 +454,8 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
         exit_meta = node_meta(exit_proxy["name"])
         if not exit_meta:
             continue
+        if exit_proxy.get("_chain-role", "both") not in {"landing", "both"}:
+            continue
         # 地区补位节点不生成代理链；HomeIP/ShowIP 是落地出口，需要参与。
         if exit_meta.get("fallback") and exit_meta["role"] not in {"HomeIP", "ShowIP"}:
             continue
@@ -272,6 +464,7 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
             if (
                 not dialer_meta
                 or dialer_meta.get("fallback")
+                or dialer.get("_chain-role", "both") not in {"dialer", "both"}
                 or dialer_meta["region"] == exit_meta["region"]
             ):
                 continue
@@ -375,7 +568,7 @@ def fallback_node(source: dict[str, Any], target_region: str) -> dict[str, Any]:
     return node
 
 
-def special_role_node(source: dict[str, Any], role: str) -> dict[str, Any]:
+def special_role_node(source: dict[str, Any], role: str, alias_index: int = 0) -> dict[str, Any]:
     source_meta = node_meta(source["name"])
     if not source_meta:
         raise ValueError(f"无法识别特殊角色来源节点名称：{source['name']}")
@@ -384,21 +577,61 @@ def special_role_node(source: dict[str, Any], role: str) -> dict[str, Any]:
         "ShowIP": "归属地落地节点",
     }
     source_label = f"{source_meta['region']}.{source_meta['proto']}.{source_meta['idx']}"
+    if source_meta.get("airport"):
+        airport_name = source_meta["airport"].replace("]", "）")
+        source_label = f"Airport.{source_label}|Name={airport_name}"
     node = copy.deepcopy(source)
     node["name"] = (
-        f"VPS-[US.{role}]-{source_meta['proto']}-{source_meta['idx']}"
-        f"-({descriptions[role]})-[Fallback={source_label}]"
+        f"VPS-[US.{role}]-{source_meta['proto']}-{alias_index:02d}"
+        f"-({descriptions[role]})-[Source={source_label}]"
     )
+    # An airport source remains independent even after being assigned a
+    # special role; only self-hosted HomeIP/ShowIP aliases act as landings.
+    node["_chain-role"] = "none" if source_meta.get("airport") else "landing"
     return node
+
+
+def mark_special_source(source: dict[str, Any], roles: str) -> None:
+    meta = node_meta(source["name"])
+    if not meta:
+        return
+    assigned = set((meta.get("special") or "").split("+")) | set(roles.split("+"))
+    assigned.discard("")
+    label = "+".join(role for role in ("HomeIP", "ShowIP") if role in assigned)
+    if meta.get("special"):
+        source["name"] = re.sub(r"-\[Special=[^]]+\]$", f"-[Special={label}]", source["name"])
+    else:
+        source["name"] += f"-[Special={label}]"
+    source["_chain-role"] = "none"
+
+
+def prompt_source_nodes(proxies: list[dict[str, Any]], role: str) -> list[dict[str, Any]]:
+    print(f"\n可选的来源节点（{role}）：")
+    for index, proxy in enumerate(proxies, 1):
+        print(f"  {index:>2}. {proxy['name']}")
+    while True:
+        try:
+            raw = input(
+                f"请选择 {role} 来源节点（如 1,3-5；all=全部；none/0=跳过）："
+            ).strip().lower()
+            selected = parse_number_selection(
+                "none" if raw == "0" else raw,
+                len(proxies),
+            )
+        except ValueError as exc:
+            print(f"输入无效：{exc}")
+            continue
+        return [proxy for index, proxy in enumerate(proxies) if index in selected]
 
 
 def prompt_source_node(proxies: list[dict[str, Any]], target_region: str | None = None) -> dict[str, Any] | None:
     suffix = f"（{target_region}）" if target_region else ""
-    print(f"\n可选的备用来源节点{suffix}：")
+    title = "来源节点" if target_region and ("HomeIP" in target_region or "ShowIP" in target_region) else "备用来源节点"
+    print(f"\n可选的{title}{suffix}：")
     for index, proxy in enumerate(proxies, 1):
         print(f"  {index:>2}. {proxy['name']}")
     while True:
-        raw = input(f"请选择备用来源节点{suffix} [1-{len(proxies)}；0=跳过]：").strip()
+        raw = input(f"请选择{title}{suffix} [1-{len(proxies)}；0=跳过]：").strip()
         if raw in {"", "0", "none", "n"}:
             return None
         try:
@@ -415,7 +648,9 @@ def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, 
     real_regions = {
         meta["region"]
         for proxy in proxies
-        if (meta := node_meta(proxy["name"])) and not meta.get("fallback")
+        if (meta := node_meta(proxy["name"]))
+        and not meta.get("fallback")
+        and not meta.get("special")
     }
     missing = [region for region in FALLBACK_REGIONS if region not in real_regions]
     if not missing:
@@ -454,8 +689,10 @@ def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, 
 def interactive_special_role_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, Any]]:
     print("\nHomeIP / ShowIP 逻辑节点：")
     print("这只是将所选节点放入对应策略组，不会把普通 VPS 变成住宅 IP。")
-    print("  1. 同一个来源同时作为 HomeIP 和 ShowIP（默认）")
-    print("  2. HomeIP 和 ShowIP 分别选择来源")
+    print("选中的原始节点会退出普通地区中转组。")
+    print("自建来源的专属别名可作为代理链落地；机场来源仍只作为独立节点。")
+    print("  1. 同一批来源节点同时作为 HomeIP 和 ShowIP（默认，可多选）")
+    print("  2. HomeIP 和 ShowIP 分别选择来源（均可多选）")
     print("  3. 不生成")
     while True:
         choice = input("请选择 [1-3，默认 1]：").strip() or "1"
@@ -465,16 +702,24 @@ def interactive_special_role_nodes(proxies: list[dict[str, Any]]) -> list[dict[s
     if choice == "3":
         return []
 
-    aliases: list[dict[str, Any]] = []
+    selections: dict[str, list[dict[str, Any]]] = {"HomeIP": [], "ShowIP": []}
     if choice == "1":
-        source = prompt_source_node(proxies, "HomeIP + ShowIP")
-        if source is not None:
-            aliases = [special_role_node(source, role) for role in ("HomeIP", "ShowIP")]
+        sources = prompt_source_nodes(proxies, "HomeIP + ShowIP")
+        selections = {"HomeIP": sources, "ShowIP": sources}
     else:
         for role in ("HomeIP", "ShowIP"):
-            source = prompt_source_node(proxies, role)
-            if source is not None:
-                aliases.append(special_role_node(source, role))
+            selections[role] = prompt_source_nodes(proxies, role)
+
+    aliases: list[dict[str, Any]] = []
+    selected_source_ids: set[int] = set()
+    for role, sources in selections.items():
+        for alias_index, source in enumerate(sources):
+            aliases.append(special_role_node(source, role, alias_index))
+            mark_special_source(source, role)
+            selected_source_ids.add(id(source))
+    if selected_source_ids:
+        proxies[:] = [proxy for proxy in proxies if id(proxy) not in selected_source_ids]
+        print(f"已从基础节点中移除 {len(selected_source_ids)} 个专属角色来源节点。")
     if aliases:
         print(f"已生成 {len(aliases)} 个 HomeIP/ShowIP 逻辑节点。")
     return aliases
@@ -580,7 +825,7 @@ def write_template(
 ) -> None:
     # Clash Verge Rev 1.7+ 的 YAML 扩展配置使用字段覆写；
     # prepend/append 已移到订阅的可视化编辑功能，不再输出旧式 prepend-proxies。
-    lines = ["proxies:"]
+    lines: list[str] = ["proxies:"]
     current_region = None
 
     for proxy in proxies:
@@ -682,14 +927,19 @@ def main(argv: list[str] | None = None) -> int:
     apply_default_invocation(args, invoked_without_args)
     hosts_dir = args.hosts_dir.expanduser().resolve()
     proxies = collect_proxies(hosts_dir)
+    raw_additional_nodes: list[dict[str, Any]] = []
+    if args.interactive:
+        airport_nodes, _airport_dns_policy = interactive_airport_import(hosts_dir)
+        proxies.extend(airport_nodes)
     if not proxies:
         raise SystemExit(
-            f"没有在 {hosts_dir} 找到节点；请检查 vps-*/host.env 和本地服务配置"
+            f"没有在 {hosts_dir} 找到节点；请检查 vps-*/host.env 或机场订阅"
         )
 
     fallback_nodes: list[dict[str, Any]] = []
     if args.interactive:
         proxies, output_format, chains, special_nodes = interactive_selection(proxies)
+        raw_additional_nodes = special_nodes
         if output_format != "plain":
             fallback_nodes = interactive_fallback_nodes(proxies)
             fallback_nodes.extend(special_nodes)
@@ -711,12 +961,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         write_template(proxies + fallback_nodes, chains, args.output)
     print(
-        f"wrote {args.output} ({len(proxies)} base nodes, {len(fallback_nodes)} fallback nodes, "
+        f"wrote {args.output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
         f"{len(chains)} chains, format={output_format})"
     )
     if args.raw_output:
-        write_plain(proxies, args.raw_output)
-        print(f"wrote {args.raw_output} ({len(proxies)} base nodes, raw=True)")
+        raw_proxies = proxies + raw_additional_nodes
+        write_plain(raw_proxies, args.raw_output)
+        print(f"wrote {args.raw_output} ({len(raw_proxies)} nodes, raw=True)")
     return 0
 
 
