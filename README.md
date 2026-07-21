@@ -14,7 +14,7 @@ This repository contains a reusable Mihomo/Clash Verge Rev configuration templat
 
 ## Usage
 
-When this repository is a direct child of the private `hosts` directory, the generator automatically detects `vps-*` in the parent directory:
+With the recommended directory layout, the generator automatically reads VPS inputs from `~/servers/hosts` and the optional airport subscription from `~/servers/proxy/airport`:
 
 ```bash
 ./generate_raw_nodes.py
@@ -23,8 +23,13 @@ When this repository is a direct child of the private `hosts` directory, the gen
 You can also specify the private input directory explicitly:
 
 ```bash
-./generate_raw_nodes.py --hosts-dir /path/to/private/hosts --interactive
+./generate_raw_nodes.py \
+  --hosts-dir /path/to/private/hosts \
+  --airport-dir /path/to/private/airport \
+  --interactive
 ```
+
+`CLASH_HOSTS_DIR` and `CLASH_AIRPORT_DIR` provide equivalent persistent overrides. Command-line arguments take precedence. The legacy `hosts/airport` location remains a fallback when the standard airport directory does not exist.
 
 The default interactive run creates:
 
@@ -35,23 +40,27 @@ Both generated files contain live credentials and are excluded by `.gitignore`.
 
 ## Optional private airport subscription
 
-Place a complete private subscription outside this repository:
+Place a complete private subscription outside this repository and outside the host inventory:
 
 ```text
-hosts/
-├── airport/
-│   └── subscription.yaml
-├── vps-*/
+servers/
+├── hosts/
+│   └── vps-*/
+└── proxy/
+    └── airport/
+        ├── subscription.yaml
+        └── selected-nodes.yaml
+projects/
 └── clash-config-public/
 ```
 
-On an interactive run, the first prompt asks whether to import it. The generator can filter by region, select individual nodes, and save only selected node names in `airport/selected-nodes.yaml`. Imported airport nodes remain independently selectable and never participate in proxy chains. Matching airport DNS policies are reported but are not written into the Merge output; add them manually to the existing `dns` section in `home.yaml` to avoid replacing that configuration.
+On an interactive run, the first prompt asks whether to import it. The generator can filter by region, select individual nodes, and save only selected node names in the configured airport directory's `selected-nodes.yaml`. Imported airport nodes remain independently selectable and never participate in proxy chains. Matching airport DNS policies are reported but are not written into the Merge output; add them manually to the existing `dns` section in `home.yaml` to avoid replacing that configuration.
 
 HomeIP and ShowIP each support selecting multiple source nodes. Each selected source is replaced by dedicated HomeIP/ShowIP aliases and is completely removed from generated `proxies:` output. Self-hosted aliases can act as chain landing nodes. Airport HomeIP/ShowIP aliases remain independently selectable but never participate in proxy chains.
 
 Airport-backed aliases retain both a stable source identifier and the original airport display name, for example `[Source=Airport.US.SS.00|Name=US Airport Node]`. Server addresses and credentials are never added to this label.
 
-The subscription and saved selection remain outside this Git repository.
+The subscription and saved selection remain outside this Git repository. Move the entire `clash-config-public` directory when relocating it so its internal `.git` directory and history stay intact.
 
 ## Security
 

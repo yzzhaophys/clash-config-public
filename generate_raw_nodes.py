@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -214,11 +215,25 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
 
 
 def default_hosts_dir() -> Path:
-    """优先从脚本目录读取 vps-*；若脚本放在 hosts 的独立子目录，则读取上一级。"""
-    for candidate in (SCRIPT_DIR, SCRIPT_DIR.parent):
+    """优先使用显式环境变量和标准私有目录，并兼容旧目录结构。"""
+    configured = os.environ.get("CLASH_HOSTS_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    for candidate in (Path.home() / "servers" / "hosts", SCRIPT_DIR, SCRIPT_DIR.parent):
         if any(path.is_dir() and path.name != "vps-template" for path in candidate.glob("vps-*")):
             return candidate
     return SCRIPT_DIR
+
+
+def default_airport_dir(hosts_dir: Path) -> Path:
+    """机场订阅默认独立于 hosts 和公开 Git 仓库，并兼容旧位置。"""
+    configured = os.environ.get("CLASH_AIRPORT_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    standard = Path.home() / "servers" / "proxy" / "airport"
+    if standard.exists():
+        return standard
+    return hosts_dir / "airport"
 
 
 def collect_proxies(hosts_dir: Path) -> list[dict[str, Any]]:
@@ -298,9 +313,8 @@ def normalize_airport_nodes(selected: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def interactive_airport_import(
-    hosts_dir: Path,
+    airport_dir: Path,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    airport_dir = hosts_dir / "airport"
     subscription_path = airport_dir / "subscription.yaml"
     if not subscription_path.exists():
         return [], {}
@@ -885,7 +899,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--hosts-dir",
         type=Path,
         default=default_hosts_dir(),
-        help="包含 vps-* 私有配置目录（默认自动检测脚本目录或上一级）",
+        help="包含 vps-* 私有配置目录（默认 CLASH_HOSTS_DIR 或 ~/servers/hosts）",
+    )
+    parser.add_argument(
+        "--airport-dir",
+        type=Path,
+        help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/servers/proxy/airport）",
     )
     parser.add_argument("--output", "-o", type=Path, default=OUT, help="输出文件")
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
@@ -926,10 +945,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     apply_default_invocation(args, invoked_without_args)
     hosts_dir = args.hosts_dir.expanduser().resolve()
+    airport_dir = (args.airport_dir or default_airport_dir(hosts_dir)).expanduser().resolve()
     proxies = collect_proxies(hosts_dir)
     raw_additional_nodes: list[dict[str, Any]] = []
     if args.interactive:
-        airport_nodes, _airport_dns_policy = interactive_airport_import(hosts_dir)
+        airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir)
         proxies.extend(airport_nodes)
     if not proxies:
         raise SystemExit(
