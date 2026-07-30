@@ -7,6 +7,11 @@ This repository contains a reusable Mihomo/Clash Verge Rev configuration templat
 - `home.yaml`: main configuration template. Its `proxies` list is intentionally empty.
 - `generate_raw_nodes.py`: reads private `vps-*` directories and generates a Clash Verge Rev YAML extension.
 
+For NAT or otherwise non-standard hosts, an optional
+`vps-*/secrets/client/clash-nodes.yaml` can provide the public client address and
+ports. Set `VPS_CLASH_REGION` in that host's `host.env`. This inventory is
+authoritative for the host and its nodes remain eligible for proxy chains.
+
 ## Requirements
 
 - Python 3.10+
@@ -14,7 +19,7 @@ This repository contains a reusable Mihomo/Clash Verge Rev configuration templat
 
 ## Usage
 
-With the recommended directory layout, the generator automatically reads VPS inputs from `~/servers/hosts` and the optional airport subscription from `~/servers/proxy/airport`:
+With the recommended directory layout, the generator automatically reads VPS inputs from `~/.config/infra/hosts` and the optional airport subscription from `~/.config/clash/airport`:
 
 ```bash
 ./generate_raw_nodes.py
@@ -43,10 +48,11 @@ Both generated files contain live credentials and are excluded by `.gitignore`.
 Place a complete private subscription outside this repository and outside the host inventory:
 
 ```text
-servers/
-├── hosts/
-│   └── vps-*/
-└── proxy/
+~/.config/
+├── infra/
+│   └── hosts/
+│       └── vps-*/
+└── clash/
     └── airport/
         ├── subscription.yaml
         └── selected-nodes.yaml
@@ -60,7 +66,7 @@ HomeIP and ShowIP each support selecting multiple source nodes. Each selected so
 
 Airport-backed aliases retain both a stable source identifier and the original airport display name, for example `[Source=Airport.US.SS.00|Name=US Airport Node]`. Server addresses and credentials are never added to this label.
 
-The subscription and saved selection remain outside this Git repository. Move the entire `clash-config-public` directory when relocating it so its internal `.git` directory and history stay intact.
+The subscription and saved selection remain outside this Git repository. `CLASH_HOSTS_DIR` and `CLASH_AIRPORT_DIR` can override both private input roots when relocating them.
 
 ## Security
 

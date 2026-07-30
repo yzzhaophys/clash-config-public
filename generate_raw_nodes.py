@@ -130,8 +130,13 @@ def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
 def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str], int]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     region = env.get("VPS_REGION", "xx").lower()
-    xray_dir = host_dir / "config" / "xray"
-    for file in sorted(xray_dir.glob("*.json")):
+    private_source = host_dir / "secrets" / "xray-inbounds.json"
+    xray_files = (
+        [private_source]
+        if private_source.exists()
+        else sorted((host_dir / "config" / "xray").glob("*.json"))
+    )
+    for file in xray_files:
         try:
             data = json.loads(file.read_text())
         except Exception:
@@ -189,7 +194,12 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
 
 
 def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str], int]) -> dict[str, Any] | None:
-    path = host_dir / "config" / "hysteria" / "config.yaml"
+    private_source = host_dir / "secrets" / "hysteria.yaml"
+    path = (
+        private_source
+        if private_source.exists()
+        else host_dir / "config" / "hysteria" / "config.yaml"
+    )
     if not path.exists():
         return None
     data = yaml.safe_load(path.read_text()) or {}
@@ -214,12 +224,63 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
     }
 
 
+def client_inventory_nodes(
+    host_dir: Path,
+    env: dict[str, str],
+    counters: dict[tuple[str, str], int],
+) -> list[dict[str, Any]]:
+    """Read an optional client-facing inventory for non-standard/NAT hosts.
+
+    The inventory is authoritative for that host. It describes public client
+    addresses and ports, which may differ from the service's internal listen
+    ports. Unlike airport imports, these remain self-hosted nodes and can
+    participate in proxy chains.
+    """
+    private_source = host_dir / "secrets" / "client" / "clash-nodes.yaml"
+    path = (
+        private_source
+        if private_source.exists()
+        else host_dir / "client" / "clash-nodes.yaml"
+    )
+    if not path.exists():
+        return []
+    data = yaml.safe_load(path.read_text()) or {}
+    source_nodes = data.get("proxies", []) or []
+    if not isinstance(source_nodes, list):
+        raise ValueError(f"{path}: proxies 必须是列表")
+
+    region = env.get("VPS_CLASH_REGION", env.get("VPS_REGION", "xx")).upper()
+    out: list[dict[str, Any]] = []
+    for source in source_nodes:
+        if not isinstance(source, dict):
+            raise ValueError(f"{path}: proxies 条目必须是映射")
+        protocol = str(source.get("type", "")).lower()
+        if protocol not in {"vless", "hysteria2"}:
+            raise ValueError(f"{path}: 不支持的自建节点协议 {protocol or '<empty>'}")
+        if not source.get("server") or not source.get("port"):
+            raise ValueError(f"{path}: {protocol} 缺少 server 或 port")
+
+        key = (region.lower(), protocol)
+        idx = counters.get(key, 0)
+        counters[key] = idx + 1
+        proxy = copy.deepcopy(source)
+        proxy["name"] = node_name(region, protocol, idx)
+        proxy["_chain-role"] = "both"
+        out.append(proxy)
+    return out
+
+
 def default_hosts_dir() -> Path:
     """优先使用显式环境变量和标准私有目录，并兼容旧目录结构。"""
     configured = os.environ.get("CLASH_HOSTS_DIR")
     if configured:
         return Path(configured).expanduser()
-    for candidate in (Path.home() / "servers" / "hosts", SCRIPT_DIR, SCRIPT_DIR.parent):
+    for candidate in (
+        Path.home() / ".config" / "infra" / "hosts",
+        Path.home() / "servers" / "hosts",
+        SCRIPT_DIR,
+        SCRIPT_DIR.parent,
+    ):
         if any(path.is_dir() and path.name != "vps-template" for path in candidate.glob("vps-*")):
             return candidate
     return SCRIPT_DIR
@@ -230,9 +291,12 @@ def default_airport_dir(hosts_dir: Path) -> Path:
     configured = os.environ.get("CLASH_AIRPORT_DIR")
     if configured:
         return Path(configured).expanduser()
-    standard = Path.home() / "servers" / "proxy" / "airport"
-    if standard.exists():
-        return standard
+    for candidate in (
+        Path.home() / ".config" / "clash" / "airport",
+        Path.home() / "servers" / "proxy" / "airport",
+    ):
+        if candidate.exists():
+            return candidate
     return hosts_dir / "airport"
 
 
@@ -244,6 +308,10 @@ def collect_proxies(hosts_dir: Path) -> list[dict[str, Any]]:
             continue
         env = load_env(host_dir / "host.env")
         if not env:
+            continue
+        inventory = client_inventory_nodes(host_dir, env, counters)
+        if inventory:
+            proxies.extend(inventory)
             continue
         proxies.extend(xray_nodes(host_dir, env, counters))
         hy = hy2_node(host_dir, env, counters)
@@ -899,12 +967,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--hosts-dir",
         type=Path,
         default=default_hosts_dir(),
-        help="包含 vps-* 私有配置目录（默认 CLASH_HOSTS_DIR 或 ~/servers/hosts）",
+        help="包含 vps-* 私有配置目录（默认 CLASH_HOSTS_DIR 或 ~/.config/infra/hosts）",
     )
     parser.add_argument(
         "--airport-dir",
         type=Path,
-        help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/servers/proxy/airport）",
+        help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/.config/clash/airport）",
     )
     parser.add_argument("--output", "-o", type=Path, default=OUT, help="输出文件")
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
