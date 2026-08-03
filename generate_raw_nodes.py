@@ -117,6 +117,22 @@ def env_bool(env: dict[str, str], key: str, default: bool) -> bool:
     raise ValueError(f"{key} 必须是 true 或 false，当前值为 {value!r}")
 
 
+def yaml_bool(value: Any, field: str, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in {0, 1}:
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "n", "off"}:
+            return False
+    raise ValueError(f"{field} 必须是 true 或 false，当前值为 {value!r}")
+
+
 def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
     region = normalize_region(env.get("VPS_CLASH_REGION", env.get("VPS_REGION", "xx")))
     exit_type = env.get("VPS_CLASH_EXIT_TYPE", "general").strip().lower() or "general"
@@ -214,7 +230,7 @@ def node_name(
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -454,6 +470,161 @@ def client_inventory_nodes(
     return out
 
 
+def normalize_trusted_nodes(
+    source_nodes: list[dict[str, Any]],
+    counters: dict[tuple[str, str], int],
+    source_path: Path,
+) -> list[dict[str, Any]]:
+    """Normalize explicitly trusted, client-side nodes.
+
+    These entries are deliberately separate from airport imports.  A trusted
+    node may relay or become a chain landing only when the private file says
+    so explicitly.  Since the generator has no way to verify residential
+    identity from a node description alone, trusted entries are always
+    ordinary (non-HomeIP, non-ShowIP) nodes.
+    """
+    allowed_protocols = {"vless", "hysteria2"}
+    seen: set[tuple[str, str]] = set()
+    normalized: list[dict[str, Any]] = []
+
+    for index, source in enumerate(source_nodes):
+        field = f"{source_path}: nodes[{index}]"
+        if not isinstance(source, dict):
+            raise ValueError(f"{field} 必须是映射")
+
+        node_id = str(source.get("id", "")).strip()
+        if not node_id:
+            raise ValueError(f"{field}.id 不能为空")
+        if "\n" in node_id or "\r" in node_id:
+            raise ValueError(f"{field}.id 不能包含换行")
+
+        raw_label = source.get("name")
+        label = str(raw_label).strip() if raw_label is not None else ""
+        label = label or node_id
+        label = re.sub(r"[\r\n]+", " ", label).replace("]", "）")
+        region_value = source.get("region")
+        if region_value is None:
+            raise ValueError(f"{field}.region 必须填写实际国家代码，例如 DE 或 NL")
+        region = normalize_region(str(region_value))
+        if region == "gb":
+            region = "uk"
+        if not re.fullmatch(r"[a-z]{2}", region):
+            raise ValueError(
+                f"{field}.region 必须是两位国家代码（例如 DE、NL），当前值为 {region_value!r}"
+            )
+
+        raw_proxy = source.get("proxy")
+        if not isinstance(raw_proxy, dict):
+            raise ValueError(f"{field}.proxy 必须是 Clash 节点映射")
+        proxy = copy.deepcopy(raw_proxy)
+        protocol = str(proxy.get("type", "")).strip().lower()
+        if protocol not in allowed_protocols:
+            raise ValueError(
+                f"{field}.proxy.type 只支持 vless 或 hysteria2，当前值为 {protocol or '<empty>'}"
+            )
+        if not proxy.get("server") or not proxy.get("port"):
+            raise ValueError(f"{field}.proxy 缺少 server 或 port")
+        if "dialer-proxy" in proxy or "<<" in proxy:
+            raise ValueError(f"{field}.proxy 只能是基础节点，不能包含 dialer-proxy 或 <<")
+        try:
+            port = int(proxy["port"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{field}.proxy.port 必须是 1-65535 的整数") from exc
+        if isinstance(proxy["port"], bool) or not 1 <= port <= 65535:
+            raise ValueError(f"{field}.proxy.port 必须是 1-65535 的整数")
+        proxy["type"] = protocol
+        proxy["port"] = port
+
+        identity = (node_id, protocol)
+        if identity in seen:
+            raise ValueError(f"{field}: id={node_id!r} 的 {protocol} 节点重复")
+        seen.add(identity)
+
+        exit_type = str(source.get("exit-type", "general")).strip().lower() or "general"
+        if exit_type != "general":
+            raise ValueError(f"{field}.exit-type 只能是 general；节点信息不能证明 HomeIP")
+        allow_showip = yaml_bool(source.get("allow-showip"), f"{field}.allow-showip", False)
+        if allow_showip:
+            raise ValueError(f"{field}.allow-showip 必须为 false；可信节点不会自动进入 ShowIP")
+        allow_relay = yaml_bool(source.get("allow-relay"), f"{field}.allow-relay", False)
+        allow_chain_exit = yaml_bool(
+            source.get("allow-chain-exit"), f"{field}.allow-chain-exit", False
+        )
+        allow_direct_exit = yaml_bool(
+            source.get("allow-direct-exit"), f"{field}.allow-direct-exit", True
+        )
+        allow_download = yaml_bool(
+            source.get("allow-download"), f"{field}.allow-download", False
+        )
+
+        relay_protocol = str(source.get("relay-protocol", protocol)).strip().lower()
+        chain_exit_protocol = str(
+            source.get("chain-exit-protocol", protocol)
+        ).strip().lower()
+        if relay_protocol not in allowed_protocols:
+            raise ValueError(f"{field}.relay-protocol 必须是 vless 或 hysteria2")
+        if chain_exit_protocol not in allowed_protocols:
+            raise ValueError(f"{field}.chain-exit-protocol 必须是 vless 或 hysteria2")
+        if allow_relay and relay_protocol != protocol:
+            raise ValueError(
+                f"{field}.relay-protocol 必须与 proxy.type 相同，才能作为 Relay"
+            )
+        if allow_chain_exit and chain_exit_protocol != protocol:
+            raise ValueError(
+                f"{field}.chain-exit-protocol 必须与 proxy.type 相同，才能作为 Chain 落地"
+            )
+
+        capabilities = {
+            "region": region,
+            "allow_relay": allow_relay,
+            "allow_direct_exit": allow_direct_exit,
+            "allow_chain_exit": allow_chain_exit,
+            "allow_download": allow_download,
+            "allow_showip": False,
+            "exit_type": "general",
+            "physical_node_id": f"trusted:{node_id}",
+            "relay_protocol": relay_protocol,
+            "chain_exit_protocol": chain_exit_protocol,
+        }
+        role = capability_role(capabilities)
+        key = (region, protocol)
+        node_index = counters.get(key, 0)
+        counters[key] = node_index + 1
+        proxy["name"] = (
+            node_name(
+                region,
+                protocol,
+                node_index,
+                role,
+                allow_direct_exit=allow_direct_exit,
+                allow_download=allow_download,
+            )
+            + f"-[Trusted={label}]"
+        )
+        normalized.append(attach_capabilities(proxy, capabilities))
+    return normalized
+
+
+def load_trusted_nodes(
+    path: Path,
+    counters: dict[tuple[str, str], int],
+) -> list[dict[str, Any]]:
+    if not path.is_file():
+        return []
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{path}: trusted-nodes.yaml 不是有效 YAML：{exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: 顶层必须是映射，并包含 nodes 列表")
+    if "nodes" not in data and data:
+        raise ValueError(f"{path}: 顶层必须包含 nodes 列表；不要直接放 subscription 的 proxies")
+    source_nodes = data.get("nodes", []) or []
+    if not isinstance(source_nodes, list):
+        raise ValueError(f"{path}: nodes 必须是列表")
+    return normalize_trusted_nodes(source_nodes, counters, path)
+
+
 def default_hosts_dir() -> Path:
     """优先使用显式环境变量和标准私有目录，并兼容旧目录结构。"""
     configured = os.environ.get("CLASH_HOSTS_DIR")
@@ -484,6 +655,13 @@ def default_airport_dir(hosts_dir: Path) -> Path:
     return hosts_dir / "airport"
 
 
+def default_trusted_nodes_file(airport_dir: Path) -> Path:
+    configured = os.environ.get("CLASH_TRUSTED_NODES_FILE")
+    if configured:
+        return Path(configured).expanduser()
+    return airport_dir / "trusted-nodes.yaml"
+
+
 def default_ansible_host_vars_dir() -> Path | None:
     configured = os.environ.get("CLASH_ANSIBLE_HOST_VARS_DIR")
     if configured:
@@ -495,8 +673,9 @@ def default_ansible_host_vars_dir() -> Path | None:
 def collect_proxies(
     hosts_dir: Path,
     ansible_host_vars_dir: Path | None = None,
+    counters: dict[tuple[str, str], int] | None = None,
 ) -> list[dict[str, Any]]:
-    counters: dict[tuple[str, str], int] = {}
+    counters = counters if counters is not None else {}
     proxies: list[dict[str, Any]] = []
     host_dirs = list(hosts_dir.glob("vps-*"))
 
@@ -1113,6 +1292,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/.config/clash/airport）",
     )
     parser.add_argument(
+        "--trusted-nodes-file",
+        type=Path,
+        help=(
+            "私有可信节点 YAML（默认 CLASH_TRUSTED_NODES_FILE 或 "
+            "<airport-dir>/trusted-nodes.yaml）"
+        ),
+    )
+    parser.add_argument(
         "--ansible-host-vars-dir",
         type=Path,
         default=default_ansible_host_vars_dir(),
@@ -1161,18 +1348,30 @@ def main(argv: list[str] | None = None) -> int:
     apply_default_invocation(args, invoked_without_args)
     hosts_dir = args.hosts_dir.expanduser().resolve()
     airport_dir = (args.airport_dir or default_airport_dir(hosts_dir)).expanduser().resolve()
+    trusted_nodes_file = (
+        args.trusted_nodes_file or default_trusted_nodes_file(airport_dir)
+    ).expanduser().resolve()
     ansible_host_vars_dir = (
         args.ansible_host_vars_dir.expanduser().resolve()
         if args.ansible_host_vars_dir
         else None
     )
-    proxies = collect_proxies(hosts_dir, ansible_host_vars_dir)
+    counters: dict[tuple[str, str], int] = {}
+    proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
+    trusted_nodes = load_trusted_nodes(trusted_nodes_file, counters)
+    if trusted_nodes:
+        proxies.extend(trusted_nodes)
+        print(
+            f"已导入 {len(trusted_nodes)} 个私有可信节点；"
+            "Relay/Chain 能力按 trusted-nodes.yaml 显式声明。"
+        )
     if args.interactive:
         airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir)
         proxies.extend(airport_nodes)
     if not proxies:
         raise SystemExit(
-            f"没有在 {hosts_dir} 找到节点；请检查 vps-*/host.env 或机场订阅"
+            f"没有在 {hosts_dir} 或 {trusted_nodes_file} 找到节点；"
+            "请检查 vps-*/host.env、trusted-nodes.yaml 或机场订阅"
         )
 
     fallback_nodes: list[dict[str, Any]] = []

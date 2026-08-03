@@ -23,7 +23,7 @@ existing hosts so their generated node names and indexes remain stable.
 
 ## Usage
 
-With the recommended directory layout, the generator automatically reads VPS inputs from `~/.config/infra/hosts` and the optional airport subscription from `~/.config/clash/airport`:
+With the recommended directory layout, the generator automatically reads VPS inputs from `~/.config/infra/hosts` and optional airport/trusted-node inputs from `~/.config/clash/airport`:
 
 ```bash
 ./generate_raw_nodes.py
@@ -35,10 +35,11 @@ You can also specify the private input directory explicitly:
 ./generate_raw_nodes.py \
   --hosts-dir /path/to/private/hosts \
   --airport-dir /path/to/private/airport \
+  --trusted-nodes-file /path/to/private/trusted-nodes.yaml \
   --interactive
 ```
 
-`CLASH_HOSTS_DIR` and `CLASH_AIRPORT_DIR` provide equivalent persistent overrides. Command-line arguments take precedence. The legacy `hosts/airport` location remains a fallback when the standard airport directory does not exist.
+`CLASH_HOSTS_DIR`, `CLASH_AIRPORT_DIR`, and `CLASH_TRUSTED_NODES_FILE` provide equivalent persistent overrides. Command-line arguments take precedence. The legacy `hosts/airport` location remains a fallback when the standard airport directory does not exist.
 
 The default interactive run creates:
 
@@ -59,12 +60,55 @@ Place a complete private subscription outside this repository and outside the ho
 └── clash/
     └── airport/
         ├── subscription.yaml
-        └── selected-nodes.yaml
+        ├── selected-nodes.yaml
+        └── trusted-nodes.yaml
 projects/
 └── clash-config-public/
 ```
 
 On an interactive run, the first prompt asks whether to import it. The generator can filter by region, select individual nodes, and save only selected node names in the configured airport directory's `selected-nodes.yaml`. Imported airport nodes remain ordinary direct-only exits: they never relay, never act as chain landings, and cannot be converted to HomeIP/ShowIP. Matching airport DNS policies are reported but are not written into the Merge output; add them manually to the existing `dns` section in `home.yaml` to avoid replacing that configuration.
+
+## Optional private trusted relay nodes
+
+If you have node information but do not manage the corresponding machines,
+put explicitly trusted client-side nodes in
+`~/.config/clash/airport/trusted-nodes.yaml` (or use
+`--trusted-nodes-file`/`CLASH_TRUSTED_NODES_FILE`):
+
+```yaml
+nodes:
+  - id: provider-jp-01
+    name: Provider JP Relay 01
+    region: JP
+    allow-relay: true
+    allow-chain-exit: true
+    allow-direct-exit: true
+    allow-download: false
+    proxy:
+      type: vless
+      server: example.com
+      port: 443
+      uuid: replace-with-private-uuid
+      encryption: none
+      tls: true
+      network: ws
+      servername: example.com
+```
+
+Each entry requires a stable `id`, an actual two-letter country code such as
+`DE` or `NL` (use the actual node country, not the virtual `EUR` group), and a
+basic VLESS or Hysteria2 `proxy`. `allow-relay` means the node may be the first
+hop; `allow-chain-exit` means it may be the chain's landing node. Both are
+`false` by default, so adding a node never silently expands the proxy-chain
+set. `allow-direct-exit` defaults to `true`, while `allow-download` defaults
+to `false`.
+
+The generator marks these entries with `[Trusted=...]` and uses `id` as their
+physical-node identity, preventing any entry from chaining to another entry
+with the same `id`. Trusted entries are always ordinary general exits:
+`HomeIP`, `ShowIP`, and pre-existing `dialer-proxy` chains are rejected. The
+file contains credentials and is ignored by Git; keep it outside this
+repository and only mark nodes as trusted when the provider permits this use.
 
 Self-hosted node capabilities are public infrastructure metadata and should be
 declared in the matching Ansible `host_vars/<hostname>.yml`:
