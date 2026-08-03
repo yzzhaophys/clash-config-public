@@ -31,7 +31,16 @@ REGION_CN = {
 }
 
 REGION_CODE = {key: key.upper() for key in REGION_CN}
+REGION_ALIASES = {
+    "hong kong": "hk",
+    "hongkong": "hk",
+    "japan": "jp",
+    "united states": "us",
+    "united states of america": "us",
+    "usa": "us",
+}
 AIRPORT_REGION_PRIORITY = ("HK", "TW", "SG", "JP", "US", "UK", "AU", "DE", "NL")
+DEFAULT_CORE_REGIONS = {"hk", "jp", "sg"}
 
 
 def load_env(path: Path) -> dict[str, str]:
@@ -47,6 +56,38 @@ def load_env(path: Path) -> dict[str, str]:
     return data
 
 
+CLASH_HOST_VAR_MAP = {
+    "vps_clash_region": "VPS_CLASH_REGION",
+    "vps_clash_order": "VPS_CLASH_ORDER",
+    "vps_clash_allow_relay": "VPS_CLASH_ALLOW_RELAY",
+    "vps_clash_allow_direct_exit": "VPS_CLASH_ALLOW_DIRECT_EXIT",
+    "vps_clash_allow_chain_exit": "VPS_CLASH_ALLOW_CHAIN_EXIT",
+    "vps_clash_exit_type": "VPS_CLASH_EXIT_TYPE",
+    "vps_clash_allow_showip": "VPS_CLASH_ALLOW_SHOWIP",
+    "vps_clash_allow_download": "VPS_CLASH_ALLOW_DOWNLOAD",
+    "vps_clash_relay_protocol": "VPS_CLASH_RELAY_PROTOCOL",
+    "vps_clash_chain_exit_protocol": "VPS_CLASH_CHAIN_EXIT_PROTOCOL",
+}
+
+
+def load_ansible_clash_vars(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    data = yaml.safe_load(path.read_text()) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: Ansible host_vars 必须是映射")
+    result: dict[str, str] = {}
+    for source_key, target_key in CLASH_HOST_VAR_MAP.items():
+        if source_key not in data:
+            continue
+        value = data[source_key]
+        if isinstance(value, bool):
+            result[target_key] = "true" if value else "false"
+        else:
+            result[target_key] = str(value)
+    return result
+
+
 def cert_domain(path: str) -> str | None:
     match = re.search(r"/live/([^/]+)/", path)
     return match.group(1) if match else None
@@ -58,16 +99,122 @@ def port_from_listen(value: Any, default: int) -> int:
     return int(match.group(1)) if match else default
 
 
-def node_name(region: str, protocol: str, index: int) -> str:
-    code = REGION_CODE.get(region.lower(), region.upper())
-    cn = REGION_CN.get(region.lower(), code)
+def normalize_region(region: str) -> str:
+    normalized = re.sub(r"[_-]+", " ", region.strip().lower())
+    normalized = re.sub(r"\s+", " ", normalized)
+    return REGION_ALIASES.get(normalized, normalized)
+
+
+def env_bool(env: dict[str, str], key: str, default: bool) -> bool:
+    value = env.get(key)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise ValueError(f"{key} 必须是 true 或 false，当前值为 {value!r}")
+
+
+def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
+    region = normalize_region(env.get("VPS_CLASH_REGION", env.get("VPS_REGION", "xx")))
+    exit_type = env.get("VPS_CLASH_EXIT_TYPE", "general").strip().lower() or "general"
+    if exit_type not in {"general", "homeip"}:
+        raise ValueError(
+            "VPS_CLASH_EXIT_TYPE 必须是 general 或 homeip，"
+            f"当前值为 {exit_type!r}"
+        )
+    allow_relay = env_bool(
+        env,
+        "VPS_CLASH_ALLOW_RELAY",
+        exit_type == "general" and region in DEFAULT_CORE_REGIONS,
+    )
+    if exit_type == "homeip" and allow_relay:
+        raise ValueError("HomeIP 节点不能设置 VPS_CLASH_ALLOW_RELAY=true")
+    relay_protocol = env.get("VPS_CLASH_RELAY_PROTOCOL", "vless").strip().lower()
+    chain_exit_protocol = env.get("VPS_CLASH_CHAIN_EXIT_PROTOCOL", "vless").strip().lower()
+    allowed_protocols = {"vless", "hysteria2"}
+    if relay_protocol not in allowed_protocols:
+        raise ValueError("VPS_CLASH_RELAY_PROTOCOL 必须是 vless 或 hysteria2")
+    if chain_exit_protocol not in allowed_protocols:
+        raise ValueError("VPS_CLASH_CHAIN_EXIT_PROTOCOL 必须是 vless 或 hysteria2")
+    return {
+        "region": region,
+        "allow_relay": allow_relay,
+        "allow_direct_exit": env_bool(env, "VPS_CLASH_ALLOW_DIRECT_EXIT", True),
+        "allow_chain_exit": env_bool(env, "VPS_CLASH_ALLOW_CHAIN_EXIT", True),
+        "allow_download": env_bool(env, "VPS_CLASH_ALLOW_DOWNLOAD", False),
+        "allow_showip": env_bool(env, "VPS_CLASH_ALLOW_SHOWIP", False),
+        "exit_type": exit_type,
+        "physical_node_id": host_dir.name,
+        "relay_protocol": relay_protocol,
+        "chain_exit_protocol": chain_exit_protocol,
+    }
+
+
+def capability_role(capabilities: dict[str, Any]) -> str:
+    if capabilities["exit_type"] == "homeip":
+        return "HomeIP"
+    return "Core" if capabilities["allow_relay"] else "Exit"
+
+
+def attach_capabilities(proxy: dict[str, Any], capabilities: dict[str, Any]) -> dict[str, Any]:
+    proxy["_allow-relay"] = capabilities["allow_relay"]
+    proxy["_allow-direct-exit"] = capabilities["allow_direct_exit"]
+    proxy["_allow-chain-exit"] = capabilities["allow_chain_exit"]
+    proxy["_allow-download"] = capabilities["allow_download"]
+    proxy["_allow-showip"] = capabilities["allow_showip"]
+    proxy["_exit-type"] = capabilities["exit_type"]
+    proxy["_physical-node-id"] = capabilities["physical_node_id"]
+    proxy["_relay-protocol"] = capabilities["relay_protocol"]
+    proxy["_chain-exit-protocol"] = capabilities["chain_exit_protocol"]
+    return proxy
+
+
+def capability_name_suffix(
+    allow_direct_exit: bool,
+    allow_download: bool,
+    allow_showip: bool = False,
+) -> str:
+    suffix = ""
+    if not allow_direct_exit:
+        suffix += "-[Direct=false]"
+    if allow_download:
+        suffix += "-[Download=true]"
+    if allow_showip:
+        suffix += "-[ShowIP=true]"
+    return suffix
+
+
+def node_name(
+    region: str,
+    protocol: str,
+    index: int,
+    role: str = "Exit",
+    *,
+    allow_direct_exit: bool = True,
+    allow_download: bool = False,
+    allow_showip: bool = False,
+) -> str:
+    region = normalize_region(region)
+    code = REGION_CODE.get(region, region.upper())
+    cn = REGION_CN.get(region, code)
     proto = "H2" if protocol == "hysteria2" else "VLESS"
-    return f"VPS-[{code}.Relay]-{proto}-{index:02d}-({cn}中转节点)"
+    descriptions = {
+        "Core": f"{cn}核心节点",
+        "Exit": f"{cn}出口节点",
+        "HomeIP": f"{cn}住宅节点",
+    }
+    return (
+        f"VPS-[{code}.{role}]-{proto}-{index:02d}-({descriptions.get(role, cn + '节点')})"
+        + capability_name_suffix(allow_direct_exit, allow_download, allow_showip)
+    )
 
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -129,7 +276,9 @@ def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
 
 def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str], int]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    region = env.get("VPS_REGION", "xx").lower()
+    capabilities = host_capabilities(host_dir, env)
+    region = capabilities["region"]
+    role = capability_role(capabilities)
     private_source = host_dir / "secrets" / "xray-inbounds.json"
     xray_files = (
         [private_source]
@@ -189,7 +338,23 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
             key = (region, "vless")
             idx = counters.get(key, 0)
             counters[key] = idx + 1
-            out.append({"name": node_name(region, "vless", idx), **config})
+            out.append(
+                attach_capabilities(
+                    {
+                        "name": node_name(
+                            region,
+                            "vless",
+                            idx,
+                            role,
+                            allow_direct_exit=capabilities["allow_direct_exit"],
+                            allow_download=capabilities["allow_download"],
+                            allow_showip=capabilities["allow_showip"],
+                        ),
+                        **config,
+                    },
+                    capabilities,
+                )
+            )
     return out
 
 
@@ -209,19 +374,29 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
         return None
     tls = data.get("tls", {}) or {}
     server = cert_domain(str(tls.get("cert", ""))) or env.get("VPS_HOST", "0.0.0.0")
-    region = env.get("VPS_REGION", "xx").lower()
+    capabilities = host_capabilities(host_dir, env)
+    region = capabilities["region"]
+    role = capability_role(capabilities)
     key = (region, "hysteria2")
     idx = counters.get(key, 0)
     counters[key] = idx + 1
-    return {
-        "name": node_name(region, "hysteria2", idx),
+    return attach_capabilities({
+        "name": node_name(
+            region,
+            "hysteria2",
+            idx,
+            role,
+            allow_direct_exit=capabilities["allow_direct_exit"],
+            allow_download=capabilities["allow_download"],
+            allow_showip=capabilities["allow_showip"],
+        ),
         "type": "hysteria2",
         "server": server,
         "port": port_from_listen(data.get("listen"), 20002),
         "password": password,
         "sni": server,
         "skip-cert-verify": False,
-    }
+    }, capabilities)
 
 
 def client_inventory_nodes(
@@ -249,7 +424,9 @@ def client_inventory_nodes(
     if not isinstance(source_nodes, list):
         raise ValueError(f"{path}: proxies 必须是列表")
 
-    region = env.get("VPS_CLASH_REGION", env.get("VPS_REGION", "xx")).upper()
+    capabilities = host_capabilities(host_dir, env)
+    region = capabilities["region"]
+    role = capability_role(capabilities)
     out: list[dict[str, Any]] = []
     for source in source_nodes:
         if not isinstance(source, dict):
@@ -260,13 +437,20 @@ def client_inventory_nodes(
         if not source.get("server") or not source.get("port"):
             raise ValueError(f"{path}: {protocol} 缺少 server 或 port")
 
-        key = (region.lower(), protocol)
+        key = (region, protocol)
         idx = counters.get(key, 0)
         counters[key] = idx + 1
         proxy = copy.deepcopy(source)
-        proxy["name"] = node_name(region, protocol, idx)
-        proxy["_chain-role"] = "both"
-        out.append(proxy)
+        proxy["name"] = node_name(
+            region,
+            protocol,
+            idx,
+            role,
+            allow_direct_exit=capabilities["allow_direct_exit"],
+            allow_download=capabilities["allow_download"],
+            allow_showip=capabilities["allow_showip"],
+        )
+        out.append(attach_capabilities(proxy, capabilities))
     return out
 
 
@@ -300,13 +484,42 @@ def default_airport_dir(hosts_dir: Path) -> Path:
     return hosts_dir / "airport"
 
 
-def collect_proxies(hosts_dir: Path) -> list[dict[str, Any]]:
+def default_ansible_host_vars_dir() -> Path | None:
+    configured = os.environ.get("CLASH_ANSIBLE_HOST_VARS_DIR")
+    if configured:
+        return Path(configured).expanduser()
+    candidate = SCRIPT_DIR.parent / "infra" / "ansible" / "host_vars"
+    return candidate if candidate.is_dir() else None
+
+
+def collect_proxies(
+    hosts_dir: Path,
+    ansible_host_vars_dir: Path | None = None,
+) -> list[dict[str, Any]]:
     counters: dict[tuple[str, str], int] = {}
     proxies: list[dict[str, Any]] = []
-    for host_dir in sorted(hosts_dir.glob("vps-*")):
+    host_dirs = list(hosts_dir.glob("vps-*"))
+
+    def clash_env(host_dir: Path) -> dict[str, str]:
+        env = load_env(host_dir / "host.env")
+        if ansible_host_vars_dir:
+            env.update(
+                load_ansible_clash_vars(
+                    ansible_host_vars_dir / f"{host_dir.name}.yml"
+                )
+            )
+        return env
+
+    host_dirs.sort(
+        key=lambda path: (
+            int(clash_env(path).get("VPS_CLASH_ORDER", "0")),
+            path.name,
+        )
+    )
+    for host_dir in host_dirs:
         if host_dir.name == "vps-template":
             continue
-        env = load_env(host_dir / "host.env")
+        env = clash_env(host_dir)
         if not env:
             continue
         inventory = client_inventory_nodes(host_dir, env, counters)
@@ -366,16 +579,21 @@ def normalize_airport_nodes(selected: list[dict[str, Any]]) -> list[dict[str, An
         key = (region, protocol)
         index = counters.get(key, 0)
         counters[key] = index + 1
-        description = f"{REGION_CN.get(region.lower(), region)}中转节点"
+        description = f"{REGION_CN.get(region.lower(), region)}机场出口"
         source_label = original_name.replace("]", "）")
         proxy = copy.deepcopy(source)
         proxy["name"] = (
-            f"VPS-[{region}.Relay]-{protocol}-{index:02d}-({description})"
+            f"VPS-[{region}.Exit]-{protocol}-{index:02d}-({description})"
             f"-[Airport={source_label}]"
         )
         # Airport nodes remain independently selectable, but never participate
         # in dialer-proxy chains because many relay airports reject VPS ingress.
-        proxy["_chain-role"] = "none"
+        proxy["_allow-relay"] = False
+        proxy["_allow-direct-exit"] = True
+        proxy["_allow-chain-exit"] = False
+        proxy["_allow-download"] = False
+        proxy["_exit-type"] = "general"
+        proxy["_physical-node-id"] = f"airport:{original_name}"
         normalized.append(proxy)
     return normalized
 
@@ -521,13 +739,16 @@ def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
     exit_meta = node_meta(exit_proxy["name"])
     dialer_meta = node_meta(dialer["name"])
     exit_tag = exit_meta["region"]
-    if exit_meta["role"] in {"HomeIP", "ShowIP"}:
+    if exit_meta["role"] == "HomeIP":
         exit_tag += f".{exit_meta['role']}"
-    return (
+    name = (
         f"PrxChain-[{exit_tag}]-{exit_meta['proto']}-{exit_meta['idx']}"
         f"--<<-{dialer_meta['region']}.{dialer_meta['role']}.{dialer_meta['proto']}.{dialer_meta['idx']}"
         f"-(代理链=={exit_meta['desc']}<-{dialer_meta['desc']})"
     )
+    if exit_proxy.get("_allow-showip", False):
+        name += "-[ShowIP=true]"
+    return name
 
 
 def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
@@ -536,18 +757,31 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
         exit_meta = node_meta(exit_proxy["name"])
         if not exit_meta:
             continue
-        if exit_proxy.get("_chain-role", "both") not in {"landing", "both"}:
+        if not exit_proxy.get("_allow-chain-exit", True):
             continue
-        # 地区补位节点不生成代理链；HomeIP/ShowIP 是落地出口，需要参与。
-        if exit_meta.get("fallback") and exit_meta["role"] not in {"HomeIP", "ShowIP"}:
+        if exit_proxy.get("_chain-exit-protocol") not in {None, str(exit_proxy.get("type", "")).lower()}:
+            continue
+        # 地区补位节点不生成代理链；HomeIP 是落地出口，需要参与。
+        if exit_meta.get("fallback") and exit_meta["role"] != "HomeIP":
             continue
         for dialer in proxies:
             dialer_meta = node_meta(dialer["name"])
             if (
                 not dialer_meta
                 or dialer_meta.get("fallback")
-                or dialer.get("_chain-role", "both") not in {"dialer", "both"}
-                or dialer_meta["region"] == exit_meta["region"]
+                or not dialer.get("_allow-relay", dialer_meta["role"] in {"Core", "Relay"})
+                or dialer.get("_relay-protocol") not in {None, str(dialer.get("type", "")).lower()}
+            ):
+                continue
+            exit_identity = exit_proxy.get("_physical-node-id")
+            dialer_identity = dialer.get("_physical-node-id")
+            if exit_identity and dialer_identity and exit_identity == dialer_identity:
+                continue
+            # Same-region chains add no useful route diversity for ordinary
+            # exits. The sole exception is a distinct HomeIP landing host.
+            if (
+                dialer_meta["region"] == exit_meta["region"]
+                and exit_meta["role"] != "HomeIP"
             ):
                 continue
             dialer_label = f"{dialer_meta['region']}.{dialer_meta['proto']}.{dialer_meta['idx']}"
@@ -561,7 +795,7 @@ def route_key(candidate: tuple[dict[str, Any], dict[str, Any]]) -> tuple[str, st
     exit_proxy, dialer = candidate
     exit_meta = node_meta(exit_proxy["name"])
     exit_tag = exit_meta["region"]
-    if exit_meta["role"] in {"HomeIP", "ShowIP"}:
+    if exit_meta["role"] == "HomeIP":
         exit_tag += f".{exit_meta['role']}"
     return exit_tag, node_meta(dialer["name"])["region"]
 
@@ -644,71 +878,18 @@ def fallback_node(source: dict[str, Any], target_region: str) -> dict[str, Any]:
     source_label = f"{source_meta['region']}.{source_meta['proto']}.{source_meta['idx']}"
     node = copy.deepcopy(source)
     node["name"] = (
-        f"VPS-[{target_region}.Relay]-{source_meta['proto']}-{source_meta['idx']}"
-        f"-({target_cn}中转节点)-[Fallback={source_label}]"
+        f"VPS-[{target_region}.Exit]-{source_meta['proto']}-{source_meta['idx']}"
+        f"-({target_cn}补位出口)-[Fallback={source_label}]"
+        + capability_name_suffix(node.get("_allow-direct-exit", True), False)
     )
+    node["_allow-relay"] = False
+    node["_allow-chain-exit"] = False
     return node
-
-
-def special_role_node(source: dict[str, Any], role: str, alias_index: int = 0) -> dict[str, Any]:
-    source_meta = node_meta(source["name"])
-    if not source_meta:
-        raise ValueError(f"无法识别特殊角色来源节点名称：{source['name']}")
-    descriptions = {
-        "HomeIP": "美国住宅节点",
-        "ShowIP": "归属地落地节点",
-    }
-    source_label = f"{source_meta['region']}.{source_meta['proto']}.{source_meta['idx']}"
-    if source_meta.get("airport"):
-        airport_name = source_meta["airport"].replace("]", "）")
-        source_label = f"Airport.{source_label}|Name={airport_name}"
-    node = copy.deepcopy(source)
-    node["name"] = (
-        f"VPS-[US.{role}]-{source_meta['proto']}-{alias_index:02d}"
-        f"-({descriptions[role]})-[Source={source_label}]"
-    )
-    # An airport source remains independent even after being assigned a
-    # special role; only self-hosted HomeIP/ShowIP aliases act as landings.
-    node["_chain-role"] = "none" if source_meta.get("airport") else "landing"
-    return node
-
-
-def mark_special_source(source: dict[str, Any], roles: str) -> None:
-    meta = node_meta(source["name"])
-    if not meta:
-        return
-    assigned = set((meta.get("special") or "").split("+")) | set(roles.split("+"))
-    assigned.discard("")
-    label = "+".join(role for role in ("HomeIP", "ShowIP") if role in assigned)
-    if meta.get("special"):
-        source["name"] = re.sub(r"-\[Special=[^]]+\]$", f"-[Special={label}]", source["name"])
-    else:
-        source["name"] += f"-[Special={label}]"
-    source["_chain-role"] = "none"
-
-
-def prompt_source_nodes(proxies: list[dict[str, Any]], role: str) -> list[dict[str, Any]]:
-    print(f"\n可选的来源节点（{role}）：")
-    for index, proxy in enumerate(proxies, 1):
-        print(f"  {index:>2}. {proxy['name']}")
-    while True:
-        try:
-            raw = input(
-                f"请选择 {role} 来源节点（如 1,3-5；all=全部；none/0=跳过）："
-            ).strip().lower()
-            selected = parse_number_selection(
-                "none" if raw == "0" else raw,
-                len(proxies),
-            )
-        except ValueError as exc:
-            print(f"输入无效：{exc}")
-            continue
-        return [proxy for index, proxy in enumerate(proxies) if index in selected]
 
 
 def prompt_source_node(proxies: list[dict[str, Any]], target_region: str | None = None) -> dict[str, Any] | None:
     suffix = f"（{target_region}）" if target_region else ""
-    title = "来源节点" if target_region and ("HomeIP" in target_region or "ShowIP" in target_region) else "备用来源节点"
+    title = "备用来源节点"
     print(f"\n可选的{title}{suffix}：")
     for index, proxy in enumerate(proxies, 1):
         print(f"  {index:>2}. {proxy['name']}")
@@ -768,52 +949,12 @@ def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, 
     return placeholders
 
 
-def interactive_special_role_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    print("\nHomeIP / ShowIP 逻辑节点：")
-    print("这只是将所选节点放入对应策略组，不会把普通 VPS 变成住宅 IP。")
-    print("选中的原始节点会退出普通地区中转组。")
-    print("自建来源的专属别名可作为代理链落地；机场来源仍只作为独立节点。")
-    print("  1. 同一批来源节点同时作为 HomeIP 和 ShowIP（默认，可多选）")
-    print("  2. HomeIP 和 ShowIP 分别选择来源（均可多选）")
-    print("  3. 不生成")
-    while True:
-        choice = input("请选择 [1-3，默认 1]：").strip() or "1"
-        if choice in {"1", "2", "3"}:
-            break
-        print("输入无效，请选择 1、2 或 3。")
-    if choice == "3":
-        return []
-
-    selections: dict[str, list[dict[str, Any]]] = {"HomeIP": [], "ShowIP": []}
-    if choice == "1":
-        sources = prompt_source_nodes(proxies, "HomeIP + ShowIP")
-        selections = {"HomeIP": sources, "ShowIP": sources}
-    else:
-        for role in ("HomeIP", "ShowIP"):
-            selections[role] = prompt_source_nodes(proxies, role)
-
-    aliases: list[dict[str, Any]] = []
-    selected_source_ids: set[int] = set()
-    for role, sources in selections.items():
-        for alias_index, source in enumerate(sources):
-            aliases.append(special_role_node(source, role, alias_index))
-            mark_special_source(source, role)
-            selected_source_ids.add(id(source))
-    if selected_source_ids:
-        proxies[:] = [proxy for proxy in proxies if id(proxy) not in selected_source_ids]
-        print(f"已从基础节点中移除 {len(selected_source_ids)} 个专属角色来源节点。")
-    if aliases:
-        print(f"已生成 {len(aliases)} 个 HomeIP/ShowIP 逻辑节点。")
-    return aliases
-
-
 def interactive_selection(
     proxies: list[dict[str, Any]],
 ) -> tuple[
     list[dict[str, Any]],
     str,
     list[tuple[dict[str, Any], dict[str, Any]]],
-    list[dict[str, Any]],
 ]:
     proxies = interactive_exclude_nodes(proxies)
     print("\n输出格式：")
@@ -827,10 +968,9 @@ def interactive_selection(
         print("输入无效，请选择 1、2 或 3。")
     output_format = {"1": "merge", "2": "template", "3": "plain"}[choice]
     if output_format == "plain":
-        return proxies, output_format, [], []
+        return proxies, output_format, []
 
-    special_nodes = interactive_special_role_nodes(proxies)
-    candidates = chain_candidates(proxies + special_nodes)
+    candidates = chain_candidates(proxies)
 
     print(f"\n可生成 {len(candidates)} 条代理链：")
     print("  1. 全部生成")
@@ -844,9 +984,9 @@ def interactive_selection(
         print("输入无效，请选择 1、2、3 或 4。")
 
     if choice == "1":
-        return proxies, output_format, candidates, special_nodes
+        return proxies, output_format, candidates
     if choice == "4":
-        return proxies, output_format, [], special_nodes
+        return proxies, output_format, []
     if choice == "2":
         routes: list[tuple[str, str]] = []
         counts: dict[tuple[str, str], int] = {}
@@ -864,7 +1004,6 @@ def interactive_selection(
             proxies,
             output_format,
             [candidate for candidate in candidates if route_key(candidate) in selected_routes],
-            special_nodes,
         )
 
     print("\n具体代理链：")
@@ -875,7 +1014,6 @@ def interactive_selection(
         proxies,
         output_format,
         [candidate for index, candidate in enumerate(candidates) if index in selected],
-        special_nodes,
     )
 
 
@@ -974,6 +1112,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/.config/clash/airport）",
     )
+    parser.add_argument(
+        "--ansible-host-vars-dir",
+        type=Path,
+        default=default_ansible_host_vars_dir(),
+        help=(
+            "Ansible host_vars 目录；其中 vps_clash_* 公共角色字段优先于 "
+            "host.env（默认 CLASH_ANSIBLE_HOST_VARS_DIR 或相邻 infra 仓库）"
+        ),
+    )
     parser.add_argument("--output", "-o", type=Path, default=OUT, help="输出文件")
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
     formats = parser.add_mutually_exclusive_group()
@@ -1014,8 +1161,12 @@ def main(argv: list[str] | None = None) -> int:
     apply_default_invocation(args, invoked_without_args)
     hosts_dir = args.hosts_dir.expanduser().resolve()
     airport_dir = (args.airport_dir or default_airport_dir(hosts_dir)).expanduser().resolve()
-    proxies = collect_proxies(hosts_dir)
-    raw_additional_nodes: list[dict[str, Any]] = []
+    ansible_host_vars_dir = (
+        args.ansible_host_vars_dir.expanduser().resolve()
+        if args.ansible_host_vars_dir
+        else None
+    )
+    proxies = collect_proxies(hosts_dir, ansible_host_vars_dir)
     if args.interactive:
         airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir)
         proxies.extend(airport_nodes)
@@ -1026,11 +1177,9 @@ def main(argv: list[str] | None = None) -> int:
 
     fallback_nodes: list[dict[str, Any]] = []
     if args.interactive:
-        proxies, output_format, chains, special_nodes = interactive_selection(proxies)
-        raw_additional_nodes = special_nodes
+        proxies, output_format, chains = interactive_selection(proxies)
         if output_format != "plain":
             fallback_nodes = interactive_fallback_nodes(proxies)
-            fallback_nodes.extend(special_nodes)
     else:
         before = len(proxies)
         proxies = exclude_by_patterns(proxies, args.exclude_node)
@@ -1053,9 +1202,8 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(chains)} chains, format={output_format})"
     )
     if args.raw_output:
-        raw_proxies = proxies + raw_additional_nodes
-        write_plain(raw_proxies, args.raw_output)
-        print(f"wrote {args.raw_output} ({len(raw_proxies)} nodes, raw=True)")
+        write_plain(proxies, args.raw_output)
+        print(f"wrote {args.raw_output} ({len(proxies)} nodes, raw=True)")
     return 0
 
 
