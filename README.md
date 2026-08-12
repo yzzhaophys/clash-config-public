@@ -41,6 +41,15 @@ You can also specify the private input directory explicitly:
 
 `CLASH_HOSTS_DIR`, `CLASH_AIRPORT_DIR`, and `CLASH_TRUSTED_NODES_FILE` provide equivalent persistent overrides. Command-line arguments take precedence. The legacy `hosts/airport` location remains a fallback when the standard airport directory does not exist.
 
+Only `vps-*` directories containing an active `host.env` are included. Retired
+directories that retain only `host.env.retired-*`, historical `host_vars`, or
+secrets remain available for recovery but are skipped by the node generator.
+
+Interactive selection displays the source `vps-*` directory after self-hosted
+node names (and shows source directories for proxy-chain exit/entry nodes) to
+make similar nodes easier to distinguish. These labels are display-only and
+are never written into generated node or proxy-chain names.
+
 The default interactive run creates:
 
 - `clash-vps.generated.yaml`: paste into the Clash Verge Rev YAML extension; it uses `proxies:` field override.

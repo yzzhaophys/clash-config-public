@@ -677,7 +677,14 @@ def collect_proxies(
 ) -> list[dict[str, Any]]:
     counters = counters if counters is not None else {}
     proxies: list[dict[str, Any]] = []
-    host_dirs = list(hosts_dir.glob("vps-*"))
+    # A retired controller source keeps its vps-* directory, secrets, and
+    # matching Ansible host_vars for recovery.  Only an active host.env makes
+    # that directory part of the client node inventory.
+    host_dirs = [
+        path
+        for path in hosts_dir.glob("vps-*")
+        if (path / "host.env").is_file()
+    ]
 
     def clash_env(host_dir: Path) -> dict[str, str]:
         env = load_env(host_dir / "host.env")
@@ -930,6 +937,34 @@ def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
     return name
 
 
+def proxy_source_directory(proxy: dict[str, Any]) -> str | None:
+    source = str(proxy.get("_physical-node-id", "")).strip()
+    return source if source.startswith("vps-") else None
+
+
+def interactive_proxy_label(proxy: dict[str, Any]) -> str:
+    name = str(proxy.get("name", "<unnamed>"))
+    source = proxy_source_directory(proxy)
+    if not source:
+        return name
+    return f"{name}（来源目录: {source}）"
+
+
+def interactive_chain_label(
+    candidate: tuple[dict[str, Any], dict[str, Any]],
+) -> str:
+    exit_proxy, dialer = candidate
+    name = chain_name(exit_proxy, dialer)
+    exit_source = proxy_source_directory(exit_proxy)
+    dialer_source = proxy_source_directory(dialer)
+    labels: list[str] = []
+    if exit_source:
+        labels.append(f"出口目录: {exit_source}")
+    if dialer_source:
+        labels.append(f"入口目录: {dialer_source}")
+    return f"{name}（{'；'.join(labels)}）" if labels else name
+
+
 def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
     candidates: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for exit_proxy in proxies:
@@ -1030,7 +1065,7 @@ def exclude_by_patterns(proxies: list[dict[str, Any]], patterns: list[str]) -> l
 def interactive_exclude_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, Any]]:
     print(f"\n发现 {len(proxies)} 个基础节点：")
     for index, proxy in enumerate(proxies, 1):
-        print(f"  {index:>2}. {proxy['name']}")
+        print(f"  {index:>2}. {interactive_proxy_label(proxy)}")
     while True:
         try:
             raw = input(
@@ -1071,7 +1106,7 @@ def prompt_source_node(proxies: list[dict[str, Any]], target_region: str | None 
     title = "备用来源节点"
     print(f"\n可选的{title}{suffix}：")
     for index, proxy in enumerate(proxies, 1):
-        print(f"  {index:>2}. {proxy['name']}")
+        print(f"  {index:>2}. {interactive_proxy_label(proxy)}")
     while True:
         raw = input(f"请选择{title}{suffix} [1-{len(proxies)}；0=跳过]：").strip()
         if raw in {"", "0", "none", "n"}:
@@ -1187,7 +1222,7 @@ def interactive_selection(
 
     print("\n具体代理链：")
     for index, candidate in enumerate(candidates, 1):
-        print(f"  {index:>2}. {chain_name(*candidate)}")
+        print(f"  {index:>2}. {interactive_chain_label(candidate)}")
     selected = prompt_number_selection(len(candidates))
     return (
         proxies,
