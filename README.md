@@ -1,35 +1,28 @@
 # Clash Verge Rev home configuration
 
-This repository contains a reusable Mihomo/Clash Verge Rev configuration template and a local node generator.
+可复用的 Mihomo/Clash Verge Rev 配置模板，以及用于生成自建节点和代理链的脚本。
 
-## Files
+## 文件
 
-- `home.yaml`: main configuration template. Its `proxies` list is intentionally empty.
-- `generate_raw_nodes.py`: reads private `vps-*` directories and generates a Clash Verge Rev YAML extension.
+- `home.yaml`：主配置模板。它负责策略组和分流规则，`proxies` 列表保持为空。
+- `generate_raw_nodes.py`：读取私有节点配置，生成基础节点和可选的代理链。
 
-For NAT or otherwise non-standard hosts, an optional
-`vps-*/secrets/client/clash-nodes.yaml` can provide the public client address and
-ports. Declare that host's Clash role in Ansible `host_vars`; legacy
-`VPS_CLASH_*` values in `host.env` are compatibility fallbacks only. This client
-inventory is authoritative for the host's public endpoints, and its nodes
-remain eligible for proxy chains.
-Set the optional integer `VPS_CLASH_ORDER` when a new host must sort after
-existing hosts so their generated node names and indexes remain stable.
+生成器负责生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
 
-## Requirements
+## 要求
 
 - Python 3.10+
-- PyYAML (`python3 -m pip install PyYAML`)
+- PyYAML：`python3 -m pip install PyYAML`
 
-## Usage
+## 快速使用
 
-With the recommended directory layout, the generator automatically reads VPS inputs from `~/.config/infra/hosts` and optional airport/trusted-node inputs from `~/.config/clash/airport`:
+默认运行会进入交互模式：
 
 ```bash
 ./generate_raw_nodes.py
 ```
 
-You can also specify the private input directory explicitly:
+也可以显式指定私有输入：
 
 ```bash
 ./generate_raw_nodes.py \
@@ -39,50 +32,103 @@ You can also specify the private input directory explicitly:
   --interactive
 ```
 
-`CLASH_HOSTS_DIR`, `CLASH_AIRPORT_DIR`, and `CLASH_TRUSTED_NODES_FILE` provide equivalent persistent overrides. Command-line arguments take precedence. The legacy `hosts/airport` location remains a fallback when the standard airport directory does not exist.
+常用选项：
 
-Only `vps-*` directories containing an active `host.env` are included. Retired
-directories that retain only `host.env.retired-*`, historical `host_vars`, or
-secrets remain available for recovery but are skipped by the node generator.
+- `--plain`：只输出基础节点，不生成代理链。
+- `--template` / `--merge`：输出 `proxies` 模板和代理链；两个选项当前同义，保留两个名称兼容既有调用。
+- `--chains all|none`：非交互模式下生成或跳过代理链；指定该选项时默认使用模板格式。
+- `--routes 'HK<-JP,US<-HK'`：只生成指定的“最终出口 <- 中转入口”方向，并默认使用模板格式；HomeIP 可写成 `US.HomeIP<-JP`，大小写不敏感。
+- `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
+- `--raw-output PATH`：额外输出仅含基础节点的 YAML。
+- `--loon-output PATH` / `--no-loon`：指定 Loon 输出文件，或关闭 Loon 输出。
 
-Interactive selection displays the source `vps-*` directory after self-hosted
-node names (and shows source directories for proxy-chain exit/entry nodes) to
-make similar nodes easier to distinguish. These labels are display-only and
-are never written into generated node or proxy-chain names.
+默认目录和环境变量：
 
-The default interactive run creates:
+- 自建节点：`~/.config/infra/hosts`，可用 `CLASH_HOSTS_DIR` 覆盖。
+- 机场/可信节点：`~/.config/clash/airport`，可用 `CLASH_AIRPORT_DIR` 覆盖。
+- 可信节点文件：`trusted-nodes.yaml`，可用 `CLASH_TRUSTED_NODES_FILE` 覆盖。
+- Ansible 角色配置：相邻 `infra/ansible/host_vars`，可用
+  `CLASH_ANSIBLE_HOST_VARS_DIR` 或 `--ansible-host-vars-dir` 覆盖。
 
-- `clash-vps.generated.yaml`: paste into the Clash Verge Rev YAML extension; it uses `proxies:` field override.
-- `nodes.yaml`: selected base nodes, without generated proxy chains or regional placeholders.
+只有包含有效 `host.env` 的 `vps-*` 目录会被读取。Ansible `host_vars` 中的
+`vps_clash_*` 值优先于 `host.env`；后者只是兼容旧配置。NAT 或非标准主机可用
+`vps-*/secrets/client/clash-nodes.yaml` 声明面向客户端的地址和端口，该文件存在时
+作为该主机唯一来源（即使其中 `proxies: []` 也不会回退到服务端配置）。
+`VPS_CLASH_ORDER` 可用于稳定多个主机的排序和节点编号，必须是整数。
 
-Both generated files contain live credentials and are excluded by `.gitignore`.
+## 节点与代理链规则
 
-## Optional private airport subscription
+### 能力开关
 
-Place a complete private subscription outside this repository and outside the host inventory:
+自建节点在 Ansible `host_vars/<hostname>.yml` 中配置；`vps_clash_region` 使用实际两位
+地区代码，不要填写 `EUR` 等虚拟分组：
 
-```text
-~/.config/
-├── infra/
-│   └── hosts/
-│       └── vps-*/
-└── clash/
-    └── airport/
-        ├── subscription.yaml
-        ├── selected-nodes.yaml
-        └── trusted-nodes.yaml
-projects/
-└── clash-config-public/
+```yaml
+vps_clash_region: jp
+vps_clash_exit_type: general       # general 或 homeip
+vps_clash_allow_relay: true        # 能否作为代理链第一跳/中转
+vps_clash_allow_direct_exit: true  # 能否作为单节点最终出口
+vps_clash_allow_chain_exit: true   # 能否作为代理链最终落地节点
+vps_clash_allow_showip: false
+vps_clash_allow_download: false
+vps_clash_relay_protocol: vless
+vps_clash_chain_exit_protocol: vless
 ```
 
-On an interactive run, the first prompt asks whether to import it. The generator can filter by region, select individual nodes, and save only selected node names in the configured airport directory's `selected-nodes.yaml`. Imported airport nodes remain ordinary direct-only exits: they never relay, never act as chain landings, and cannot be converted to HomeIP/ShowIP. Matching airport DNS policies are reported but are not written into the Merge output; add them manually to the existing `dns` section in `home.yaml` to avoid replacing that configuration.
+这些能力相互独立：
 
-## Optional private trusted relay nodes
+- `allow_direct_exit: false`：节点名增加 `[Direct=false]`，不会进入 `DirectExit` 组，
+  但不影响它参与代理链。
+- `allow_relay: true`：节点可以作为第一跳/中转节点。
+- `allow_chain_exit: true`：节点可以作为第二跳/最终出口。
+- `allow_showip: true`：节点名增加 `[ShowIP=true]`，进入对应的 ShowIP 节点组和代理链。
+- `allow_download: true`：节点名增加 `[Download=true]`，可进入下载专用节点组。
 
-If you have node information but do not manage the corresponding machines,
-put explicitly trusted client-side nodes in
-`~/.config/clash/airport/trusted-nodes.yaml` (or use
-`--trusted-nodes-file`/`CLASH_TRUSTED_NODES_FILE`):
+默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`，
+`allow_showip` 和 `allow_download` 为 `false`。普通 `general` 节点只有 HK、JP、SG
+默认开启 `allow_relay`；其他地区默认关闭。
+
+`exit_type` 决定节点角色：
+
+- `homeip` → `HomeIP`，不能开启 `allow_relay`；
+- `general` 且 `allow_relay: true` → `Core`；
+- `general` 且 `allow_relay: false` → `Exit`。
+
+因此，`Core` 不等于只能中转；只要 `allow_direct_exit: true`，它也可以单节点直出。
+
+这里的“直出/直连”是指“客户端只经过一个代理节点并由它作为最终出口”，不是
+Clash 的 `DIRECT`（完全不经过代理）。
+
+### 代理链生成
+
+代理链的路径是：
+
+```text
+客户端 → Relay/中转节点 → Chain Exit/最终落地节点
+```
+
+只有同时满足以下条件才会生成：
+
+- 最终落地节点允许 `allow_chain_exit`；
+- 中转节点允许 `allow_relay`；
+- 节点实际协议与相应的 relay/chain-exit 协议一致；自建节点的链路协议默认是 VLESS，
+  可信节点未显式配置时默认使用其 `proxy.type`；
+- 两个节点不能来自同一个物理节点；
+- 普通出口不生成同地区代理链；HomeIP 允许不同物理节点的同地区落地例外；
+- 地区补位节点不参与代理链。
+
+`allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
+代理链的中转节点或最终落地节点。
+
+### 机场和可信节点
+
+机场订阅目录中的 `subscription.yaml` 需要在交互运行时选择节点，选择结果可保存到
+`selected-nodes.yaml`。节点名称末尾需要有两位地区代码（例如 `... US`）；导入后的
+机场节点固定为：允许单节点直出、不允许中转、不允许作为代理链落地，也不会被标记为
+`HomeIP` 或 `ShowIP`。订阅中匹配到的 `dns.nameserver-policy` 只会报告，不会自动改写
+`home.yaml`，避免生成器覆盖主配置的 DNS 策略。
+
+可信节点放在私有 `trusted-nodes.yaml` 中：
 
 ```yaml
 nodes:
@@ -104,141 +150,55 @@ nodes:
       servername: example.com
 ```
 
-Each entry requires a stable `id`, an actual two-letter country code such as
-`DE` or `NL` (use the actual node country, not the virtual `EUR` group), and a
-basic VLESS or Hysteria2 `proxy`. `allow-relay` means the node may be the first
-hop; `allow-chain-exit` means it may be the chain's landing node. Both are
-`false` by default, so adding a node never silently expands the proxy-chain
-set. `allow-direct-exit` defaults to `true`, while `allow-download` defaults
-to `false`.
+可信节点的 `allow-relay` 和 `allow-chain-exit` 默认是 `false`，`allow-direct-exit`
+默认是 `true`。必须填写稳定的 `id` 和实际两位国家代码；可信节点不能声明
+`HomeIP`、`ShowIP` 或已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一物理节点自连。
 
-The generator marks these entries with `[Trusted=...]` and uses `id` as their
-physical-node identity, preventing any entry from chaining to another entry
-with the same `id`. Trusted entries are always ordinary general exits:
-`HomeIP`, `ShowIP`, and pre-existing `dialer-proxy` chains are rejected. The
-file contains credentials and is ignored by Git; keep it outside this
-repository and only mark nodes as trusted when the provider permits this use.
+### 策略组筛选
 
-Self-hosted node capabilities are public infrastructure metadata and should be
-declared in the matching Ansible `host_vars/<hostname>.yml`:
+`home.yaml` 中的规则与节点名称标记对应：
 
-```yaml
-vps_clash_region: jp
-vps_clash_allow_relay: true
-vps_clash_allow_direct_exit: true
-vps_clash_allow_chain_exit: true
-vps_clash_exit_type: general
-vps_clash_allow_showip: false
-vps_clash_allow_download: false
-vps_clash_relay_protocol: vless
-vps_clash_chain_exit_protocol: vless
+- `DirectExit` 组筛选基础节点，并排除 `PrxChain` 和 `[Direct=false]`；
+- `Chain` 组只筛选 `PrxChain-*`；
+- `ShowIP` 组筛选 `[ShowIP=true]`；
+- 下载组筛选 `[Download=true]`，并排除 HomeIP、ShowIP、代理链和 `[Direct=false]`。
+
+地区 `Line` 组再根据 `home.yaml` 的定义组合 `DirectExit` 和 `Chain`。因此修改
+节点能力后，需要重新运行生成器并重新加载生成的配置。
+
+## 输出文件
+
+默认交互运行会生成：
+
+- `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
+- `nodes.yaml`：选中的基础节点，不含代理链和地区补位节点；
+- `loon-nodes.conf`：选中的基础节点的 Loon 格式，不含 Clash 专用代理链和地区补位节点。
+
+显式 `--plain` 时主输出默认为 `nodes.yaml`；`--template`、`--merge`、`--chains` 或
+`--routes` 时主输出默认为 `clash-vps.generated.yaml`。显式指定的输出路径不能相同。
+除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前仅转换 VLESS、Hysteria2
+和 Shadowsocks，其他协议会跳过并在终端列出。交互模式还可以排除基础节点、选择代理链
+方向或逐条选择代理链；被排除节点的相关代理链不会生成。
+
+这些文件包含真实凭据，已加入 `.gitignore`。
+
+## 编辑和安全
+
+`[Direct=false]`、`[ShowIP=true]` 等标记是生成器根据源配置自动写入的，不是 Clash
+节点编辑界面的标准字段。应修改 `host_vars` 或 `trusted-nodes.yaml` 后重新生成，
+不要只在客户端手动改节点名称。
+
+不要提交 `vps-*`、`host.env`、私钥、Xray/Hysteria 配置、`nodes.yaml`、
+`loon-nodes.conf` 或 `clash-vps.generated.yaml`。凭据一旦泄露，应立即轮换。
+
+`home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
+`rules` 或 `rule-providers`。
+
+## 维护与验证
+
+生成器的规则以本 README 和测试为准。修改命名、能力开关、代理链或输出格式后运行：
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 -m py_compile generate_raw_nodes.py
 ```
-
-`vps_clash_exit_type` accepts `general` or `homeip`. ShowIP is an independent
-capability controlled by `vps_clash_allow_showip`, so one HomeIP node may also
-serve ShowIP traffic without creating a duplicate proxy. General HK,
-JP, and SG nodes default to `Core`; other general self-hosted nodes default to
-`Exit`. Self-hosted nodes default to direct and chain landing capability.
-Airport nodes are always direct-only. A generated node carrying
-`[Direct=false]` is excluded from direct-exit pools, while `[Download=true]`
-can be selected by the dedicated download group. Proxy chains reject only the
-same physical source, so a JP Core may relay to a different JP HomeIP host.
-Ordinary same-region chains are not generated. Both relay and chain-landing
-protocols default to VLESS, while every available protocol remains in direct
-exit pools.
-
-The generator automatically reads the sibling
-`infra/ansible/host_vars` directory. Override it with
-`CLASH_ANSIBLE_HOST_VARS_DIR` or `--ansible-host-vars-dir`. Ansible values are
-authoritative; legacy `VPS_CLASH_*` values in private `host.env` files are only
-a compatibility fallback.
-
-HomeIP and ShowIP are never assigned interactively. A self-hosted node enters
-its country HomeIP pool when `vps_clash_exit_type: homeip`; it additionally
-enters the country ShowIP pool when `vps_clash_allow_showip: true`. The same
-physical node and proxy chain can therefore belong to both pools.
-
-The capabilities are independent. `vps_clash_allow_direct_exit` controls
-whether the physical node appears in direct pools,
-`vps_clash_allow_chain_exit` controls whether it may be a chain landing, and
-`vps_clash_allow_relay` controls whether it may dial another landing. Enabling
-direct exit on a HomeIP node that also has ShowIP enabled makes that same node
-available in both HomeIP and ShowIP direct pools. It does not create a second
-proxy.
-
-## Proxy-group routing model
-
-`home.yaml` currently uses the following layers:
-
-```text
-business policy (select)
-  -> selected country/region Line
-    -> DirectExit or Chain pool
-```
-
-A `select` group is manual. `store-selected: true` preserves the last choice
-between restarts, so a previously selected country or `DIRECT` can remain
-selected until changed in Clash Verge Rev. There is currently no active
-cross-country `Global` or `Manual` failover group: selecting `US.Line` stays in
-the US line, and does not automatically jump to JP, SG, AU, or EUR.
-
-Ordinary country Lines use `fallback` between their DirectExit and Chain
-pools. The US/JP/SG HomeIP Lines use `select` so the direct or chain HomeIP
-path can be chosen explicitly. ShowIP is only a capability tag: a tagged
-HomeIP node and each of its generated chains can match both country-specific
-HomeIP and ShowIP pools without duplication.
-
-The active regional set is US, JP, SG, HK, AU, and EUR. EUR is the single
-European exit and currently matches DE/NL nodes; the old TW, UK, DE, NL, and FR
-Line definitions remain commented until those regions are needed. Generic
-business groups may expose several regions, while capability- or
-region-sensitive groups should only expose the regions that are valid for that
-business.
-
-Same-region chains are omitted for ordinary exits. The only same-region
-exception is a different physical Core landing on HomeIP. Chain relay and
-landing protocols are currently restricted to VLESS; Hysteria2 remains
-available for direct exit.
-
-## Current special-group defaults
-
-- `GlobalDNS`: `select`, default `Low.Latency`; `DIRECT` remains a manual
-  fallback for diagnosis. This group routes DNS queries, not ordinary traffic.
-- `ChinaDNS`: `select`, default `REJECT` to keep the current DNS protection
-  behavior; `DIRECT` is available only as a manual override.
-- `GlobalNTP` and `ChinaNTP`: default `DIRECT`. NTP uses UDP/123 and should not
-  be treated as a proxy bandwidth test.
-- `HttpDNS` and `Hijacking`: default `REJECT-DROP`; use `DIRECT` only when
-  diagnosing a compatibility problem.
-- `CDN`: default `DIRECT`; `Low.Latency` is a manual alternative when a CDN
-  route needs to leave through a proxy. The group does not automatically find
-  the fastest CDN node.
-- `Final`: default `Low.Latency`.
-- `Speedtest`: manual `select`, default `DIRECT`, with country, HomeIP, ShowIP,
-  AU, EUR, and helper lines available for comparison. The Apple success URL
-  checks reachability and rough latency only; it does not measure download
-  bandwidth or prove the residential identity of an exit.
-- `Max.Traffic` is a dedicated download-capable pool selected by download and
-  storage-related business groups. Its Apple health check is not a true
-  maximum-bandwidth measurement.
-
-## `home.yaml` formatting
-
-Only `proxy-groups` is maintained as aligned one-line flow YAML. Fields and
-entries inside `proxies: [ ... ]` are padded to aligned comma columns within
-their structural section. Active groups and single-`#` commented groups follow
-the same format; headings beginning with `##` or more are left as prose.
-Proxy-group `icon` fields are intentionally omitted. Formatting this section
-must not rewrite `dns`, `rules`, or `rule-providers`.
-
-With the current self-hosted inventory, selecting every base node and every
-route produces 16 self-hosted base nodes and 28 VLESS chains. Airport imports
-increase the base-node count, and selecting only some route directions in the
-interactive prompt intentionally produces fewer than 28 chains. Always check
-the final `wrote ...` summary before loading the generated extension.
-
-The subscription and saved selection remain outside this Git repository. `CLASH_HOSTS_DIR` and `CLASH_AIRPORT_DIR` can override both private input roots when relocating them.
-
-## Security
-
-Never commit `vps-*`, `host.env`, private keys, Xray/Hysteria service configuration, `nodes.yaml`, or `clash-vps.generated.yaml`. If credentials are pushed accidentally, remove them from Git history and rotate them immediately.

@@ -1,5 +1,6 @@
 nodes.yaml
 clash-vps.generated.yaml
+loon-nodes.conf
 trusted-nodes.yaml
 
 __pycache__/

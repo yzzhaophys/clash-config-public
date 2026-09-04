@@ -15,6 +15,7 @@ import yaml
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
+LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
 FALLBACK_REGIONS = ("UK", "AU", "TW", "SG", "NL", "DE")
 AIRPORT_REGION_ALIASES = {"GB": "UK"}
 
@@ -38,6 +39,19 @@ REGION_ALIASES = {
     "united states": "us",
     "united states of america": "us",
     "usa": "us",
+    "united kingdom": "uk",
+    "great britain": "uk",
+    "england": "uk",
+    "gb": "uk",
+    "australia": "au",
+    "taiwan": "tw",
+    "singapore": "sg",
+    "malaysia": "my",
+    "netherlands": "nl",
+    "the netherlands": "nl",
+    "germany": "de",
+    "france": "fr",
+    "canada": "ca",
 }
 AIRPORT_REGION_PRIORITY = ("HK", "TW", "SG", "JP", "US", "UK", "AU", "DE", "NL")
 DEFAULT_CORE_REGIONS = {"hk", "jp", "sg"}
@@ -73,7 +87,10 @@ CLASH_HOST_VAR_MAP = {
 def load_ansible_clash_vars(path: Path) -> dict[str, str]:
     if not path.is_file():
         return {}
-    data = yaml.safe_load(path.read_text()) or {}
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ValueError(f"{path}: Ansible host_vars 不是有效 YAML：{exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"{path}: Ansible host_vars 必须是映射")
     result: dict[str, str] = {}
@@ -93,14 +110,34 @@ def cert_domain(path: str) -> str | None:
     return match.group(1) if match else None
 
 
+def parse_port(value: Any, field: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field} 必须是 1-65535 的整数")
+    if isinstance(value, float) and not value.is_integer():
+        raise ValueError(f"{field} 必须是 1-65535 的整数")
+    if isinstance(value, str) and not value.strip().isdigit():
+        raise ValueError(f"{field} 必须是 1-65535 的整数")
+    try:
+        port = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} 必须是 1-65535 的整数") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError(f"{field} 必须是 1-65535 的整数")
+    return port
+
+
 def port_from_listen(value: Any, default: int) -> int:
-    text = str(value or "")
-    match = re.search(r":(\d+)$", text)
-    return int(match.group(1)) if match else default
+    if value is None or value == "":
+        return default
+    if isinstance(value, (int, str)) and str(value).strip().isdigit():
+        return parse_port(value, "listen")
+    text = str(value).strip()
+    match = re.search(r":(\d+)(?:-\d+)?$", text)
+    return parse_port(match.group(1), "listen") if match else default
 
 
 def normalize_region(region: str) -> str:
-    normalized = re.sub(r"[_-]+", " ", region.strip().lower())
+    normalized = re.sub(r"[_-]+", " ", str(region or "").strip().lower())
     normalized = re.sub(r"\s+", " ", normalized)
     return REGION_ALIASES.get(normalized, normalized)
 
@@ -134,7 +171,13 @@ def yaml_bool(value: Any, field: str, default: bool) -> bool:
 
 
 def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
-    region = normalize_region(env.get("VPS_CLASH_REGION", env.get("VPS_REGION", "xx")))
+    raw_region = env.get("VPS_CLASH_REGION", env.get("VPS_REGION", ""))
+    region = normalize_region(raw_region)
+    if region == "xx" or not re.fullmatch(r"[a-z]{2}", region):
+        raise ValueError(
+            "VPS_CLASH_REGION 必须是两位地区代码或已知地区名称，"
+            f"当前值为 {raw_region!r}"
+        )
     exit_type = env.get("VPS_CLASH_EXIT_TYPE", "general").strip().lower() or "general"
     if exit_type not in {"general", "homeip"}:
         raise ValueError(
@@ -242,7 +285,32 @@ def anchor_name(name: str) -> str:
     meta = node_meta(name)
     if not meta:
         return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
-    return f"VPS_{meta['region']}_{meta['role']}_{meta['proto']}_{meta['idx']}"
+    base = f"VPS_{meta['region']}_{meta['role']}_{meta['proto']}_{meta['idx']}"
+    # Fallback, airport, and trusted nodes can intentionally reuse a base
+    # region/protocol/index. Include their source marker so YAML anchors stay
+    # unique even when a future caller does not share counters.
+    markers: list[str] = []
+    for field in ("fallback", "source", "airport", "special", "trusted"):
+        value = meta.get(field)
+        if not value:
+            continue
+        token = re.sub(r"[^A-Za-z0-9]+", "_", value).strip("_") or "value"
+        markers.append(f"{field.title()}_{token}")
+    return base + ("_" + "_".join(markers) if markers else "")
+
+
+def ensure_unique_anchors(proxies: list[dict[str, Any]]) -> None:
+    seen: dict[str, str] = {}
+    for proxy in proxies:
+        name = str(proxy.get("name", "<unnamed>"))
+        anchor = anchor_name(name)
+        previous = seen.get(anchor)
+        if previous is not None:
+            raise ValueError(
+                f"节点 YAML anchor 重复：{anchor}（{previous!r} 与 {name!r}）；"
+                "请检查节点来源和编号"
+            )
+        seen[anchor] = name
 
 
 def yaml_scalar(value: Any) -> str:
@@ -273,6 +341,7 @@ def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
         "port",
         "type",
         "uuid",
+        "flow",
         "password",
         "encryption",
         "tls",
@@ -304,34 +373,65 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
     for file in xray_files:
         try:
             data = json.loads(file.read_text())
-        except Exception:
-            continue
-        for inbound in data.get("inbounds", []) or []:
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"{file}: 无法读取有效的 Xray JSON：{exc}") from exc
+        if not isinstance(data, dict):
+            raise ValueError(f"{file}: Xray 配置顶层必须是映射")
+        inbounds = data.get("inbounds", []) or []
+        if not isinstance(inbounds, list):
+            raise ValueError(f"{file}: inbounds 必须是列表")
+        for inbound_index, inbound in enumerate(inbounds):
+            if not isinstance(inbound, dict):
+                raise ValueError(f"{file}: inbounds[{inbound_index}] 必须是映射")
             if inbound.get("protocol") != "vless":
                 continue
-            clients = inbound.get("settings", {}).get("clients", []) or []
+            settings = inbound.get("settings", {}) or {}
+            if not isinstance(settings, dict):
+                raise ValueError(f"{file}: inbounds[{inbound_index}].settings 必须是映射")
+            clients = settings.get("clients", []) or []
+            if not isinstance(clients, list):
+                raise ValueError(
+                    f"{file}: inbounds[{inbound_index}].settings.clients 必须是列表"
+                )
             if not clients:
                 continue
             client = clients[0]
+            if not isinstance(client, dict):
+                raise ValueError(
+                    f"{file}: inbounds[{inbound_index}].settings.clients[0] 必须是映射"
+                )
             uuid = client.get("id")
             if not uuid:
                 continue
 
             stream = inbound.get("streamSettings", {}) or {}
+            if not isinstance(stream, dict):
+                raise ValueError(
+                    f"{file}: inbounds[{inbound_index}].streamSettings 必须是映射"
+                )
             security = stream.get("security")
             config: dict[str, Any] = {
                 "type": "vless",
-                "server": env.get("VPS_HOST", "0.0.0.0"),
-                "port": int(inbound.get("port", 10000)),
+                "server": env.get("VPS_HOST", "0.0.0.0").strip() or "0.0.0.0",
+                "port": parse_port(
+                    inbound.get("port", 10000),
+                    f"{file}: inbounds[{inbound_index}].port",
+                ),
                 "uuid": uuid,
-                "encryption": client.get("encryption", "none"),
-                "network": stream.get("network", "tcp"),
+                "encryption": client.get("encryption") or "none",
+                "network": str(stream.get("network") or "tcp").strip().lower(),
                 "tls": security in {"tls", "reality"},
                 "udp": True,
             }
+            if client.get("flow"):
+                config["flow"] = client["flow"]
 
             if security == "tls":
                 tls = stream.get("tlsSettings", {}) or {}
+                if not isinstance(tls, dict):
+                    raise ValueError(
+                        f"{file}: inbounds[{inbound_index}].tlsSettings 必须是映射"
+                    )
                 servername = tls.get("serverName") or env.get("VPS_HOST", "")
                 config["server"] = servername
                 config["servername"] = servername
@@ -340,6 +440,10 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                     config["alpn"] = tls["alpn"]
             elif security == "reality":
                 reality = stream.get("realitySettings", {}) or {}
+                if not isinstance(reality, dict):
+                    raise ValueError(
+                        f"{file}: inbounds[{inbound_index}].realitySettings 必须是映射"
+                    )
                 names = reality.get("serverNames") or []
                 servername = names[0] if isinstance(names, list) and names else env.get("VPS_HOST", "")
                 config["servername"] = servername
@@ -383,13 +487,26 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
     )
     if not path.exists():
         return None
-    data = yaml.safe_load(path.read_text()) or {}
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ValueError(f"{path}: Hysteria 配置不是有效 YAML：{exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: Hysteria 配置顶层必须是映射")
     auth = data.get("auth", {}) or {}
+    if not isinstance(auth, dict):
+        raise ValueError(f"{path}: auth 必须是映射")
     password = auth.get("password")
     if not password:
         return None
     tls = data.get("tls", {}) or {}
-    server = cert_domain(str(tls.get("cert", ""))) or env.get("VPS_HOST", "0.0.0.0")
+    if not isinstance(tls, dict):
+        raise ValueError(f"{path}: tls 必须是映射")
+    server = (
+        cert_domain(str(tls.get("cert", "")))
+        or env.get("VPS_HOST", "0.0.0.0").strip()
+        or "0.0.0.0"
+    )
     capabilities = host_capabilities(host_dir, env)
     region = capabilities["region"]
     role = capability_role(capabilities)
@@ -419,7 +536,7 @@ def client_inventory_nodes(
     host_dir: Path,
     env: dict[str, str],
     counters: dict[tuple[str, str], int],
-) -> list[dict[str, Any]]:
+) -> list[dict[str, Any]] | None:
     """Read an optional client-facing inventory for non-standard/NAT hosts.
 
     The inventory is authoritative for that host. It describes public client
@@ -434,8 +551,13 @@ def client_inventory_nodes(
         else host_dir / "client" / "clash-nodes.yaml"
     )
     if not path.exists():
-        return []
-    data = yaml.safe_load(path.read_text()) or {}
+        return None
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ValueError(f"{path}: 客户端节点 inventory 不是有效 YAML：{exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: 顶层必须是映射，并包含 proxies 列表")
     source_nodes = data.get("proxies", []) or []
     if not isinstance(source_nodes, list):
         raise ValueError(f"{path}: proxies 必须是列表")
@@ -450,13 +572,17 @@ def client_inventory_nodes(
         protocol = str(source.get("type", "")).lower()
         if protocol not in {"vless", "hysteria2"}:
             raise ValueError(f"{path}: 不支持的自建节点协议 {protocol or '<empty>'}")
-        if not source.get("server") or not source.get("port"):
+        server = str(source.get("server", "")).strip()
+        if not server:
             raise ValueError(f"{path}: {protocol} 缺少 server 或 port")
+        port = parse_port(source.get("port"), f"{path}: {protocol}.port")
 
         key = (region, protocol)
         idx = counters.get(key, 0)
         counters[key] = idx + 1
         proxy = copy.deepcopy(source)
+        proxy["server"] = server
+        proxy["port"] = port
         proxy["name"] = node_name(
             region,
             protocol,
@@ -522,16 +648,13 @@ def normalize_trusted_nodes(
             raise ValueError(
                 f"{field}.proxy.type 只支持 vless 或 hysteria2，当前值为 {protocol or '<empty>'}"
             )
-        if not proxy.get("server") or not proxy.get("port"):
+        server = str(proxy.get("server", "")).strip()
+        if not server:
             raise ValueError(f"{field}.proxy 缺少 server 或 port")
+        proxy["server"] = server
         if "dialer-proxy" in proxy or "<<" in proxy:
             raise ValueError(f"{field}.proxy 只能是基础节点，不能包含 dialer-proxy 或 <<")
-        try:
-            port = int(proxy["port"])
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"{field}.proxy.port 必须是 1-65535 的整数") from exc
-        if isinstance(proxy["port"], bool) or not 1 <= port <= 65535:
-            raise ValueError(f"{field}.proxy.port 必须是 1-65535 的整数")
+        port = parse_port(proxy.get("port"), f"{field}.proxy.port")
         proxy["type"] = protocol
         proxy["port"] = port
 
@@ -613,7 +736,7 @@ def load_trusted_nodes(
         return []
     try:
         data = yaml.safe_load(path.read_text()) or {}
-    except yaml.YAMLError as exc:
+    except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: trusted-nodes.yaml 不是有效 YAML：{exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"{path}: 顶层必须是映射，并包含 nodes 列表")
@@ -696,9 +819,19 @@ def collect_proxies(
             )
         return env
 
+    def host_order(host_dir: Path) -> int:
+        env = clash_env(host_dir)
+        raw_order = env.get("VPS_CLASH_ORDER", "0").strip() or "0"
+        try:
+            return int(raw_order)
+        except ValueError as exc:
+            raise ValueError(
+                f"{host_dir}: VPS_CLASH_ORDER 必须是整数，当前值为 {raw_order!r}"
+            ) from exc
+
     host_dirs.sort(
         key=lambda path: (
-            int(clash_env(path).get("VPS_CLASH_ORDER", "0")),
+            host_order(path),
             path.name,
         )
     )
@@ -709,7 +842,7 @@ def collect_proxies(
         if not env:
             continue
         inventory = client_inventory_nodes(host_dir, env, counters)
-        if inventory:
+        if inventory is not None:
             proxies.extend(inventory)
             continue
         proxies.extend(xray_nodes(host_dir, env, counters))
@@ -720,10 +853,10 @@ def collect_proxies(
 
 
 def airport_region(name: str) -> str | None:
-    match = re.search(r"\b([A-Z]{2})\s*$", name)
+    match = re.search(r"\b([A-Za-z]{2})\s*$", name)
     if not match:
         return None
-    code = match.group(1)
+    code = match.group(1).upper()
     return AIRPORT_REGION_ALIASES.get(code, code)
 
 
@@ -739,7 +872,12 @@ def airport_policy_matches(policy_key: str, hostname: str) -> bool:
 def matching_airport_dns_policy(
     subscription: dict[str, Any], selected: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    source_policy = ((subscription.get("dns") or {}).get("nameserver-policy") or {})
+    dns = subscription.get("dns") or {}
+    if not isinstance(dns, dict):
+        raise ValueError("机场订阅的 dns 必须是映射")
+    source_policy = dns.get("nameserver-policy") or {}
+    if not isinstance(source_policy, dict):
+        raise ValueError("机场订阅的 dns.nameserver-policy 必须是映射")
     hostnames = {
         str(proxy.get("server", "")).strip()
         for proxy in selected
@@ -752,22 +890,37 @@ def matching_airport_dns_policy(
     }
 
 
-def normalize_airport_nodes(selected: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    counters: dict[tuple[str, str], int] = {}
+def normalize_airport_nodes(
+    selected: list[dict[str, Any]],
+    counters: dict[tuple[str, str], int] | None = None,
+) -> list[dict[str, Any]]:
+    counters = counters if counters is not None else {}
     normalized: list[dict[str, Any]] = []
     for source in selected:
         original_name = str(source.get("name", "")).strip()
         region = airport_region(original_name)
-        protocol = str(source.get("type", "")).upper()
+        protocol_raw = str(source.get("type", "")).strip().lower()
+        protocol = protocol_raw.upper()
         if not region or not protocol:
             print(f"已跳过无法识别的机场节点：{original_name or '<unnamed>'}")
             continue
-        key = (region, protocol)
+        server = str(source.get("server", "")).strip()
+        if not server:
+            print(f"已跳过缺少 server 的机场节点：{original_name or '<unnamed>'}")
+            continue
+        try:
+            port = parse_port(source.get("port"), f"机场节点 {original_name or '<unnamed>'}.port")
+        except ValueError as exc:
+            print(f"已跳过无效机场节点：{exc}")
+            continue
+        key = (region.lower(), protocol_raw)
         index = counters.get(key, 0)
         counters[key] = index + 1
         description = f"{REGION_CN.get(region.lower(), region)}机场出口"
         source_label = original_name.replace("]", "）")
         proxy = copy.deepcopy(source)
+        proxy["server"] = server
+        proxy["port"] = port
         proxy["name"] = (
             f"VPS-[{region}.Exit]-{protocol}-{index:02d}-({description})"
             f"-[Airport={source_label}]"
@@ -786,6 +939,7 @@ def normalize_airport_nodes(selected: list[dict[str, Any]]) -> list[dict[str, An
 
 def interactive_airport_import(
     airport_dir: Path,
+    counters: dict[tuple[str, str], int] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     subscription_path = airport_dir / "subscription.yaml"
     if not subscription_path.exists():
@@ -799,12 +953,19 @@ def interactive_airport_import(
 
     try:
         subscription = yaml.safe_load(subscription_path.read_text()) or {}
-    except Exception as exc:
+    except (OSError, yaml.YAMLError) as exc:
         print(f"无法读取机场订阅：{exc}")
+        return [], {}
+    if not isinstance(subscription, dict):
+        print("机场订阅顶层必须是映射。")
+        return [], {}
+    source_list = subscription.get("proxies", []) or []
+    if not isinstance(source_list, list):
+        print("机场订阅中的 proxies 必须是列表。")
         return [], {}
     source_nodes = [
         proxy
-        for proxy in (subscription.get("proxies") or [])
+        for proxy in source_list
         if isinstance(proxy, dict) and proxy.get("name") and proxy.get("server")
     ]
     if not source_nodes:
@@ -817,9 +978,20 @@ def interactive_airport_import(
     if selection_path.exists():
         try:
             saved = yaml.safe_load(selection_path.read_text()) or {}
-            saved_names = [str(name) for name in saved.get("selected-names", [])]
-        except Exception:
+        except (OSError, yaml.YAMLError) as exc:
+            print(f"警告：无法读取已保存的机场选择：{exc}")
             saved_names = []
+        else:
+            if not isinstance(saved, dict):
+                print("警告：已保存的机场选择顶层必须是映射。")
+                saved_names = []
+            else:
+                raw_names = saved.get("selected-names", []) or []
+                if not isinstance(raw_names, list):
+                    print("警告：已保存的机场选择 selected-names 必须是列表。")
+                    saved_names = []
+                else:
+                    saved_names = [str(name) for name in raw_names]
         if saved_names:
             use_saved = input(
                 f"已保存 {len(saved_names)} 个机场节点，是否继续使用？ [Y/n]："
@@ -892,7 +1064,7 @@ def interactive_airport_import(
             print(f"已保存选择到 {selection_path}。")
 
     dns_policy = matching_airport_dns_policy(subscription, selected)
-    normalized = normalize_airport_nodes(selected)
+    normalized = normalize_airport_nodes(selected, counters)
     print(
         f"已导入 {len(normalized)} 个机场独立节点（不参与代理链），"
         f"匹配 {len(dns_policy)} 条节点专用 DNS 策略；请手动合入 home.yaml。"
@@ -919,6 +1091,199 @@ def write_plain(proxies: list[dict[str, Any]], output: Path) -> None:
             sort_keys=False,
         ),
     )
+
+
+def loon_quote(value: Any) -> str:
+    text = str(value).replace("\r", " ").replace("\n", " ")
+    text = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{text}"'
+
+
+def loon_atom(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    text = str(value).replace("\r", " ").replace("\n", " ")
+    if any(char in text for char in ',="'):
+        return loon_quote(text)
+    return text
+
+
+def loon_bool(value: Any, default: bool = False) -> bool:
+    return yaml_bool(value, "Loon 节点布尔参数", default)
+
+
+def loon_option(key: str, value: Any) -> str:
+    if isinstance(value, list):
+        value = ",".join(str(item) for item in value)
+    return f"{key}={loon_atom(value)}"
+
+
+def loon_server_fields(proxy: dict[str, Any]) -> list[str]:
+    server = str(proxy.get("server", "")).strip()
+    port = proxy.get("port")
+    if not server or port in {None, ""}:
+        raise ValueError("缺少 server 或 port")
+    return [loon_atom(server), loon_atom(port)]
+
+
+def loon_transport_options(proxy: dict[str, Any]) -> list[str]:
+    network = str(proxy.get("network", "tcp")).strip().lower() or "tcp"
+    network = {"raw": "tcp", "websocket": "ws"}.get(network, network)
+    if network not in {"tcp", "ws", "http"}:
+        raise ValueError(f"Loon 不支持传输方式 {network!r}")
+
+    options = [loon_option("transport", network)]
+    if network not in {"ws", "http"}:
+        return options
+
+    transport_opts = proxy.get(f"{network}-opts") or {}
+    if not isinstance(transport_opts, dict):
+        raise ValueError(f"{network}-opts 必须是映射")
+    path = transport_opts.get("path") or "/"
+    if isinstance(path, list):
+        path = path[0] if path else "/"
+    options.append(loon_option("path", path))
+    headers = transport_opts.get("headers") or {}
+    if not isinstance(headers, dict):
+        raise ValueError(f"{network}-opts.headers 必须是映射")
+    host = headers.get("Host") or headers.get("host")
+    if host:
+        options.append(loon_option("host", host))
+    return options
+
+
+def loon_vless(proxy: dict[str, Any]) -> str:
+    uuid = str(proxy.get("uuid", "")).strip()
+    if not uuid:
+        raise ValueError("VLESS 缺少 uuid")
+    fields = ["VLESS", *loon_server_fields(proxy), loon_quote(uuid)]
+    options = loon_transport_options(proxy)
+
+    reality = proxy.get("reality-opts") or {}
+    if reality and not isinstance(reality, dict):
+        raise ValueError("reality-opts 必须是映射")
+    public_key = reality.get("public-key") if isinstance(reality, dict) else None
+    if public_key:
+        options.extend(
+            [
+                loon_option("flow", proxy.get("flow") or "xtls-rprx-vision"),
+                f"public-key={loon_quote(public_key)}",
+            ]
+        )
+        if "short-id" in reality:
+            options.append(loon_option("short-id", reality["short-id"]))
+
+    over_tls = loon_bool(proxy.get("tls"), bool(public_key))
+    options.extend(
+        [
+            loon_option("udp", loon_bool(proxy.get("udp"), True)),
+            loon_option("over-tls", over_tls),
+        ]
+    )
+    sni = proxy.get("sni") or proxy.get("servername")
+    if sni:
+        options.append(loon_option("sni", sni))
+    if loon_bool(proxy.get("skip-cert-verify"), False):
+        options.append("skip-cert-verify=true")
+    if proxy.get("alpn"):
+        options.append(loon_option("alpn", proxy["alpn"]))
+    return ",".join([*fields, *options])
+
+
+def loon_hysteria2(proxy: dict[str, Any]) -> str:
+    password = proxy.get("password")
+    if password in {None, ""}:
+        raise ValueError("Hysteria2 缺少 password")
+    fields = ["Hysteria2", *loon_server_fields(proxy), loon_quote(password)]
+    options: list[str] = []
+    sni = proxy.get("sni") or proxy.get("servername")
+    if sni:
+        options.append(loon_option("sni", sni))
+    if loon_bool(proxy.get("skip-cert-verify"), False):
+        options.append("skip-cert-verify=true")
+    if "fast-open" in proxy:
+        options.append(loon_option("fast-open", loon_bool(proxy["fast-open"])))
+    if proxy.get("salamander-password"):
+        options.append(
+            f"salamander-password={loon_quote(proxy['salamander-password'])}"
+        )
+    elif proxy.get("obfs-password"):
+        options.append(
+            f"salamander-password={loon_quote(proxy['obfs-password'])}"
+        )
+    if "udp" in proxy:
+        options.append(loon_option("udp", loon_bool(proxy["udp"])))
+    return ",".join([*fields, *options])
+
+
+def loon_shadowsocks(proxy: dict[str, Any]) -> str:
+    cipher = str(proxy.get("cipher", "")).strip()
+    password = proxy.get("password")
+    if not cipher or password in {None, ""}:
+        raise ValueError("Shadowsocks 缺少 cipher 或 password")
+    fields = [
+        "Shadowsocks",
+        *loon_server_fields(proxy),
+        loon_atom(cipher),
+        loon_quote(password),
+    ]
+    options: list[str] = []
+    plugin = str(proxy.get("plugin", "")).strip().lower()
+    if plugin:
+        if plugin not in {"obfs", "simple-obfs"}:
+            raise ValueError(f"Loon 不支持 Shadowsocks 插件 {plugin!r}")
+        plugin_opts = proxy.get("plugin-opts") or {}
+        if not isinstance(plugin_opts, dict):
+            raise ValueError("plugin-opts 必须是映射")
+        if plugin_opts.get("mode"):
+            options.append(loon_option("obfs-name", plugin_opts["mode"]))
+        if plugin_opts.get("host"):
+            options.append(loon_option("obfs-host", plugin_opts["host"]))
+        if plugin_opts.get("path"):
+            options.append(loon_option("obfs-uri", plugin_opts["path"]))
+    if "udp" in proxy:
+        options.append(loon_option("udp", loon_bool(proxy["udp"])))
+    return ",".join([*fields, *options])
+
+
+def loon_node_body(proxy: dict[str, Any]) -> str:
+    protocol = str(proxy.get("type", "")).strip().lower()
+    converters = {
+        "vless": loon_vless,
+        "hysteria2": loon_hysteria2,
+        "ss": loon_shadowsocks,
+    }
+    converter = converters.get(protocol)
+    if converter is None:
+        raise ValueError(f"Loon 不支持节点协议 {protocol or '<empty>'}")
+    return converter(proxy)
+
+
+def loon_node_alias(proxy: dict[str, Any], counts: dict[str, int]) -> str:
+    meta = node_meta(str(proxy.get("name", "")))
+    region = (meta.get("region") if meta else None) or "XX"
+    protocol = str(proxy.get("type", "node")).strip().lower()
+    protocol = {"hysteria2": "hy2"}.get(protocol, protocol or "node")
+    base = f"{region.lower()}.{protocol}"
+    index = counts.get(base, 0)
+    counts[base] = index + 1
+    return base if index == 0 else f"{base}-{index:02d}"
+
+
+def write_loon(proxies: list[dict[str, Any]], output: Path) -> tuple[int, list[str]]:
+    """Write selected base nodes as Loon node lines."""
+    lines: list[str] = []
+    counts: dict[str, int] = {}
+    skipped: list[str] = []
+    for proxy in proxies:
+        try:
+            body = loon_node_body(proxy)
+        except ValueError as exc:
+            skipped.append(f"{proxy.get('name', '<unnamed>')}: {exc}")
+            continue
+        lines.append(f"{loon_node_alias(proxy, counts)} = {body}")
+    secure_write(output, "\n".join(lines).rstrip() + ("\n" if lines else ""))
+    return len(lines), skipped
 
 
 def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
@@ -1011,7 +1376,19 @@ def route_key(candidate: tuple[dict[str, Any], dict[str, Any]]) -> tuple[str, st
     exit_tag = exit_meta["region"]
     if exit_meta["role"] == "HomeIP":
         exit_tag += f".{exit_meta['role']}"
-    return exit_tag, node_meta(dialer["name"])["region"]
+    return normalize_route_region(exit_tag), normalize_route_region(node_meta(dialer["name"])["region"])
+
+
+def normalize_route_region(value: str) -> str:
+    text = value.strip().upper()
+    if text.endswith(".HOMEIP"):
+        region = text[: -len(".HOMEIP")]
+        if not re.fullmatch(r"[A-Z]{2}", region):
+            raise ValueError(f"无效地区代码 {value!r}")
+        return f"{region}.HomeIP"
+    if not re.fullmatch(r"[A-Z]{2}", text):
+        raise ValueError(f"无效地区代码 {value!r}")
+    return text
 
 
 def parse_number_selection(raw: str, maximum: int) -> set[int]:
@@ -1238,13 +1615,18 @@ def select_routes(
     available = {route_key(candidate) for candidate in candidates}
     requested: set[tuple[str, str]] = set()
     for raw in route_spec.split(","):
-        token = raw.strip().upper().replace(" ", "")
+        token = raw.strip().replace(" ", "")
         if not token:
             continue
         separator = "<-" if "<-" in token else ":"
         if separator not in token:
             raise SystemExit(f"无效方向 {raw!r}；请使用 'HK<-JP,US<-HK' 或 'HK:JP,US:HK'")
-        exit_region, dialer_region = token.split(separator, 1)
+        raw_exit_region, raw_dialer_region = token.split(separator, 1)
+        try:
+            exit_region = normalize_route_region(raw_exit_region)
+            dialer_region = normalize_route_region(raw_dialer_region)
+        except ValueError as exc:
+            raise SystemExit(f"无效方向 {raw!r}：{exc}") from exc
         key = (exit_region, dialer_region)
         if key not in available:
             raise SystemExit(f"没有可用的代理链方向：{exit_region} <- {dialer_region}")
@@ -1259,6 +1641,7 @@ def write_template(
 ) -> None:
     # Clash Verge Rev 1.7+ 的 YAML 扩展配置使用字段覆写；
     # prepend/append 已移到订阅的可视化编辑功能，不再输出旧式 prepend-proxies。
+    ensure_unique_anchors(proxies)
     lines: list[str] = ["proxies:"]
     current_region = None
 
@@ -1343,18 +1726,46 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "host.env（默认 CLASH_ANSIBLE_HOST_VARS_DIR 或相邻 infra 仓库）"
         ),
     )
-    parser.add_argument("--output", "-o", type=Path, default=OUT, help="输出文件")
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        default=None,
+        help="输出文件（plain 默认 nodes.yaml，其余格式默认 clash-vps.generated.yaml）",
+    )
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
+    parser.add_argument(
+        "--loon-output",
+        type=Path,
+        default=LOON_OUT,
+        help="额外输出 Loon 节点文件（默认 loon-nodes.conf）",
+    )
+    parser.add_argument(
+        "--no-loon",
+        dest="loon_output",
+        action="store_const",
+        const=None,
+        help="不生成 Loon 节点文件",
+    )
     formats = parser.add_mutually_exclusive_group()
-    formats.add_argument("--plain", action="store_true", help="仅输出基础节点（默认）")
-    formats.add_argument("--template", action="store_true", help="输出 proxies 模板和代理链")
+    formats.add_argument("--plain", action="store_true", help="仅输出基础节点")
+    formats.add_argument(
+        "--template",
+        action="store_true",
+        help="输出 proxies 模板和代理链（与 --merge 同义）",
+    )
     formats.add_argument(
         "--merge",
         action="store_true",
-        help="输出 Clash Verge Rev 扩展配置（proxies 覆写）",
+        help="输出 Clash Verge Rev 扩展配置（与 --template 同义）",
     )
     parser.add_argument("--interactive", "-i", action="store_true", help="交互选择输出格式和代理链")
-    parser.add_argument("--chains", choices=("all", "none"), default="all", help="非交互模式生成全部或不生成代理链")
+    parser.add_argument(
+        "--chains",
+        choices=("all", "none"),
+        default=None,
+        help="非交互模式生成全部或不生成代理链；指定后默认使用模板格式",
+    )
     parser.add_argument(
         "--exclude-node",
         action="append",
@@ -1377,6 +1788,23 @@ def apply_default_invocation(args: argparse.Namespace, invoked_without_args: boo
     args.raw_output = SCRIPT_DIR / "nodes.yaml"
 
 
+def validate_output_paths(
+    paths: list[tuple[str, Path | None]],
+) -> None:
+    seen: dict[Path, str] = {}
+    for label, path in paths:
+        if path is None:
+            continue
+        resolved = path.expanduser().resolve()
+        previous = seen.get(resolved)
+        if previous is not None:
+            raise SystemExit(
+                f"输出路径冲突：{previous} 和 {label} 都是 {resolved}；"
+                "请显式指定不同文件"
+            )
+        seen[resolved] = label
+
+
 def main(argv: list[str] | None = None) -> int:
     invoked_without_args = len(sys.argv) == 1 if argv is None else len(argv) == 0
     args = parse_args(argv)
@@ -1392,8 +1820,11 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     counters: dict[tuple[str, str], int] = {}
-    proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
-    trusted_nodes = load_trusted_nodes(trusted_nodes_file, counters)
+    try:
+        proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
+        trusted_nodes = load_trusted_nodes(trusted_nodes_file, counters)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     if trusted_nodes:
         proxies.extend(trusted_nodes)
         print(
@@ -1401,7 +1832,10 @@ def main(argv: list[str] | None = None) -> int:
             "Relay/Chain 能力按 trusted-nodes.yaml 显式声明。"
         )
     if args.interactive:
-        airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir)
+        try:
+            airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir, counters)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
         proxies.extend(airport_nodes)
     if not proxies:
         raise SystemExit(
@@ -1419,7 +1853,14 @@ def main(argv: list[str] | None = None) -> int:
         proxies = exclude_by_patterns(proxies, args.exclude_node)
         if len(proxies) != before:
             print(f"excluded {before - len(proxies)} base nodes, {len(proxies)} remaining")
-        output_format = "merge" if args.merge else "template" if args.template else "plain"
+        if args.plain:
+            output_format = "plain"
+        elif args.merge:
+            output_format = "merge"
+        elif args.template or args.routes or args.chains is not None:
+            output_format = "template"
+        else:
+            output_format = "plain"
         if output_format == "plain" or args.chains == "none":
             chains = []
         elif args.routes:
@@ -1427,17 +1868,41 @@ def main(argv: list[str] | None = None) -> int:
         else:
             chains = chain_candidates(proxies)
 
-    if output_format == "plain":
-        write_plain(proxies, args.output)
-    else:
-        write_template(proxies + fallback_nodes, chains, args.output)
+    default_output = OUT if output_format == "plain" else SCRIPT_DIR / "clash-vps.generated.yaml"
+    output = (args.output or default_output).expanduser()
+    raw_output = args.raw_output.expanduser() if args.raw_output else None
+    loon_output = args.loon_output.expanduser() if args.loon_output else None
+    validate_output_paths(
+        [
+            ("主输出", output),
+            ("raw-output", raw_output),
+            ("loon-output", loon_output),
+        ]
+    )
+
+    try:
+        if output_format == "plain":
+            write_plain(proxies, output)
+        else:
+            write_template(proxies + fallback_nodes, chains, output)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     print(
-        f"wrote {args.output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
+        f"wrote {output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
         f"{len(chains)} chains, format={output_format})"
     )
-    if args.raw_output:
-        write_plain(proxies, args.raw_output)
-        print(f"wrote {args.raw_output} ({len(proxies)} nodes, raw=True)")
+    if raw_output:
+        write_plain(proxies, raw_output)
+        print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
+    if loon_output:
+        loon_count, loon_skipped = write_loon(proxies, loon_output)
+        print(f"wrote {loon_output} ({loon_count} nodes, format=loon)")
+        if loon_skipped:
+            print(f"warning: skipped {len(loon_skipped)} node(s) unsupported by Loon:")
+            for item in loon_skipped:
+                print(f"  - {item}")
+    else:
+        print("Loon 输出已禁用（--no-loon）")
     return 0
 
 
