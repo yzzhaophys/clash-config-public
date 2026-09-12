@@ -193,6 +193,21 @@ nodes:
 默认是 `true`。必须填写稳定的 `id` 和实际两位国家代码；可信节点不能声明
 `HomeIP`、`ShowIP` 或已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一物理节点自连。
 
+多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
+`manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
+VLESS 和 Hysteria2；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
+时间戳备份并进行锁定和原子替换：
+
+```bash
+python3 manage_trusted_nodes.py merge \
+  --target ~/.config/clash/airport/trusted-nodes.yaml \
+  --source /path/to/nat-node.yaml
+python3 manage_trusted_nodes.py merge \
+  --target ~/.config/clash/airport/trusted-nodes.yaml \
+  --source /path/to/nat-node.yaml \
+  --apply
+```
+
 ### 策略组筛选
 
 `home.yaml` 中的规则与节点名称标记对应：
