@@ -195,7 +195,7 @@ nodes:
 
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
-VLESS 和 Hysteria2；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
+VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
 时间戳备份并进行锁定和原子替换：
 
 ```bash
@@ -207,6 +207,9 @@ python3 manage_trusted_nodes.py merge \
   --source /path/to/nat-node.yaml \
   --apply
 ```
+
+SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，默认只作为直出节点；
+它会进入 Clash/Mihomo 输出。当前 Loon 输出仍会跳过 SOCKS5，因为 Loon 转换器尚未覆盖该协议。
 
 ### 策略组筛选
 

@@ -137,6 +137,55 @@ class GeneratorTests(unittest.TestCase):
         self.assertFalse(nodes[0]["_allow-chain-exit"])
         self.assertFalse(nodes[0]["_allow-download"])
 
+    def test_trusted_socks5_is_supported_with_authentication(self) -> None:
+        nodes = generator.normalize_trusted_nodes(
+            [
+                {
+                    "id": "trusted-us-01",
+                    "region": "US",
+                    "proxy": {
+                        "type": "socks5",
+                        "server": "nat.example",
+                        "port": 1080,
+                        "username": "nat-user",
+                        "password": "nat-password",
+                        "udp": True,
+                    },
+                }
+            ],
+            {},
+            Path("trusted-nodes.yaml"),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "nodes.yaml"
+            generator.write_template(nodes, [], output)
+            rendered = yaml.safe_load(output.read_text())["proxies"][0]
+
+        self.assertEqual(rendered["type"], "socks5")
+        self.assertEqual(rendered["name"], "VPS-[US.Exit]-SOCKS5-00-(美国出口节点)")
+        self.assertEqual(rendered["username"], "nat-user")
+        self.assertFalse(nodes[0]["_allow-relay"])
+        self.assertFalse(nodes[0]["_allow-chain-exit"])
+
+    def test_trusted_socks5_rejects_anonymous_authentication(self) -> None:
+        with self.assertRaisesRegex(ValueError, "不能使用匿名认证"):
+            generator.normalize_trusted_nodes(
+                [
+                    {
+                        "id": "trusted-us-01",
+                        "region": "US",
+                        "proxy": {
+                            "type": "socks5",
+                            "server": "nat.example",
+                            "port": 1080,
+                        },
+                    }
+                ],
+                {},
+                Path("trusted-nodes.yaml"),
+            )
+
     def test_direct_source_nodes_reject_non_mapping_and_chains(self) -> None:
         options = {
             "source_marker": "Trusted",
@@ -374,6 +423,36 @@ class GeneratorTests(unittest.TestCase):
 
             inventory.write_text("proxies: []\n")
             self.assertEqual(generator.client_inventory_nodes(host_dir, env, {}), [])
+
+    def test_client_inventory_accepts_authenticated_socks5(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            host_dir = Path(directory) / "vps-nat"
+            inventory = host_dir / "client" / "clash-nodes.yaml"
+            inventory.parent.mkdir(parents=True)
+            inventory.write_text(
+                yaml.safe_dump(
+                    {
+                        "proxies": [
+                            {
+                                "type": "socks5",
+                                "server": "public.example",
+                                "port": 1080,
+                                "username": "nat-user",
+                                "password": "nat-password",
+                            }
+                        ]
+                    }
+                )
+            )
+
+            nodes = generator.client_inventory_nodes(
+                host_dir,
+                {"VPS_CLASH_REGION": "us"},
+                {},
+            )
+
+        self.assertEqual(nodes[0]["type"], "socks5")
+        self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-SOCKS5-00-(美国出口节点)")
 
     def test_default_hosts_dir_requires_an_active_host_env(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

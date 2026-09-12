@@ -17,6 +17,9 @@ def node(node_id: str, *, port: int = 443, protocol: str = "vless") -> dict:
     }
     if protocol == "vless":
         proxy["uuid"] = f"uuid-{node_id}"
+    elif protocol == "socks5":
+        proxy["username"] = f"user-{node_id}"
+        proxy["password"] = f"password-{node_id}"
     else:
         proxy["password"] = f"password-{node_id}"
     return {
@@ -83,15 +86,25 @@ class TrustedNodesMergeTests(unittest.TestCase):
             target = root / "trusted-nodes.yaml"
             source = root / "new.yaml"
             write_nodes(target, [node("nat-01", protocol="vless")])
-            write_nodes(source, [node("nat-01", protocol="hysteria2")])
+            write_nodes(
+                source,
+                [
+                    node("nat-01", protocol="hysteria2"),
+                    node("nat-01", protocol="socks5"),
+                ],
+            )
 
             result = manager.merge_trusted_nodes_file(target, source, apply=True)
             values = yaml.safe_load(target.read_text())["nodes"]
 
-            self.assertEqual((result.added, result.updated), (1, 0))
+            self.assertEqual((result.added, result.updated), (2, 0))
             self.assertEqual(
                 [(item["id"], item["proxy"]["type"]) for item in values],
-                [("nat-01", "vless"), ("nat-01", "hysteria2")],
+                [
+                    ("nat-01", "vless"),
+                    ("nat-01", "hysteria2"),
+                    ("nat-01", "socks5"),
+                ],
             )
 
     def test_dry_run_does_not_create_or_modify_target(self) -> None:

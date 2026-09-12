@@ -173,6 +173,15 @@ def yaml_bool(value: Any, field: str, default: bool) -> bool:
     raise ValueError(f"{field} 必须是 true 或 false，当前值为 {value!r}")
 
 
+def require_socks5_credentials(proxy: dict[str, Any], field: str) -> None:
+    """Require credentials for optional SOCKS5 nodes instead of open proxies."""
+    for key in ("username", "password"):
+        value = proxy.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field}.{key} 必须填写；SOCKS5 节点不能使用匿名认证")
+        proxy[key] = value.strip()
+
+
 def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
     raw_region = env.get("VPS_CLASH_REGION", env.get("VPS_REGION", ""))
     region = normalize_region(raw_region)
@@ -262,7 +271,11 @@ def node_name(
     region = normalize_region(region)
     code = REGION_CODE.get(region, region.upper())
     cn = REGION_CN.get(region, code)
-    proto = "H2" if protocol == "hysteria2" else "VLESS"
+    proto = {
+        "vless": "VLESS",
+        "hysteria2": "H2",
+        "socks5": "SOCKS5",
+    }.get(protocol, protocol.upper() or "NODE")
     descriptions = {
         "Core": f"{cn}核心节点",
         "Exit": f"{cn}出口节点",
@@ -586,11 +599,11 @@ def client_inventory_nodes(
     region = capabilities["region"]
     role = capability_role(capabilities)
     out: list[dict[str, Any]] = []
-    for source in source_nodes:
+    for source_index, source in enumerate(source_nodes):
         if not isinstance(source, dict):
             raise ValueError(f"{path}: proxies 条目必须是映射")
         protocol = str(source.get("type", "")).lower()
-        if protocol not in {"vless", "hysteria2"}:
+        if protocol not in {"vless", "hysteria2", "socks5"}:
             raise ValueError(f"{path}: 不支持的自建节点协议 {protocol or '<empty>'}")
         server = str(source.get("server", "")).strip()
         if not server:
@@ -603,6 +616,9 @@ def client_inventory_nodes(
         proxy = copy.deepcopy(source)
         proxy["server"] = server
         proxy["port"] = port
+        proxy["type"] = protocol
+        if protocol == "socks5":
+            require_socks5_credentials(proxy, f"{path}: proxies[{source_index}]")
         proxy["name"] = node_name(
             region,
             protocol,
@@ -627,9 +643,10 @@ def normalize_trusted_nodes(
     node may relay or become a chain landing only when the private file says
     so explicitly.  Since the generator has no way to verify residential
     identity from a node description alone, trusted entries are always
-    ordinary (non-HomeIP, non-ShowIP) nodes.
+    ordinary (non-HomeIP, non-ShowIP) nodes. SOCKS5 entries are supported as
+    optional, authenticated client-facing nodes for special/NAT hosts.
     """
-    allowed_protocols = {"vless", "hysteria2"}
+    allowed_protocols = {"vless", "hysteria2", "socks5"}
     seen: set[tuple[str, str]] = set()
     normalized: list[dict[str, Any]] = []
 
@@ -662,7 +679,8 @@ def normalize_trusted_nodes(
         protocol = str(proxy.get("type", "")).strip().lower()
         if protocol not in allowed_protocols:
             raise ValueError(
-                f"{field}.proxy.type 只支持 vless 或 hysteria2，当前值为 {protocol or '<empty>'}"
+                f"{field}.proxy.type 只支持 vless、hysteria2 或 socks5，"
+                f"当前值为 {protocol or '<empty>'}"
             )
         server = str(proxy.get("server", "")).strip()
         if not server:
@@ -673,6 +691,8 @@ def normalize_trusted_nodes(
         port = parse_port(proxy.get("port"), f"{field}.proxy.port")
         proxy["type"] = protocol
         proxy["port"] = port
+        if protocol == "socks5":
+            require_socks5_credentials(proxy, field)
 
         identity = (node_id, protocol)
         if identity in seen:
@@ -701,9 +721,13 @@ def normalize_trusted_nodes(
             source.get("chain-exit-protocol", protocol)
         ).strip().lower()
         if relay_protocol not in allowed_protocols:
-            raise ValueError(f"{field}.relay-protocol 必须是 vless 或 hysteria2")
+            raise ValueError(
+                f"{field}.relay-protocol 必须是 vless、hysteria2 或 socks5"
+            )
         if chain_exit_protocol not in allowed_protocols:
-            raise ValueError(f"{field}.chain-exit-protocol 必须是 vless 或 hysteria2")
+            raise ValueError(
+                f"{field}.chain-exit-protocol 必须是 vless、hysteria2 或 socks5"
+            )
         if allow_relay and relay_protocol != protocol:
             raise ValueError(
                 f"{field}.relay-protocol 必须与 proxy.type 相同，才能作为 Relay"
