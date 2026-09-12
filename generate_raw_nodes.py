@@ -1418,12 +1418,23 @@ def proxy_source_directory(proxy: dict[str, Any]) -> str | None:
     return source if source.startswith("vps-") else None
 
 
+def interactive_proxy_source(proxy: dict[str, Any], prefix: str = "") -> str | None:
+    source = proxy_source_directory(proxy)
+    if source:
+        return f"{prefix}目录: {source}" if prefix else f"来源目录: {source}"
+
+    physical_node_id = str(proxy.get("_physical-node-id", "")).strip()
+    if physical_node_id.startswith("trusted:"):
+        return f"{prefix}来源文件: trusted-nodes.yaml"
+    return None
+
+
 def interactive_proxy_label(proxy: dict[str, Any]) -> str:
     name = str(proxy.get("name", "<unnamed>"))
-    source = proxy_source_directory(proxy)
-    if not source:
+    source_label = interactive_proxy_source(proxy)
+    if not source_label:
         return name
-    return f"{name}（来源目录: {source}）"
+    return f"{name}（{source_label}）"
 
 
 def interactive_chain_label(
@@ -1431,13 +1442,13 @@ def interactive_chain_label(
 ) -> str:
     exit_proxy, dialer = candidate
     name = chain_name(exit_proxy, dialer)
-    exit_source = proxy_source_directory(exit_proxy)
-    dialer_source = proxy_source_directory(dialer)
+    exit_source = interactive_proxy_source(exit_proxy, "出口")
+    dialer_source = interactive_proxy_source(dialer, "入口")
     labels: list[str] = []
     if exit_source:
-        labels.append(f"出口目录: {exit_source}")
+        labels.append(exit_source)
     if dialer_source:
-        labels.append(f"入口目录: {dialer_source}")
+        labels.append(dialer_source)
     return f"{name}（{'；'.join(labels)}）" if labels else name
 
 

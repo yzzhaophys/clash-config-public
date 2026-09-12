@@ -238,6 +238,17 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-VLESS-00-(美国出口节点)")
         self.assertIsNone(generator.node_meta(nodes[0]["name"])["trusted"])
 
+    def test_trusted_nodes_show_trust_file_as_interactive_source(self) -> None:
+        proxy = {
+            "name": "VPS-[US.Exit]-VLESS-00-(美国出口节点)",
+            "_physical-node-id": "trusted:trusted-us",
+        }
+
+        self.assertEqual(
+            generator.interactive_proxy_label(proxy),
+            "VPS-[US.Exit]-VLESS-00-(美国出口节点)（来源文件: trusted-nodes.yaml）",
+        )
+
     def test_direct_source_region_rejects_virtual_codes(self) -> None:
         self.assertIsNone(
             generator.airport_region("VPS-[EUR.Core]-VLESS-00-(欧洲核心节点)")

@@ -61,7 +61,7 @@
 | 来源 | 私有输入 | 导入时机 | 命名与标记 | 默认链路能力 |
 | --- | --- | --- | --- | --- |
 | 自建 VPS | `vps-*/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `vps-*/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
-| Trusted | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | 与自建 VPS 使用相同的 `VPS-[US.Exit]-...` 命名 | 按 `allow-*` 字段决定，默认仅允许直出 |
+| Trusted | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | `VPS-[US.Exit]-...`；交互时显示来源文件 | 按 `allow-*` 字段决定，默认仅允许直出 |
 | 机场订阅 | `subscription.yaml` 和可选的 `selected-nodes.yaml` | 仅交互模式中确认导入 | `(...机场出口)-[Airport=...]` | 仅允许直出，不可 Relay，不可作为 Chain 落地 |
 
 三种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted
@@ -145,8 +145,8 @@ Clash 的 `DIRECT`（完全不经过代理）。
 可信节点必须放在私有 `trusted-nodes.yaml` 的 `nodes` 列表中。每个节点都需要
 显式指定稳定 `id`、实际两位国家代码和 `proxy`；能力由
 `allow-*` 字段控制，默认只允许单节点直出。生成名称与自建 VPS 保持一致，
-使用 `VPS-[地区.角色]-协议-编号-(地区节点)` 格式，不附加
-`[Trusted=...]` 或 `NAT机` 标记。脚本不再接受顶层
+使用 `VPS-[地区.角色]-协议-编号-(地区节点)` 格式，
+并在交互选择时显示“来源文件: trusted-nodes.yaml”。脚本不再接受顶层
 `proxies:`。
 
 ```yaml
