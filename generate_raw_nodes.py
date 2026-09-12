@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -279,6 +280,12 @@ def node_meta(name: str) -> dict[str, Any]:
     if not match:
         return {}
     return match.groupdict()
+
+
+def source_marker_label(value: Any) -> str:
+    """Make a source name safe to nest inside an ASCII marker."""
+    label = re.sub(r"[\r\n]+", " ", str(value).strip())
+    return label.replace("[", "［").replace("]", "］")
 
 
 def anchor_name(name: str) -> str:
@@ -627,7 +634,7 @@ def normalize_trusted_nodes(
         raw_label = source.get("name")
         label = str(raw_label).strip() if raw_label is not None else ""
         label = label or node_id
-        label = re.sub(r"[\r\n]+", " ", label).replace("]", "）")
+        label = source_marker_label(label)
         region_value = source.get("region")
         if region_value is None:
             raise ValueError(f"{field}.region 必须填写实际国家代码，例如 DE 或 NL")
@@ -735,17 +742,37 @@ def load_trusted_nodes(
     if not path.is_file():
         return []
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text())
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: trusted-nodes.yaml 不是有效 YAML：{exc}") from exc
+    if data is None:
+        data = {}
     if not isinstance(data, dict):
-        raise ValueError(f"{path}: 顶层必须是映射，并包含 nodes 列表")
-    if "nodes" not in data and data:
-        raise ValueError(f"{path}: 顶层必须包含 nodes 列表；不要直接放 subscription 的 proxies")
-    source_nodes = data.get("nodes", []) or []
-    if not isinstance(source_nodes, list):
-        raise ValueError(f"{path}: nodes 必须是列表")
-    return normalize_trusted_nodes(source_nodes, counters, path)
+        raise ValueError(f"{path}: 顶层必须是映射，并包含 proxies 或 nodes 列表")
+    if "proxies" in data and "nodes" in data:
+        raise ValueError(f"{path}: proxies 和 nodes 不能同时存在")
+    if "proxies" in data:
+        raw_proxies = data.get("proxies")
+        source_proxies = [] if raw_proxies is None else raw_proxies
+        if not isinstance(source_proxies, list):
+            raise ValueError(f"{path}: proxies 必须是列表")
+        return normalize_direct_source_nodes(
+            source_proxies,
+            counters,
+            source_marker="Trusted",
+            description_suffix="NAT机",
+            physical_source="trusted",
+            source_kind="可信 NAT",
+        )
+    if "nodes" in data:
+        raw_nodes = data.get("nodes")
+        source_nodes = [] if raw_nodes is None else raw_nodes
+        if not isinstance(source_nodes, list):
+            raise ValueError(f"{path}: nodes 必须是列表")
+        return normalize_trusted_nodes(source_nodes, counters, path)
+    if data:
+        raise ValueError(f"{path}: 顶层必须包含 proxies 或 nodes 列表")
+    return []
 
 
 def default_hosts_dir() -> Path:
@@ -853,6 +880,10 @@ def collect_proxies(
 
 
 def airport_region(name: str) -> str | None:
+    meta = node_meta(name)
+    if meta and meta.get("region"):
+        code = AIRPORT_REGION_ALIASES.get(meta["region"], meta["region"])
+        return code if re.fullmatch(r"[A-Z]{2}", code) else None
     match = re.search(r"\b([A-Za-z]{2})\s*$", name)
     if not match:
         return None
@@ -890,51 +921,77 @@ def matching_airport_dns_policy(
     }
 
 
-def normalize_airport_nodes(
+def normalize_direct_source_nodes(
     selected: list[dict[str, Any]],
     counters: dict[tuple[str, str], int] | None = None,
+    *,
+    source_marker: str,
+    description_suffix: str,
+    physical_source: str,
+    source_kind: str,
 ) -> list[dict[str, Any]]:
     counters = counters if counters is not None else {}
     normalized: list[dict[str, Any]] = []
-    for source in selected:
+    for source_index, source in enumerate(selected):
+        field = f"{source_kind}节点[{source_index}]"
+        if not isinstance(source, dict):
+            raise ValueError(f"{field} 必须是映射")
+        if "dialer-proxy" in source or "<<" in source:
+            raise ValueError(
+                f"{field} 必须是独立直连节点，不能包含 dialer-proxy 或 <<"
+            )
         original_name = str(source.get("name", "")).strip()
         region = airport_region(original_name)
         protocol_raw = str(source.get("type", "")).strip().lower()
-        protocol = protocol_raw.upper()
+        protocol = "H2" if protocol_raw == "hysteria2" else protocol_raw.upper()
         if not region or not protocol:
-            print(f"已跳过无法识别的机场节点：{original_name or '<unnamed>'}")
+            print(f"已跳过无法识别的{source_kind}节点：{original_name or '<unnamed>'}")
             continue
         server = str(source.get("server", "")).strip()
         if not server:
-            print(f"已跳过缺少 server 的机场节点：{original_name or '<unnamed>'}")
+            print(f"已跳过缺少 server 的{source_kind}节点：{original_name or '<unnamed>'}")
             continue
         try:
-            port = parse_port(source.get("port"), f"机场节点 {original_name or '<unnamed>'}.port")
+            port = parse_port(source.get("port"), f"{source_kind}节点 {original_name or '<unnamed>'}.port")
         except ValueError as exc:
-            print(f"已跳过无效机场节点：{exc}")
+            print(f"已跳过无效{source_kind}节点：{exc}")
             continue
         key = (region.lower(), protocol_raw)
         index = counters.get(key, 0)
         counters[key] = index + 1
-        description = f"{REGION_CN.get(region.lower(), region)}机场出口"
-        source_label = original_name.replace("]", "）")
+        description = f"{REGION_CN.get(region.lower(), region)}{description_suffix}"
+        source_label = source_marker_label(original_name)
         proxy = copy.deepcopy(source)
         proxy["server"] = server
         proxy["port"] = port
         proxy["name"] = (
             f"VPS-[{region}.Exit]-{protocol}-{index:02d}-({description})"
-            f"-[Airport={source_label}]"
+            f"-[{source_marker}={source_label}]"
         )
-        # Airport nodes remain independently selectable, but never participate
-        # in dialer-proxy chains because many relay airports reject VPS ingress.
+        # Direct-source nodes remain independently selectable but never
+        # participate in generated dialer-proxy chains.
         proxy["_allow-relay"] = False
         proxy["_allow-direct-exit"] = True
         proxy["_allow-chain-exit"] = False
         proxy["_allow-download"] = False
         proxy["_exit-type"] = "general"
-        proxy["_physical-node-id"] = f"airport:{original_name}"
+        proxy["_physical-node-id"] = f"{physical_source}:{original_name}"
         normalized.append(proxy)
     return normalized
+
+
+def normalize_airport_nodes(
+    selected: list[dict[str, Any]],
+    counters: dict[tuple[str, str], int] | None = None,
+) -> list[dict[str, Any]]:
+    return normalize_direct_source_nodes(
+        selected,
+        counters,
+        source_marker="Airport",
+        description_suffix="机场出口",
+        physical_source="airport",
+        source_kind="机场",
+    )
 
 
 def interactive_airport_import(
@@ -1074,8 +1131,22 @@ def interactive_airport_import(
 
 def secure_write(output: Path, content: str) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(content)
-    output.chmod(0o600)
+    fd, temporary_name = tempfile.mkstemp(
+        dir=output.parent,
+        prefix=f".{output.name}.",
+        suffix=".tmp",
+        text=True,
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, output)
+    except BaseException:
+        temporary_path.unlink(missing_ok=True)
+        raise
 
 
 def clean_proxy(proxy: dict[str, Any]) -> dict[str, Any]:
@@ -1828,8 +1899,8 @@ def main(argv: list[str] | None = None) -> int:
     if trusted_nodes:
         proxies.extend(trusted_nodes)
         print(
-            f"已导入 {len(trusted_nodes)} 个私有可信节点；"
-            "Relay/Chain 能力按 trusted-nodes.yaml 显式声明。"
+            f"已导入 {len(trusted_nodes)} 个 trusted-nodes.yaml 节点；"
+            "proxies 格式按 NAT 直连节点处理，nodes 格式按显式能力处理。"
         )
     if args.interactive:
         try:

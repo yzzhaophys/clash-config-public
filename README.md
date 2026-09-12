@@ -128,7 +128,22 @@ Clash 的 `DIRECT`（完全不经过代理）。
 `HomeIP` 或 `ShowIP`。订阅中匹配到的 `dns.nameserver-policy` 只会报告，不会自动改写
 `home.yaml`，避免生成器覆盖主配置的 DNS 策略。
 
-可信节点放在私有 `trusted-nodes.yaml` 中：
+可信节点放在私有 `trusted-nodes.yaml` 中。如果文件使用标准 Clash
+`proxies` 格式，其中的节点会默认按 NAT 直连节点导入：允许单节点直出，
+不允许作为 Relay 或 Chain 落地，生成名称中标记为 `NAT机` 和
+`[Trusted=...]`。节点名称可以使用生成器的
+`VPS-[US.Core]-...` 格式，也可以在名称末尾放两位地区代码：
+
+```yaml
+proxies:
+  - name: VPS-[US.Core]-VLESS-00-(US核心节点)
+    type: vless
+    server: example.com
+    port: 443
+    uuid: replace-with-private-uuid
+```
+
+需要显式开启 Relay 或 Chain 能力时，仍可使用 `nodes` 高级格式：
 
 ```yaml
 nodes:
