@@ -56,6 +56,20 @@
 作为该主机唯一来源（即使其中 `proxies: []` 也不会回退到服务端配置）。
 `VPS_CLASH_ORDER` 可用于稳定多个主机的排序和节点编号，必须是整数。
 
+## 三种节点来源
+
+| 来源 | 私有输入 | 导入时机 | 命名与标记 | 默认链路能力 |
+| --- | --- | --- | --- | --- |
+| 自建 VPS | `vps-*/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `vps-*/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
+| Trusted | `trusted-nodes.yaml` | 每次运行自动导入 | `proxies` 格式生成 `(...NAT机)-[Trusted=...]`；`nodes` 格式使用显式标签 | `proxies` 格式仅允许直出；`nodes` 格式按 `allow-*` 字段决定 |
+| 机场订阅 | `subscription.yaml` 和可选的 `selected-nodes.yaml` | 仅交互模式中确认导入 | `(...机场出口)-[Airport=...]` | 仅允许直出，不可 Relay，不可作为 Chain 落地 |
+
+三种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted
+→ 机场订阅”的顺序分配编号。因此已有一个美国 H2 自建节点时，后续的美国
+Trusted H2 节点会使用 `H2-01`。物理节点身份分别由 VPS 目录名、
+Trusted 的稳定 `id`/原始节点名和机场原始节点名确定，用于防止同一
+物理节点自连。
+
 ## 节点与代理链规则
 
 ### 能力开关

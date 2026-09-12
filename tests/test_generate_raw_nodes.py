@@ -187,10 +187,27 @@ class GeneratorTests(unittest.TestCase):
         self.assertIn("[Trusted=VPS-［US.Core］-source]", nodes[0]["name"])
         self.assertIsNotNone(generator.node_meta(nodes[0]["name"])["trusted"])
 
-    def test_generated_region_must_be_two_letters_for_direct_sources(self) -> None:
+    def test_direct_source_region_rejects_virtual_codes(self) -> None:
         self.assertIsNone(
             generator.airport_region("VPS-[EUR.Core]-VLESS-00-(欧洲核心节点)")
         )
+        self.assertIsNone(generator.airport_region("Example XX"))
+        with self.assertRaisesRegex(ValueError, "两位国家代码"):
+            generator.normalize_trusted_nodes(
+                [
+                    {
+                        "id": "unknown",
+                        "region": "XX",
+                        "proxy": {
+                            "type": "vless",
+                            "server": "trusted.example",
+                            "port": 443,
+                        },
+                    }
+                ],
+                {},
+                Path("trusted-nodes.yaml"),
+            )
 
     def test_trusted_file_rejects_mixed_input_formats(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -277,6 +294,36 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(nodes[0]["flow"], "xtls-rprx-vision")
         self.assertEqual(nodes[0]["reality-opts"]["public-key"], "public-key")
 
+    def test_tls_xray_node_requires_server_name_or_vps_host(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            host_dir = Path(directory) / "vps-us"
+            source = host_dir / "secrets" / "xray-inbounds.json"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                json.dumps(
+                    {
+                        "inbounds": [
+                            {
+                                "protocol": "vless",
+                                "port": 443,
+                                "settings": {"clients": [{"id": "uuid"}]},
+                                "streamSettings": {
+                                    "security": "tls",
+                                    "tlsSettings": {},
+                                },
+                            }
+                        ]
+                    }
+                )
+            )
+
+            with self.assertRaisesRegex(ValueError, "serverName 或 VPS_HOST"):
+                generator.xray_nodes(
+                    host_dir,
+                    {"VPS_CLASH_REGION": "us"},
+                    {},
+                )
+
     def test_invalid_xray_json_is_not_silently_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             host_dir = Path(directory) / "vps-us"
@@ -319,8 +366,29 @@ class GeneratorTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "1-65535"):
                 generator.client_inventory_nodes(host_dir, env, {})
 
+            inventory.write_text("proxies: false\n")
+            with self.assertRaisesRegex(ValueError, "proxies 必须是列表"):
+                generator.client_inventory_nodes(host_dir, env, {})
+
             inventory.write_text("proxies: []\n")
             self.assertEqual(generator.client_inventory_nodes(host_dir, env, {}), [])
+
+    def test_default_hosts_dir_requires_an_active_host_env(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home"
+            preferred = home / ".config" / "infra" / "hosts"
+            legacy = home / "servers" / "hosts"
+            (preferred / "vps-retired").mkdir(parents=True)
+            active = legacy / "vps-active"
+            active.mkdir(parents=True)
+            (active / "host.env").write_text("VPS_CLASH_REGION=us\n")
+
+            with (
+                mock.patch.object(generator.Path, "home", return_value=home),
+                mock.patch.object(generator, "SCRIPT_DIR", root / "repo"),
+            ):
+                self.assertEqual(generator.default_hosts_dir(), legacy)
 
     def test_invalid_host_order_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -346,6 +414,8 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(generator.port_from_listen(":443", 20002), 443)
         self.assertEqual(generator.port_from_listen(":443-500", 20002), 443)
         self.assertEqual(generator.port_from_listen("443", 20002), 443)
+        with self.assertRaisesRegex(ValueError, "listen"):
+            generator.port_from_listen("definitely-invalid", 20002)
 
     def test_loon_vless_uses_supported_common_options(self) -> None:
         body = generator.loon_node_body(
@@ -368,6 +438,27 @@ class GeneratorTests(unittest.TestCase):
         self.assertNotIn("client-fingerprint", body)
         self.assertNotIn("block-quic", body)
 
+    def test_loon_skips_non_scalar_credentials_without_crashing(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "hysteria2", 0, "Exit"),
+            "type": "hysteria2",
+            "server": "edge.example",
+            "port": 443,
+            "password": [],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "nodes.conf"
+            count, skipped = generator.write_loon([proxy], output)
+
+        self.assertEqual(count, 0)
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("password", skipped[0])
+
+    def test_number_prompt_exits_cleanly_on_eof(self) -> None:
+        with mock.patch("builtins.input", side_effect=EOFError):
+            with self.assertRaisesRegex(SystemExit, "输入已结束"):
+                generator.prompt_number_selection(3)
+
     def test_output_path_collision_is_rejected(self) -> None:
         with self.assertRaisesRegex(SystemExit, "输出路径冲突"):
             generator.validate_output_paths(
@@ -386,6 +477,28 @@ class GeneratorTests(unittest.TestCase):
 
             self.assertEqual(output.read_text(), "old\n")
             self.assertEqual(list(Path(directory).glob(".nodes.yaml.*.tmp")), [])
+
+    def test_main_reports_output_os_errors_without_traceback(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "type": "vless",
+            "server": "edge.example",
+            "port": 443,
+            "uuid": "uuid",
+        }
+        with (
+            mock.patch.object(generator, "collect_proxies", return_value=[proxy]),
+            mock.patch.object(generator, "load_trusted_nodes", return_value=[]),
+            mock.patch.object(
+                generator,
+                "write_plain",
+                side_effect=PermissionError("permission denied"),
+            ),
+        ):
+            with self.assertRaisesRegex(SystemExit, "无法写入主输出"):
+                generator.main(
+                    ["--plain", "--no-loon", "--output", "/tmp/test-output.yaml"]
+                )
 
 
 if __name__ == "__main__":

@@ -134,7 +134,9 @@ def port_from_listen(value: Any, default: int) -> int:
         return parse_port(value, "listen")
     text = str(value).strip()
     match = re.search(r":(\d+)(?:-\d+)?$", text)
-    return parse_port(match.group(1), "listen") if match else default
+    if not match:
+        raise ValueError(f"listen 必须包含有效端口，当前值为 {value!r}")
+    return parse_port(match.group(1), "listen")
 
 
 def normalize_region(region: str) -> str:
@@ -439,7 +441,14 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                     raise ValueError(
                         f"{file}: inbounds[{inbound_index}].tlsSettings 必须是映射"
                     )
-                servername = tls.get("serverName") or env.get("VPS_HOST", "")
+                servername = str(
+                    tls.get("serverName") or env.get("VPS_HOST", "")
+                ).strip()
+                if not servername:
+                    raise ValueError(
+                        f"{file}: inbounds[{inbound_index}] 的 TLS 节点缺少 "
+                        "tlsSettings.serverName 或 VPS_HOST"
+                    )
                 config["server"] = servername
                 config["servername"] = servername
                 config["skip-cert-verify"] = False
@@ -560,12 +569,15 @@ def client_inventory_nodes(
     if not path.exists():
         return None
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text())
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: 客户端节点 inventory 不是有效 YAML：{exc}") from exc
+    if data is None:
+        data = {}
     if not isinstance(data, dict):
         raise ValueError(f"{path}: 顶层必须是映射，并包含 proxies 列表")
-    source_nodes = data.get("proxies", []) or []
+    raw_source_nodes = data.get("proxies")
+    source_nodes = [] if raw_source_nodes is None else raw_source_nodes
     if not isinstance(source_nodes, list):
         raise ValueError(f"{path}: proxies 必须是列表")
 
@@ -641,7 +653,7 @@ def normalize_trusted_nodes(
         region = normalize_region(str(region_value))
         if region == "gb":
             region = "uk"
-        if not re.fullmatch(r"[a-z]{2}", region):
+        if region == "xx" or not re.fullmatch(r"[a-z]{2}", region):
             raise ValueError(
                 f"{field}.region 必须是两位国家代码（例如 DE、NL），当前值为 {region_value!r}"
             )
@@ -786,7 +798,12 @@ def default_hosts_dir() -> Path:
         SCRIPT_DIR,
         SCRIPT_DIR.parent,
     ):
-        if any(path.is_dir() and path.name != "vps-template" for path in candidate.glob("vps-*")):
+        if any(
+            path.is_dir()
+            and path.name != "vps-template"
+            and (path / "host.env").is_file()
+            for path in candidate.glob("vps-*")
+        ):
             return candidate
     return SCRIPT_DIR
 
@@ -883,12 +900,13 @@ def airport_region(name: str) -> str | None:
     meta = node_meta(name)
     if meta and meta.get("region"):
         code = AIRPORT_REGION_ALIASES.get(meta["region"], meta["region"])
-        return code if re.fullmatch(r"[A-Z]{2}", code) else None
+        return code if code != "XX" and re.fullmatch(r"[A-Z]{2}", code) else None
     match = re.search(r"\b([A-Za-z]{2})\s*$", name)
     if not match:
         return None
     code = match.group(1).upper()
-    return AIRPORT_REGION_ALIASES.get(code, code)
+    code = AIRPORT_REGION_ALIASES.get(code, code)
+    return code if code != "XX" else None
 
 
 def airport_policy_matches(policy_key: str, hostname: str) -> bool:
@@ -1190,10 +1208,13 @@ def loon_option(key: str, value: Any) -> str:
 
 
 def loon_server_fields(proxy: dict[str, Any]) -> list[str]:
-    server = str(proxy.get("server", "")).strip()
-    port = proxy.get("port")
-    if not server or port in {None, ""}:
+    raw_server = proxy.get("server")
+    if isinstance(raw_server, (dict, list, set, tuple)):
         raise ValueError("缺少 server 或 port")
+    server = str(raw_server or "").strip()
+    if not server:
+        raise ValueError("缺少 server 或 port")
+    port = parse_port(proxy.get("port"), "Loon 节点 port")
     return [loon_atom(server), loon_atom(port)]
 
 
@@ -1263,7 +1284,9 @@ def loon_vless(proxy: dict[str, Any]) -> str:
 
 def loon_hysteria2(proxy: dict[str, Any]) -> str:
     password = proxy.get("password")
-    if password in {None, ""}:
+    if password is None or password == "" or isinstance(
+        password, (dict, list, set, tuple)
+    ):
         raise ValueError("Hysteria2 缺少 password")
     fields = ["Hysteria2", *loon_server_fields(proxy), loon_quote(password)]
     options: list[str] = []
@@ -1288,9 +1311,16 @@ def loon_hysteria2(proxy: dict[str, Any]) -> str:
 
 
 def loon_shadowsocks(proxy: dict[str, Any]) -> str:
-    cipher = str(proxy.get("cipher", "")).strip()
+    raw_cipher = proxy.get("cipher")
+    cipher = (
+        ""
+        if isinstance(raw_cipher, (dict, list, set, tuple))
+        else str(raw_cipher or "").strip()
+    )
     password = proxy.get("password")
-    if not cipher or password in {None, ""}:
+    if not cipher or password is None or password == "" or isinstance(
+        password, (dict, list, set, tuple)
+    ):
         raise ValueError("Shadowsocks 缺少 cipher 或 password")
     fields = [
         "Shadowsocks",
@@ -1493,8 +1523,10 @@ def prompt_number_selection(maximum: int) -> set[int]:
     while True:
         try:
             return parse_number_selection(input("请输入编号（如 1,3-5；all=全部；none=不选）："), maximum)
-        except (ValueError, EOFError) as exc:
+        except ValueError as exc:
             print(f"输入无效：{exc}")
+        except EOFError as exc:
+            raise SystemExit("输入已结束，已取消选择") from exc
 
 
 def exclude_by_patterns(proxies: list[dict[str, Any]], patterns: list[str]) -> list[dict[str, Any]]:
@@ -1956,17 +1988,23 @@ def main(argv: list[str] | None = None) -> int:
             write_plain(proxies, output)
         else:
             write_template(proxies + fallback_nodes, chains, output)
-    except ValueError as exc:
-        raise SystemExit(str(exc)) from exc
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"无法写入主输出 {output}：{exc}") from exc
     print(
         f"wrote {output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
         f"{len(chains)} chains, format={output_format})"
     )
     if raw_output:
-        write_plain(proxies, raw_output)
+        try:
+            write_plain(proxies, raw_output)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"无法写入 raw-output {raw_output}：{exc}") from exc
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
     if loon_output:
-        loon_count, loon_skipped = write_loon(proxies, loon_output)
+        try:
+            loon_count, loon_skipped = write_loon(proxies, loon_output)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"无法写入 Loon 输出 {loon_output}：{exc}") from exc
         print(f"wrote {loon_output} ({loon_count} nodes, format=loon)")
         if loon_skipped:
             print(f"warning: skipped {len(loon_skipped)} node(s) unsupported by Loon:")
