@@ -137,6 +137,23 @@ class TrustedNodesMergeTests(unittest.TestCase):
             with self.assertRaisesRegex(manager.TrustedNodesError, "proxies"):
                 manager.merge_trusted_nodes_file(target, source)
 
+    def test_missing_protocol_credentials_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "trusted-nodes.yaml"
+            source = root / "new.yaml"
+            invalid_nodes = (
+                ("vless", "uuid"),
+                ("hysteria2", "password"),
+            )
+            for protocol, message in invalid_nodes:
+                with self.subTest(protocol=protocol):
+                    value = node("invalid", protocol=protocol)
+                    value["proxy"].pop(message)
+                    write_nodes(source, [value])
+                    with self.assertRaisesRegex(manager.TrustedNodesError, message):
+                        manager.merge_trusted_nodes_file(target, source)
+
     def test_atomic_write_failure_keeps_original_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

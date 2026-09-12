@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import ipaddress
 import json
 import os
 import re
@@ -173,13 +174,51 @@ def yaml_bool(value: Any, field: str, default: bool) -> bool:
     raise ValueError(f"{field} 必须是 true 或 false，当前值为 {value!r}")
 
 
+def require_nonempty_string(
+    value: Any,
+    field: str,
+    *,
+    trim: bool = True,
+) -> str:
+    """Return a validated scalar string without coercing YAML null/containers."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} 必须是非空字符串")
+    result = value.strip() if trim else value
+    if "\n" in result or "\r" in result:
+        raise ValueError(f"{field} 不能包含换行")
+    return result
+
+
 def require_socks5_credentials(proxy: dict[str, Any], field: str) -> None:
     """Require credentials for optional SOCKS5 nodes instead of open proxies."""
     for key in ("username", "password"):
-        value = proxy.get(key)
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"{field}.{key} 必须填写；SOCKS5 节点不能使用匿名认证")
-        proxy[key] = value.strip()
+        try:
+            value = require_nonempty_string(proxy.get(key), f"{field}.{key}")
+        except ValueError as exc:
+            raise ValueError(
+                f"{field}.{key} 必须填写；SOCKS5 节点不能使用匿名认证"
+            ) from exc
+        proxy[key] = value
+
+
+def require_proxy_credentials(
+    proxy: dict[str, Any],
+    protocol: str,
+    field: str,
+    *,
+    authenticated_socks5: bool = False,
+) -> None:
+    """Validate credentials required to produce a usable client node."""
+    if protocol == "vless":
+        proxy["uuid"] = require_nonempty_string(proxy.get("uuid"), f"{field}.uuid")
+    elif protocol == "hysteria2":
+        proxy["password"] = require_nonempty_string(
+            proxy.get("password"),
+            f"{field}.password",
+            trim=False,
+        )
+    elif protocol == "socks5" and authenticated_socks5:
+        require_socks5_credentials(proxy, field)
 
 
 def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
@@ -338,7 +377,9 @@ def ensure_unique_anchors(proxies: list[dict[str, Any]]) -> None:
 
 def yaml_scalar(value: Any) -> str:
     if isinstance(value, str):
-        return "'" + value.replace("'", "''") + "'"
+        # JSON strings are valid YAML scalars and correctly escape controls,
+        # quotes, and newlines from imported subscription data.
+        return json.dumps(value, ensure_ascii=False)
     if isinstance(value, bool):
         return "true" if value else "false"
     if value is None:
@@ -348,13 +389,33 @@ def yaml_scalar(value: Any) -> str:
     if isinstance(value, list):
         return "[ " + " , ".join(yaml_scalar(item) for item in value) + " ]"
     if isinstance(value, dict):
-        return "{ " + " , ".join(f"{key} : {yaml_scalar(item)}" for key, item in value.items()) + " }"
+        return (
+            "{ "
+            + " , ".join(
+                f"{yaml_mapping_key(key)} : {yaml_scalar(item)}"
+                for key, item in value.items()
+            )
+            + " }"
+        )
     return yaml_scalar(str(value))
+
+
+def yaml_mapping_key(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"YAML 映射键必须是字符串，当前值为 {value!r}")
+    return yaml_scalar(value)
 
 
 def flow_map(items: list[tuple[str, Any]], anchor: str | None = None) -> str:
     prefix = f"&{anchor} " if anchor else ""
-    return prefix + "{ " + " , ".join(f"{key} : {yaml_scalar(value)}" for key, value in items) + " }"
+    return (
+        prefix
+        + "{ "
+        + " , ".join(
+            f"{yaml_mapping_key(key)} : {yaml_scalar(value)}" for key, value in items
+        )
+        + " }"
+    )
 
 
 def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
@@ -377,8 +438,15 @@ def ordered_items(proxy: dict[str, Any]) -> list[tuple[str, Any]]:
         "client-fingerprint",
         "reality-opts",
     ]
+    for key in proxy:
+        if not isinstance(key, str):
+            raise ValueError(f"节点字段名必须是字符串，当前值为 {key!r}")
     items = [(key, proxy[key]) for key in order if key in proxy]
-    items.extend((key, proxy[key]) for key in proxy if key not in order and not key.startswith("_"))
+    items.extend(
+        (key, proxy[key])
+        for key in proxy
+        if key not in order and not key.startswith("_")
+    )
     return items
 
 
@@ -424,8 +492,12 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                     f"{file}: inbounds[{inbound_index}].settings.clients[0] 必须是映射"
                 )
             uuid = client.get("id")
-            if not uuid:
+            if uuid is None or uuid == "":
                 continue
+            uuid = require_nonempty_string(
+                uuid,
+                f"{file}: inbounds[{inbound_index}].settings.clients[0].id",
+            )
 
             stream = inbound.get("streamSettings", {}) or {}
             if not isinstance(stream, dict):
@@ -527,8 +599,9 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
     if not isinstance(auth, dict):
         raise ValueError(f"{path}: auth 必须是映射")
     password = auth.get("password")
-    if not password:
+    if password is None or password == "":
         return None
+    password = require_nonempty_string(password, f"{path}: auth.password", trim=False)
     tls = data.get("tls", {}) or {}
     if not isinstance(tls, dict):
         raise ValueError(f"{path}: tls 必须是映射")
@@ -602,12 +675,18 @@ def client_inventory_nodes(
     for source_index, source in enumerate(source_nodes):
         if not isinstance(source, dict):
             raise ValueError(f"{path}: proxies 条目必须是映射")
+        if "dialer-proxy" in source or "<<" in source:
+            raise ValueError(
+                f"{path}: proxies[{source_index}] 必须是基础节点，"
+                "不能包含 dialer-proxy 或 <<"
+            )
         protocol = str(source.get("type", "")).lower()
         if protocol not in {"vless", "hysteria2", "socks5"}:
             raise ValueError(f"{path}: 不支持的自建节点协议 {protocol or '<empty>'}")
-        server = str(source.get("server", "")).strip()
-        if not server:
-            raise ValueError(f"{path}: {protocol} 缺少 server 或 port")
+        server = require_nonempty_string(
+            source.get("server"),
+            f"{path}: proxies[{source_index}].server",
+        )
         port = parse_port(source.get("port"), f"{path}: {protocol}.port")
 
         key = (region, protocol)
@@ -617,8 +696,12 @@ def client_inventory_nodes(
         proxy["server"] = server
         proxy["port"] = port
         proxy["type"] = protocol
-        if protocol == "socks5":
-            require_socks5_credentials(proxy, f"{path}: proxies[{source_index}]")
+        require_proxy_credentials(
+            proxy,
+            protocol,
+            f"{path}: proxies[{source_index}]",
+            authenticated_socks5=True,
+        )
         proxy["name"] = node_name(
             region,
             protocol,
@@ -655,11 +738,7 @@ def normalize_trusted_nodes(
         if not isinstance(source, dict):
             raise ValueError(f"{field} 必须是映射")
 
-        node_id = str(source.get("id", "")).strip()
-        if not node_id:
-            raise ValueError(f"{field}.id 不能为空")
-        if "\n" in node_id or "\r" in node_id:
-            raise ValueError(f"{field}.id 不能包含换行")
+        node_id = require_nonempty_string(source.get("id"), f"{field}.id")
 
         region_value = source.get("region")
         if region_value is None:
@@ -682,17 +761,22 @@ def normalize_trusted_nodes(
                 f"{field}.proxy.type 只支持 vless、hysteria2 或 socks5，"
                 f"当前值为 {protocol or '<empty>'}"
             )
-        server = str(proxy.get("server", "")).strip()
-        if not server:
-            raise ValueError(f"{field}.proxy 缺少 server 或 port")
+        server = require_nonempty_string(
+            proxy.get("server"),
+            f"{field}.proxy.server",
+        )
         proxy["server"] = server
         if "dialer-proxy" in proxy or "<<" in proxy:
             raise ValueError(f"{field}.proxy 只能是基础节点，不能包含 dialer-proxy 或 <<")
         port = parse_port(proxy.get("port"), f"{field}.proxy.port")
         proxy["type"] = protocol
         proxy["port"] = port
-        if protocol == "socks5":
-            require_socks5_credentials(proxy, field)
+        require_proxy_credentials(
+            proxy,
+            protocol,
+            f"{field}.proxy",
+            authenticated_socks5=True,
+        )
 
         identity = (node_id, protocol)
         if identity in seen:
@@ -860,7 +944,7 @@ def collect_proxies(
     host_dirs = [
         path
         for path in hosts_dir.glob("vps-*")
-        if (path / "host.env").is_file()
+        if path.name != "vps-template" and (path / "host.env").is_file()
     ]
 
     def clash_env(host_dir: Path) -> dict[str, str]:
@@ -890,8 +974,6 @@ def collect_proxies(
         )
     )
     for host_dir in host_dirs:
-        if host_dir.name == "vps-template":
-            continue
         env = clash_env(host_dir)
         if not env:
             continue
@@ -928,6 +1010,17 @@ def airport_policy_matches(policy_key: str, hostname: str) -> bool:
     return key == host
 
 
+def is_ip_address(value: str) -> bool:
+    candidate = value.strip()
+    if candidate.startswith("[") and candidate.endswith("]"):
+        candidate = candidate[1:-1]
+    try:
+        ipaddress.ip_address(candidate)
+    except ValueError:
+        return False
+    return True
+
+
 def matching_airport_dns_policy(
     subscription: dict[str, Any], selected: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -937,11 +1030,14 @@ def matching_airport_dns_policy(
     source_policy = dns.get("nameserver-policy") or {}
     if not isinstance(source_policy, dict):
         raise ValueError("机场订阅的 dns.nameserver-policy 必须是映射")
-    hostnames = {
-        str(proxy.get("server", "")).strip()
-        for proxy in selected
-        if proxy.get("server") and not re.fullmatch(r"[0-9a-fA-F:.]+", str(proxy["server"]))
-    }
+    hostnames: set[str] = set()
+    for proxy in selected:
+        raw_server = proxy.get("server")
+        if not isinstance(raw_server, str):
+            continue
+        hostname = raw_server.strip()
+        if hostname and not is_ip_address(hostname):
+            hostnames.add(hostname)
     return {
         str(key): copy.deepcopy(value)
         for key, value in source_policy.items()
@@ -970,28 +1066,38 @@ def normalize_direct_source_nodes(
             )
         original_name = str(source.get("name", "")).strip()
         region = airport_region(original_name)
-        protocol_raw = str(source.get("type", "")).strip().lower()
+        raw_protocol = source.get("type")
+        protocol_raw = (
+            raw_protocol.strip().lower() if isinstance(raw_protocol, str) else ""
+        )
         protocol = "H2" if protocol_raw == "hysteria2" else protocol_raw.upper()
         if not region or not protocol:
             print(f"已跳过无法识别的{source_kind}节点：{original_name or '<unnamed>'}")
             continue
-        server = str(source.get("server", "")).strip()
-        if not server:
+        raw_server = source.get("server")
+        if not isinstance(raw_server, str) or not raw_server.strip():
             print(f"已跳过缺少 server 的{source_kind}节点：{original_name or '<unnamed>'}")
             continue
+        server = raw_server.strip()
         try:
             port = parse_port(source.get("port"), f"{source_kind}节点 {original_name or '<unnamed>'}.port")
+        except ValueError as exc:
+            print(f"已跳过无效{source_kind}节点：{exc}")
+            continue
+        description = f"{REGION_CN.get(region.lower(), region)}{description_suffix}"
+        source_label = source_marker_label(original_name)
+        proxy = copy.deepcopy(source)
+        proxy["server"] = server
+        proxy["port"] = port
+        proxy["type"] = protocol_raw
+        try:
+            require_proxy_credentials(proxy, protocol_raw, field)
         except ValueError as exc:
             print(f"已跳过无效{source_kind}节点：{exc}")
             continue
         key = (region.lower(), protocol_raw)
         index = counters.get(key, 0)
         counters[key] = index + 1
-        description = f"{REGION_CN.get(region.lower(), region)}{description_suffix}"
-        source_label = source_marker_label(original_name)
-        proxy = copy.deepcopy(source)
-        proxy["server"] = server
-        proxy["port"] = port
         proxy["name"] = (
             f"VPS-[{region}.Exit]-{protocol}-{index:02d}-({description})"
             f"-[{source_marker}={source_label}]"
@@ -1178,7 +1284,13 @@ def secure_write(output: Path, content: str) -> None:
 
 
 def clean_proxy(proxy: dict[str, Any]) -> dict[str, Any]:
-    return {key: copy.deepcopy(value) for key, value in proxy.items() if not key.startswith("_")}
+    cleaned: dict[str, Any] = {}
+    for key, value in proxy.items():
+        if not isinstance(key, str):
+            raise ValueError(f"节点字段名必须是字符串，当前值为 {key!r}")
+        if not key.startswith("_"):
+            cleaned[key] = copy.deepcopy(value)
+    return cleaned
 
 
 def write_plain(proxies: list[dict[str, Any]], output: Path) -> None:
@@ -1901,7 +2013,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--routes",
         help="仅生成指定方向，例如 'HK<-JP,US<-HK'；也可写成 'HK:JP,US:HK'",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.interactive and any(
+        (
+            args.plain,
+            args.template,
+            args.merge,
+            args.chains is not None,
+            args.routes is not None,
+            bool(args.exclude_node),
+        )
+    ):
+        parser.error(
+            "--interactive 不能与 --plain/--template/--merge/--chains/"
+            "--routes/--exclude-node 同时使用"
+        )
+    if args.plain and (args.chains is not None or args.routes is not None):
+        parser.error("--plain 不能与 --chains 或 --routes 同时使用")
+    if args.routes is not None and args.chains is not None:
+        parser.error("--routes 不能与 --chains 同时使用")
+    return args
 
 
 def apply_default_invocation(args: argparse.Namespace, invoked_without_args: bool) -> None:

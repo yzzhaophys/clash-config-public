@@ -1,3 +1,4 @@
+import io
 import json
 import tempfile
 import unittest
@@ -228,6 +229,7 @@ class GeneratorTests(unittest.TestCase):
                         "type": "vless",
                         "server": "trusted.example",
                         "port": 443,
+                        "uuid": "trusted-uuid",
                     },
                 }
             ],
@@ -237,6 +239,68 @@ class GeneratorTests(unittest.TestCase):
 
         self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-VLESS-00-(美国出口节点)")
         self.assertIsNone(generator.node_meta(nodes[0]["name"])["trusted"])
+
+    def test_trusted_nodes_require_scalar_identity_server_and_credentials(self) -> None:
+        invalid_nodes = (
+            (
+                {
+                    "id": None,
+                    "region": "US",
+                    "proxy": {
+                        "type": "vless",
+                        "server": "trusted.example",
+                        "port": 443,
+                        "uuid": "uuid",
+                    },
+                },
+                "id",
+            ),
+            (
+                {
+                    "id": "trusted-us",
+                    "region": "US",
+                    "proxy": {
+                        "type": "vless",
+                        "server": {"host": "trusted.example"},
+                        "port": 443,
+                        "uuid": "uuid",
+                    },
+                },
+                "server",
+            ),
+            (
+                {
+                    "id": "trusted-us",
+                    "region": "US",
+                    "proxy": {
+                        "type": "vless",
+                        "server": "trusted.example",
+                        "port": 443,
+                    },
+                },
+                "uuid",
+            ),
+            (
+                {
+                    "id": "trusted-us",
+                    "region": "US",
+                    "proxy": {
+                        "type": "hysteria2",
+                        "server": "trusted.example",
+                        "port": 443,
+                    },
+                },
+                "password",
+            ),
+        )
+        for source, message in invalid_nodes:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    generator.normalize_trusted_nodes(
+                        [source],
+                        {},
+                        Path("trusted-nodes.yaml"),
+                    )
 
     def test_trusted_nodes_show_trust_file_as_interactive_source(self) -> None:
         proxy = {
@@ -283,6 +347,48 @@ class GeneratorTests(unittest.TestCase):
         name = generator.node_name("us", "vless", 0, "Exit")
         with self.assertRaisesRegex(ValueError, "anchor 重复"):
             generator.ensure_unique_anchors([{"name": name}, {"name": name}])
+
+    def test_template_quotes_imported_mapping_keys(self) -> None:
+        injected_key = "x : 1 }\ninjected: true #"
+        proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "type": "vless",
+            "server": "edge.example",
+            "port": 443,
+            "uuid": "uuid",
+            injected_key: "kept-as-data",
+            "ws-opts": {"headers": {injected_key: "nested-data"}},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "template.yaml"
+            generator.write_template([proxy], [], output)
+            parsed = yaml.safe_load(output.read_text())
+
+        self.assertNotIn("injected", parsed)
+        self.assertEqual(parsed["proxies"][0][injected_key], "kept-as-data")
+        self.assertEqual(
+            parsed["proxies"][0]["ws-opts"]["headers"][injected_key],
+            "nested-data",
+        )
+
+    def test_outputs_reject_non_string_proxy_keys_cleanly(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "type": "vless",
+            "server": "edge.example",
+            "port": 443,
+            "uuid": "uuid",
+            1: "invalid-key",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for writer, filename in (
+                (lambda path: generator.write_template([proxy], [], path), "template.yaml"),
+                (lambda path: generator.write_plain([proxy], path), "plain.yaml"),
+            ):
+                with self.subTest(filename=filename):
+                    with self.assertRaisesRegex(ValueError, "字段名必须是字符串"):
+                        writer(root / filename)
 
     def test_fallback_anchor_does_not_collide_with_real_target_region(self) -> None:
         source = {
@@ -435,6 +541,47 @@ class GeneratorTests(unittest.TestCase):
             inventory.write_text("proxies: []\n")
             self.assertEqual(generator.client_inventory_nodes(host_dir, env, {}), [])
 
+    def test_client_inventory_rejects_chains_and_missing_credentials(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            host_dir = Path(directory) / "vps-nat"
+            inventory = host_dir / "client" / "clash-nodes.yaml"
+            inventory.parent.mkdir(parents=True)
+            env = {"VPS_CLASH_REGION": "jp"}
+
+            inventory.write_text(
+                yaml.safe_dump(
+                    {
+                        "proxies": [
+                            {
+                                "type": "vless",
+                                "server": "public.example",
+                                "port": 443,
+                                "uuid": "uuid",
+                                "dialer-proxy": "already-chained",
+                            }
+                        ]
+                    }
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "dialer-proxy"):
+                generator.client_inventory_nodes(host_dir, env, {})
+
+            inventory.write_text(
+                yaml.safe_dump(
+                    {
+                        "proxies": [
+                            {
+                                "type": "hysteria2",
+                                "server": "public.example",
+                                "port": 443,
+                            }
+                        ]
+                    }
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "password"):
+                generator.client_inventory_nodes(host_dir, env, {})
+
     def test_client_inventory_accepts_authenticated_socks5(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             host_dir = Path(directory) / "vps-nat"
@@ -481,6 +628,15 @@ class GeneratorTests(unittest.TestCase):
                 mock.patch.object(generator, "SCRIPT_DIR", root / "repo"),
             ):
                 self.assertEqual(generator.default_hosts_dir(), legacy)
+
+    def test_collect_proxies_ignores_vps_template_before_sorting(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            hosts_dir = Path(directory)
+            template = hosts_dir / "vps-template"
+            template.mkdir()
+            (template / "host.env").write_text("VPS_CLASH_ORDER=invalid\n")
+
+            self.assertEqual(generator.collect_proxies(hosts_dir), [])
 
     def test_invalid_host_order_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -556,6 +712,26 @@ class GeneratorTests(unittest.TestCase):
             generator.validate_output_paths(
                 [("主输出", Path("output.yaml")), ("raw-output", Path("./output.yaml"))]
             )
+
+    def test_conflicting_cli_modes_are_rejected(self) -> None:
+        combinations = (
+            ["--plain", "--routes", "US<-JP"],
+            ["--routes", "US<-JP", "--chains", "none"],
+            ["--interactive", "--exclude-node", "US"],
+        )
+        for arguments in combinations:
+            with self.subTest(arguments=arguments):
+                with mock.patch("sys.stderr", new=io.StringIO()):
+                    with self.assertRaises(SystemExit):
+                        generator.parse_args(arguments)
+
+    def test_dns_policy_does_not_treat_hex_like_domain_as_ip(self) -> None:
+        policy = generator.matching_airport_dns_policy(
+            {"dns": {"nameserver-policy": {"+.abc.de": ["dns.example"]}}},
+            [{"server": "node.abc.de"}],
+        )
+
+        self.assertEqual(policy, {"+.abc.de": ["dns.example"]})
 
     def test_secure_write_is_private_and_atomic_on_replace_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
