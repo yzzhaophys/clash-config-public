@@ -258,7 +258,6 @@ def node_name(
     allow_direct_exit: bool = True,
     allow_download: bool = False,
     allow_showip: bool = False,
-    description_override: str | None = None,
 ) -> str:
     region = normalize_region(region)
     code = REGION_CODE.get(region, region.upper())
@@ -269,7 +268,7 @@ def node_name(
         "Exit": f"{cn}出口节点",
         "HomeIP": f"{cn}住宅节点",
     }
-    description = description_override or descriptions.get(role, cn + "节点")
+    description = descriptions.get(role, cn + "节点")
     return (
         f"VPS-[{code}.{role}]-{proto}-{index:02d}-({description})"
         + capability_name_suffix(allow_direct_exit, allow_download, allow_showip)
@@ -645,10 +644,6 @@ def normalize_trusted_nodes(
         if "\n" in node_id or "\r" in node_id:
             raise ValueError(f"{field}.id 不能包含换行")
 
-        raw_label = source.get("name")
-        label = str(raw_label).strip() if raw_label is not None else ""
-        label = label or node_id
-        label = source_marker_label(label)
         region_value = source.get("region")
         if region_value is None:
             raise ValueError(f"{field}.region 必须填写实际国家代码，例如 DE 或 NL")
@@ -742,9 +737,7 @@ def normalize_trusted_nodes(
                 role,
                 allow_direct_exit=allow_direct_exit,
                 allow_download=allow_download,
-                description_override=f"{REGION_CN.get(region, region)}NAT机",
             )
-            + f"-[Trusted={label}]"
         )
         normalized.append(attach_capabilities(proxy, capabilities))
     return normalized

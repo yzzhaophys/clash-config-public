@@ -130,9 +130,8 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(meta["role"], "Exit")
         self.assertEqual(meta["proto"], "VLESS")
         self.assertIsNone(meta["airport"])
-        self.assertIsNotNone(meta["trusted"])
-        self.assertIn("[Trusted=US NAT VLESS 01]", nodes[0]["name"])
-        self.assertIn("(美国NAT机)", nodes[0]["name"])
+        self.assertIsNone(meta["trusted"])
+        self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-VLESS-00-(美国出口节点)")
         self.assertFalse(nodes[0]["_allow-relay"])
         self.assertTrue(nodes[0]["_allow-direct-exit"])
         self.assertFalse(nodes[0]["_allow-chain-exit"])
@@ -169,7 +168,7 @@ class GeneratorTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "顶层必须是映射"):
                 generator.load_trusted_nodes(source, {})
 
-    def test_advanced_trusted_label_uses_balanced_fullwidth_brackets(self) -> None:
+    def test_trusted_nodes_use_host_var_naming(self) -> None:
         nodes = generator.normalize_trusted_nodes(
             [
                 {
@@ -187,8 +186,8 @@ class GeneratorTests(unittest.TestCase):
             Path("trusted-nodes.yaml"),
         )
 
-        self.assertIn("[Trusted=VPS-［US.Core］-source]", nodes[0]["name"])
-        self.assertIsNotNone(generator.node_meta(nodes[0]["name"])["trusted"])
+        self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-VLESS-00-(美国出口节点)")
+        self.assertIsNone(generator.node_meta(nodes[0]["name"])["trusted"])
 
     def test_direct_source_region_rejects_virtual_codes(self) -> None:
         self.assertIsNone(
