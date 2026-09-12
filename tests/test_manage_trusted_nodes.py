@@ -40,6 +40,7 @@ def node(node_id: str, *, port: int = 443, protocol: str = "vless") -> dict:
 
 def write_nodes(path: Path, nodes: list[dict]) -> None:
     path.write_text(yaml.safe_dump({"nodes": nodes}, sort_keys=False), encoding="utf-8")
+    path.chmod(0o600)
 
 
 class TrustedNodesMergeTests(unittest.TestCase):
@@ -123,6 +124,93 @@ class TrustedNodesMergeTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), before)
             self.assertEqual(list(root.glob("trusted-nodes.yaml.bak-*")), [])
 
+    def test_remove_all_protocols_previews_then_applies_with_backup(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "trusted-nodes.yaml"
+            write_nodes(
+                target,
+                [
+                    node("nat-01", protocol="vless"),
+                    node("keep-01", protocol="hysteria2"),
+                    node("nat-01", protocol="socks5"),
+                ],
+            )
+            before = target.read_bytes()
+
+            preview = manager.remove_trusted_nodes_file(target, "nat-01")
+            self.assertEqual((preview.removed, preview.preserved), (2, 1))
+            self.assertIsNone(preview.backup)
+            self.assertEqual(target.read_bytes(), before)
+
+            result = manager.remove_trusted_nodes_file(target, "nat-01", apply=True)
+            values = yaml.safe_load(target.read_text())["nodes"]
+            self.assertEqual((result.removed, result.preserved), (2, 1))
+            self.assertEqual(
+                [(item["id"], item["proxy"]["type"]) for item in values],
+                [("keep-01", "hysteria2")],
+            )
+            self.assertIsNotNone(result.backup)
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+
+    def test_remove_can_target_one_protocol_and_rejects_missing_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "trusted-nodes.yaml"
+            write_nodes(
+                target,
+                [
+                    node("nat-01", protocol="vless"),
+                    node("nat-01", protocol="hysteria2"),
+                ],
+            )
+
+            result = manager.remove_trusted_nodes_file(
+                target, "nat-01", protocol="vless", apply=True
+            )
+            values = yaml.safe_load(target.read_text())["nodes"]
+            self.assertEqual(result.removed, 1)
+            self.assertEqual(
+                [(item["id"], item["proxy"]["type"]) for item in values],
+                [("nat-01", "hysteria2")],
+            )
+            with self.assertRaisesRegex(manager.TrustedNodesError, "未找到"):
+                manager.remove_trusted_nodes_file(
+                    target, "nat-01", protocol="vless"
+                )
+
+    def test_remove_cli_dispatches_without_exposing_node_content(self) -> None:
+        result = manager.RemoveResult(
+            removed=2,
+            preserved=1,
+            changed=True,
+            backup=None,
+        )
+        with mock.patch.object(
+            manager, "remove_trusted_nodes_file", return_value=result
+        ) as remove, mock.patch("builtins.print") as output:
+            exit_code = manager.main(
+                [
+                    "remove",
+                    "--target",
+                    "/private/trusted-nodes.yaml",
+                    "--id",
+                    "nat-01",
+                    "--protocol",
+                    "vless",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        remove.assert_called_once_with(
+            Path("/private/trusted-nodes.yaml"),
+            "nat-01",
+            protocol="vless",
+            apply=False,
+        )
+        rendered = " ".join(str(call) for call in output.call_args_list)
+        self.assertIn("删除=2", rendered)
+        self.assertNotIn("nat-01", rendered)
+
     def test_duplicate_ids_and_proxies_format_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -153,6 +241,25 @@ class TrustedNodesMergeTests(unittest.TestCase):
                     write_nodes(source, [value])
                     with self.assertRaisesRegex(manager.TrustedNodesError, message):
                         manager.merge_trusted_nodes_file(target, source)
+
+    def test_source_and_existing_target_require_private_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "trusted-nodes.yaml"
+            source = root / "new.yaml"
+            write_nodes(target, [node("one")])
+            write_nodes(source, [node("two")])
+
+            source.chmod(0o644)
+            with self.assertRaisesRegex(manager.TrustedNodesError, "chmod 600"):
+                manager.merge_trusted_nodes_file(target, source)
+            source.chmod(0o600)
+
+            target.chmod(0o640)
+            with self.assertRaisesRegex(manager.TrustedNodesError, "chmod 600"):
+                manager.merge_trusted_nodes_file(target, source)
+            with self.assertRaisesRegex(manager.TrustedNodesError, "chmod 600"):
+                manager.remove_trusted_nodes_file(target, "one")
 
     def test_atomic_write_failure_keeps_original_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

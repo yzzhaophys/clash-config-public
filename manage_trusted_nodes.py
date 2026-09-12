@@ -9,6 +9,7 @@ import errno
 import fcntl
 import os
 import shutil
+import stat
 import tempfile
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -35,12 +36,30 @@ class MergeResult:
     backup: Path | None
 
 
+@dataclass(frozen=True)
+class RemoveResult:
+    removed: int
+    preserved: int
+    changed: bool
+    backup: Path | None
+
+
 def _reject_symlink(path: Path, label: str) -> None:
     if path.is_symlink():
         raise TrustedNodesError(f"{label} 不能是符号链接：{path}")
 
 
-def _load_document(path: Path, *, required: bool) -> dict[str, Any]:
+def _require_private_permissions(path: Path, label: str) -> None:
+    mode = stat.S_IMODE(path.stat(follow_symlinks=False).st_mode)
+    if mode & 0o077:
+        raise TrustedNodesError(
+            f"{label} 权限过宽：{path} 当前为 {mode:04o}；请先执行 chmod 600"
+        )
+
+
+def _load_document(
+    path: Path, *, required: bool, require_private: bool = True
+) -> dict[str, Any]:
     path = path.expanduser()
     _reject_symlink(path, "trusted-nodes 文件")
     if not path.exists():
@@ -49,6 +68,8 @@ def _load_document(path: Path, *, required: bool) -> dict[str, Any]:
         return {"nodes": []}
     if not path.is_file():
         raise TrustedNodesError(f"trusted-nodes 路径不是普通文件：{path}")
+    if require_private:
+        _require_private_permissions(path, "trusted-nodes 文件")
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, yaml.YAMLError) as exc:
@@ -260,6 +281,58 @@ def _merge_once(target: Path, source: Path, *, apply: bool) -> MergeResult:
     return MergeResult(added, updated, unchanged, preserved, changed, backup)
 
 
+def _normalize_remove_selector(
+    node_id: str, protocol: str | None
+) -> tuple[str, str | None]:
+    normalized_id = str(node_id).strip()
+    if not normalized_id or "\n" in normalized_id or "\r" in normalized_id:
+        raise TrustedNodesError("删除目标 id 必须是无换行的非空字符串")
+    normalized_protocol = (
+        str(protocol).strip().lower() if protocol is not None else None
+    )
+    if normalized_protocol not in {None, "vless", "hysteria2", "socks5"}:
+        raise TrustedNodesError("删除目标 protocol 必须是 vless、hysteria2 或 socks5")
+    return normalized_id, normalized_protocol
+
+
+def _remove_once(
+    target: Path,
+    node_id: str,
+    protocol: str | None,
+    *,
+    apply: bool,
+) -> RemoveResult:
+    existing = _load_document(target, required=True)
+    existing_nodes = existing.get("nodes", [])
+    _validate_nodes(existing_nodes, path=target)
+
+    kept_nodes: list[Any] = []
+    removed = 0
+    for index, node in enumerate(existing_nodes):
+        current_id, current_protocol = _node_key(node, path=target, index=index)
+        if current_id == node_id and (
+            protocol is None or current_protocol == protocol
+        ):
+            removed += 1
+        else:
+            kept_nodes.append(copy.deepcopy(node))
+    if removed == 0:
+        selector = f"id={node_id!r}"
+        if protocol is not None:
+            selector += f"、protocol={protocol!r}"
+        raise TrustedNodesError(f"目标文件中未找到 {selector}")
+
+    updated = copy.deepcopy(existing)
+    updated["nodes"] = kept_nodes
+    _validate_nodes(kept_nodes, path=target)
+    backup = None
+    if apply:
+        _reject_symlink(target, "目标 trusted-nodes 文件")
+        backup = _backup_path(target)
+        _atomic_write_yaml(target, updated)
+    return RemoveResult(removed, len(kept_nodes), True, backup)
+
+
 def merge_trusted_nodes_file(
     target: Path, source: Path, *, apply: bool = False
 ) -> MergeResult:
@@ -276,10 +349,29 @@ def merge_trusted_nodes_file(
     return _merge_once(target, source, apply=False)
 
 
+def remove_trusted_nodes_file(
+    target: Path,
+    node_id: str,
+    *,
+    protocol: str | None = None,
+    apply: bool = False,
+) -> RemoveResult:
+    """Preview or remove one protocol or every protocol for a stable node ID."""
+    target = target.expanduser()
+    normalized_id, normalized_protocol = _normalize_remove_selector(node_id, protocol)
+    if apply:
+        with _exclusive_lock(target):
+            return _remove_once(
+                target,
+                normalized_id,
+                normalized_protocol,
+                apply=True,
+            )
+    return _remove_once(target, normalized_id, normalized_protocol, apply=False)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="按 id + proxy.type 合并私有 trusted-nodes.yaml，不覆盖其他节点"
-    )
+    parser = argparse.ArgumentParser(description="安全维护私有 trusted-nodes.yaml")
     subparsers = parser.add_subparsers(dest="action", required=True)
     merge = subparsers.add_parser(
         "merge",
@@ -297,27 +389,59 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="实际写入；省略时只预览，不创建备份或修改目标",
     )
+    remove = subparsers.add_parser(
+        "remove",
+        help="按稳定 id 删除全部协议，或用 --protocol 只删除一个协议",
+    )
+    remove.add_argument(
+        "--target", required=True, type=Path, help="目标 trusted-nodes.yaml"
+    )
+    remove.add_argument("--id", required=True, help="要退役的稳定节点 id")
+    remove.add_argument(
+        "--protocol",
+        choices=("vless", "hysteria2", "socks5"),
+        help="只删除指定协议；省略时删除该 id 的全部协议",
+    )
+    remove.add_argument(
+        "--apply",
+        action="store_true",
+        help="实际写入；省略时只预览，不创建备份或修改目标",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        result = merge_trusted_nodes_file(
-            args.target,
-            args.source,
-            apply=args.apply,
-        )
+        if args.action == "merge":
+            result = merge_trusted_nodes_file(
+                args.target,
+                args.source,
+                apply=args.apply,
+            )
+        else:
+            result = remove_trusted_nodes_file(
+                args.target,
+                args.id,
+                protocol=args.protocol,
+                apply=args.apply,
+            )
     except (OSError, TrustedNodesError) as exc:
-        print(f"trusted-nodes 合并失败：{exc}", file=os.sys.stderr)
+        print(f"trusted-nodes {args.action} 失败：{exc}", file=os.sys.stderr)
         return 1
 
     mode = "已应用" if args.apply else "预览"
-    print(
-        f"trusted-nodes {mode}：新增={result.added}，更新={result.updated}，"
-        f"不变={result.unchanged}，保留={result.preserved}，"
-        f"changed={'yes' if result.changed else 'no'}"
-    )
+    if args.action == "merge":
+        print(
+            f"trusted-nodes {mode}：新增={result.added}，更新={result.updated}，"
+            f"不变={result.unchanged}，保留={result.preserved}，"
+            f"changed={'yes' if result.changed else 'no'}"
+        )
+    else:
+        print(
+            f"trusted-nodes {mode}：删除={result.removed}，保留={result.preserved}，"
+            f"changed={'yes' if result.changed else 'no'}"
+        )
     if result.backup is not None:
         print("已创建目标文件备份；未输出节点内容。")
     elif not args.apply and result.changed:

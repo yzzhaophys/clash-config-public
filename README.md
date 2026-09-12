@@ -196,9 +196,11 @@ nodes:
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
 VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
-时间戳备份并进行锁定和原子替换：
+时间戳备份并进行锁定和原子替换。目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
+以下命令从本仓库根目录执行：
 
 ```bash
+chmod 600 /path/to/nat-node.yaml
 python3 manage_trusted_nodes.py merge \
   --target ~/.config/clash/airport/trusted-nodes.yaml \
   --source /path/to/nat-node.yaml
@@ -207,6 +209,31 @@ python3 manage_trusted_nodes.py merge \
   --source /path/to/nat-node.yaml \
   --apply
 ```
+
+NAT 主机退役时按稳定 `id` 先预览、再删除；省略 `--protocol` 会删除该物理节点登记的全部协议，
+指定 `--protocol vless|hysteria2|socks5` 时只删除一个协议：
+
+```bash
+python3 manage_trusted_nodes.py remove \
+  --target ~/.config/clash/airport/trusted-nodes.yaml \
+  --id provider-us-01
+python3 manage_trusted_nodes.py remove \
+  --target ~/.config/clash/airport/trusted-nodes.yaml \
+  --id provider-us-01 \
+  --apply
+```
+
+合并或删除只修改私密事实源。应用后必须使用当前已审查的选项重新运行生成器并重新加载客户端；
+交互流程会重写三份默认输出：
+
+```bash
+./generate_raw_nodes.py \
+  --trusted-nodes-file ~/.config/clash/airport/trusted-nodes.yaml \
+  --interactive
+```
+
+退役后应在 `trusted-nodes.yaml`、`nodes.yaml`、`clash-vps.generated.yaml` 和 `loon-nodes.conf`
+中反向搜索稳定 `id`，确认无残留；检查完备份后再按控制端保留策略处置临时源文件和过期备份。
 
 SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，默认只作为直出节点；
 它会进入 Clash/Mihomo 输出。当前 Loon 输出仍会跳过 SOCKS5，因为 Loon 转换器尚未覆盖该协议。
