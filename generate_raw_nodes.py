@@ -258,6 +258,7 @@ def node_name(
     allow_direct_exit: bool = True,
     allow_download: bool = False,
     allow_showip: bool = False,
+    description_override: str | None = None,
 ) -> str:
     region = normalize_region(region)
     code = REGION_CODE.get(region, region.upper())
@@ -268,8 +269,9 @@ def node_name(
         "Exit": f"{cn}出口节点",
         "HomeIP": f"{cn}住宅节点",
     }
+    description = description_override or descriptions.get(role, cn + "节点")
     return (
-        f"VPS-[{code}.{role}]-{proto}-{index:02d}-({descriptions.get(role, cn + '节点')})"
+        f"VPS-[{code}.{role}]-{proto}-{index:02d}-({description})"
         + capability_name_suffix(allow_direct_exit, allow_download, allow_showip)
     )
 
@@ -740,6 +742,7 @@ def normalize_trusted_nodes(
                 role,
                 allow_direct_exit=allow_direct_exit,
                 allow_download=allow_download,
+                description_override=f"{REGION_CN.get(region, region)}NAT机",
             )
             + f"-[Trusted={label}]"
         )
@@ -760,31 +763,21 @@ def load_trusted_nodes(
     if data is None:
         data = {}
     if not isinstance(data, dict):
-        raise ValueError(f"{path}: 顶层必须是映射，并包含 proxies 或 nodes 列表")
-    if "proxies" in data and "nodes" in data:
-        raise ValueError(f"{path}: proxies 和 nodes 不能同时存在")
+        raise ValueError(f"{path}: 顶层必须是映射，并包含 nodes 列表")
     if "proxies" in data:
-        raw_proxies = data.get("proxies")
-        source_proxies = [] if raw_proxies is None else raw_proxies
-        if not isinstance(source_proxies, list):
-            raise ValueError(f"{path}: proxies 必须是列表")
-        return normalize_direct_source_nodes(
-            source_proxies,
-            counters,
-            source_marker="Trusted",
-            description_suffix="NAT机",
-            physical_source="trusted",
-            source_kind="可信 NAT",
+        raise ValueError(
+            f"{path}: trusted-nodes.yaml 只支持 nodes 列表；"
+            "请将节点改为高级 nodes 格式"
         )
-    if "nodes" in data:
-        raw_nodes = data.get("nodes")
-        source_nodes = [] if raw_nodes is None else raw_nodes
-        if not isinstance(source_nodes, list):
-            raise ValueError(f"{path}: nodes 必须是列表")
-        return normalize_trusted_nodes(source_nodes, counters, path)
-    if data:
-        raise ValueError(f"{path}: 顶层必须包含 proxies 或 nodes 列表")
-    return []
+    if "nodes" not in data:
+        if data:
+            raise ValueError(f"{path}: 顶层必须包含 nodes 列表")
+        return []
+    raw_nodes = data.get("nodes")
+    source_nodes = [] if raw_nodes is None else raw_nodes
+    if not isinstance(source_nodes, list):
+        raise ValueError(f"{path}: nodes 必须是列表")
+    return normalize_trusted_nodes(source_nodes, counters, path)
 
 
 def default_hosts_dir() -> Path:
@@ -1932,7 +1925,7 @@ def main(argv: list[str] | None = None) -> int:
         proxies.extend(trusted_nodes)
         print(
             f"已导入 {len(trusted_nodes)} 个 trusted-nodes.yaml 节点；"
-            "proxies 格式按 NAT 直连节点处理，nodes 格式按显式能力处理。"
+            "nodes 格式按显式能力处理。"
         )
     if args.interactive:
         try:

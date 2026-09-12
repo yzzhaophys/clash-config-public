@@ -96,20 +96,26 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(generator.node_meta(airport[0]["name"])["proto"], "H2")
         self.assertNotIn("HYSTERIA2", airport[0]["name"])
 
-    def test_trusted_proxies_are_loaded_as_direct_nat_nodes(self) -> None:
-        original_name = "VPS-[US.Core]-VLESS-00-(US核心节点)"
+    def test_trusted_nodes_are_loaded_with_explicit_capabilities(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "trusted-nodes.yaml"
             source.write_text(
                 yaml.safe_dump(
                     {
-                        "proxies": [
+                        "nodes": [
                             {
-                                "name": original_name,
-                                "type": "vless",
-                                "server": "trusted.example",
-                                "port": 443,
-                                "uuid": "trusted-uuid",
+                                "id": "trusted-us-01",
+                                "name": "US NAT VLESS 01",
+                                "region": "US",
+                                "allow-relay": False,
+                                "allow-chain-exit": False,
+                                "allow-direct-exit": True,
+                                "proxy": {
+                                    "type": "vless",
+                                    "server": "trusted.example",
+                                    "port": 443,
+                                    "uuid": "trusted-uuid",
+                                },
                             }
                         ]
                     }
@@ -125,9 +131,8 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(meta["proto"], "VLESS")
         self.assertIsNone(meta["airport"])
         self.assertIsNotNone(meta["trusted"])
+        self.assertIn("[Trusted=US NAT VLESS 01]", nodes[0]["name"])
         self.assertIn("(美国NAT机)", nodes[0]["name"])
-        self.assertIn("[Trusted=VPS-［US.Core］-VLESS-00-(US核心节点)]", nodes[0]["name"])
-        self.assertNotIn("VPS-[US.Core）", nodes[0]["name"])
         self.assertFalse(nodes[0]["_allow-relay"])
         self.assertTrue(nodes[0]["_allow-direct-exit"])
         self.assertFalse(nodes[0]["_allow-chain-exit"])
@@ -156,11 +161,9 @@ class GeneratorTests(unittest.TestCase):
     def test_trusted_file_rejects_false_list_values(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "trusted-nodes.yaml"
-            for key in ("proxies", "nodes"):
-                source.write_text(f"{key}: false\n")
-                with self.subTest(key=key):
-                    with self.assertRaisesRegex(ValueError, f"{key} 必须是列表"):
-                        generator.load_trusted_nodes(source, {})
+            source.write_text("nodes: false\n")
+            with self.assertRaisesRegex(ValueError, "nodes 必须是列表"):
+                generator.load_trusted_nodes(source, {})
 
             source.write_text("false\n")
             with self.assertRaisesRegex(ValueError, "顶层必须是映射"):
@@ -209,12 +212,12 @@ class GeneratorTests(unittest.TestCase):
                 Path("trusted-nodes.yaml"),
             )
 
-    def test_trusted_file_rejects_mixed_input_formats(self) -> None:
+    def test_trusted_file_rejects_proxies_format(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "trusted-nodes.yaml"
-            source.write_text("proxies: []\nnodes: []\n")
+            source.write_text("proxies: []\n")
 
-            with self.assertRaisesRegex(ValueError, "不能同时存在"):
+            with self.assertRaisesRegex(ValueError, "只支持 nodes"):
                 generator.load_trusted_nodes(source, {})
 
     def test_duplicate_anchor_is_rejected(self) -> None:
