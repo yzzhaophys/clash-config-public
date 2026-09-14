@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from node_io import load_yaml
+from node_conversion import xray_options, hysteria_options
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -90,7 +92,7 @@ def load_ansible_clash_vars(path: Path) -> dict[str, str]:
     if not path.is_file():
         return {}
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = load_yaml(path) or {}
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: Ansible host_vars 不是有效 YAML：{exc}") from exc
     if not isinstance(data, dict):
@@ -181,19 +183,18 @@ def require_nonempty_string(
     trim: bool = True,
 ) -> str:
     """Return a validated scalar string without coercing YAML null/containers."""
-    if not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str) or not (value.strip() if trim else value):
         raise ValueError(f"{field} 必须是非空字符串")
-    result = value.strip() if trim else value
-    if "\n" in result or "\r" in result:
+    if "\n" in value or "\r" in value:
         raise ValueError(f"{field} 不能包含换行")
-    return result
+    return value.strip() if trim else value
 
 
 def require_socks5_credentials(proxy: dict[str, Any], field: str) -> None:
     """Require credentials for optional SOCKS5 nodes instead of open proxies."""
     for key in ("username", "password"):
         try:
-            value = require_nonempty_string(proxy.get(key), f"{field}.{key}")
+            value = require_nonempty_string(proxy.get(key), f"{field}.{key}", trim=False)
         except ValueError as exc:
             raise ValueError(
                 f"{field}.{key} 必须填写；SOCKS5 节点不能使用匿名认证"
@@ -492,70 +493,25 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                     f"{file}: inbounds[{inbound_index}].settings.clients[0] 必须是映射"
                 )
             uuid = client.get("id")
-            if uuid is None or uuid == "":
-                continue
             uuid = require_nonempty_string(
                 uuid,
                 f"{file}: inbounds[{inbound_index}].settings.clients[0].id",
             )
 
-            stream = inbound.get("streamSettings", {}) or {}
-            if not isinstance(stream, dict):
-                raise ValueError(
-                    f"{file}: inbounds[{inbound_index}].streamSettings 必须是映射"
-                )
-            security = stream.get("security")
+            field = f'{file}: inbounds[{inbound_index}]'
             config: dict[str, Any] = {
                 "type": "vless",
-                "server": env.get("VPS_HOST", "0.0.0.0").strip() or "0.0.0.0",
+                "server": require_nonempty_string(env.get('VPS_HOST'), f'{field}.VPS_HOST'),
                 "port": parse_port(
-                    inbound.get("port", 10000),
+                    inbound.get("port"),
                     f"{file}: inbounds[{inbound_index}].port",
                 ),
                 "uuid": uuid,
-                "encryption": client.get("encryption") or "none",
-                "network": str(stream.get("network") or "tcp").strip().lower(),
-                "tls": security in {"tls", "reality"},
-                "udp": True,
+                **xray_options(inbound, client, field),
             }
-            if client.get("flow"):
-                config["flow"] = client["flow"]
-
-            if security == "tls":
-                tls = stream.get("tlsSettings", {}) or {}
-                if not isinstance(tls, dict):
-                    raise ValueError(
-                        f"{file}: inbounds[{inbound_index}].tlsSettings 必须是映射"
-                    )
-                servername = str(
-                    tls.get("serverName") or env.get("VPS_HOST", "")
-                ).strip()
-                if not servername:
-                    raise ValueError(
-                        f"{file}: inbounds[{inbound_index}] 的 TLS 节点缺少 "
-                        "tlsSettings.serverName 或 VPS_HOST"
-                    )
-                config["server"] = servername
-                config["servername"] = servername
-                config["skip-cert-verify"] = False
-                if tls.get("alpn"):
-                    config["alpn"] = tls["alpn"]
-            elif security == "reality":
-                reality = stream.get("realitySettings", {}) or {}
-                if not isinstance(reality, dict):
-                    raise ValueError(
-                        f"{file}: inbounds[{inbound_index}].realitySettings 必须是映射"
-                    )
-                names = reality.get("serverNames") or []
-                servername = names[0] if isinstance(names, list) and names else env.get("VPS_HOST", "")
-                config["servername"] = servername
-                config["client-fingerprint"] = reality.get("fingerprint", "firefox")
-                config["skip-cert-verify"] = False
-                public_key = reality.get("publicKey")
-                short_ids = reality.get("shortIds") or []
-                short_id = short_ids[0] if isinstance(short_ids, list) and short_ids else ""
-                if public_key:
-                    config["reality-opts"] = {"public-key": public_key, "short-id": short_id}
+            config['_conversion-audit']['derived'].append(
+                f'client credential: first accepted entry of {len(clients)}'
+            )
 
             key = (region, "vless")
             idx = counters.get(key, 0)
@@ -590,26 +546,19 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
     if not path.exists():
         return None
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = load_yaml(path) or {}
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: Hysteria 配置不是有效 YAML：{exc}") from exc
     if not isinstance(data, dict):
         raise ValueError(f"{path}: Hysteria 配置顶层必须是映射")
-    auth = data.get("auth", {}) or {}
-    if not isinstance(auth, dict):
-        raise ValueError(f"{path}: auth 必须是映射")
-    password = auth.get("password")
-    if password is None or password == "":
-        return None
-    password = require_nonempty_string(password, f"{path}: auth.password", trim=False)
-    tls = data.get("tls", {}) or {}
-    if not isinstance(tls, dict):
-        raise ValueError(f"{path}: tls 必须是映射")
-    server = (
-        cert_domain(str(tls.get("cert", "")))
-        or env.get("VPS_HOST", "0.0.0.0").strip()
-        or "0.0.0.0"
-    )
+    options = hysteria_options(data, str(path))
+    server = require_nonempty_string(env.get('VPS_HOST'), f'{path}: VPS_HOST')
+    certificate_name = cert_domain(str((data.get('tls') or {}).get('cert', '')))
+    if 'sni' not in options and certificate_name:
+        options['sni'] = certificate_name
+        options['_conversion-audit']['derived'].append('sni from tls.cert live certificate directory')
+    if 'listen' not in data or data['listen'] in (None, ''):
+        raise ValueError(f'{path}: listen 缺失，请在客户端 inventory 中明确端口')
     capabilities = host_capabilities(host_dir, env)
     region = capabilities["region"]
     role = capability_role(capabilities)
@@ -628,10 +577,8 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
         ),
         "type": "hysteria2",
         "server": server,
-        "port": port_from_listen(data.get("listen"), 20002),
-        "password": password,
-        "sni": server,
-        "skip-cert-verify": False,
+        "port": port_from_listen(data['listen'], 443),
+        **options,
     }, capabilities)
 
 
@@ -656,7 +603,7 @@ def client_inventory_nodes(
     if not path.exists():
         return None
     try:
-        data = yaml.safe_load(path.read_text())
+        data = load_yaml(path)
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: 客户端节点 inventory 不是有效 YAML：{exc}") from exc
     if data is None:
@@ -858,7 +805,7 @@ def load_trusted_nodes(
     if not path.is_file():
         return []
     try:
-        data = yaml.safe_load(path.read_text())
+        data = load_yaml(path)
     except (OSError, yaml.YAMLError) as exc:
         raise ValueError(f"{path}: trusted-nodes.yaml 不是有效 YAML：{exc}") from exc
     if data is None:
@@ -1143,7 +1090,7 @@ def interactive_airport_import(
         return [], {}
 
     try:
-        subscription = yaml.safe_load(subscription_path.read_text()) or {}
+        subscription = load_yaml(subscription_path) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(f"无法读取机场订阅：{exc}")
         return [], {}
@@ -1168,7 +1115,7 @@ def interactive_airport_import(
     selected: list[dict[str, Any]] = []
     if selection_path.exists():
         try:
-            saved = yaml.safe_load(selection_path.read_text()) or {}
+            saved = load_yaml(selection_path) or {}
         except (OSError, yaml.YAMLError) as exc:
             print(f"警告：无法读取已保存的机场选择：{exc}")
             saved_names = []
@@ -1305,7 +1252,11 @@ def write_plain(proxies: list[dict[str, Any]], output: Path) -> None:
 
 
 def loon_quote(value: Any) -> str:
-    text = str(value).replace("\r", " ").replace("\n", " ")
+    if value is None or isinstance(value, (dict, list, tuple, set)):
+        raise ValueError('Loon 字符串参数不能为 null 或容器')
+    text = str(value)
+    if '\r' in text or '\n' in text:
+        raise ValueError('Loon 字符串参数不能含换行')
     text = text.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{text}"'
 
@@ -1313,18 +1264,26 @@ def loon_quote(value: Any) -> str:
 def loon_atom(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    text = str(value).replace("\r", " ").replace("\n", " ")
-    if any(char in text for char in ',="'):
+    if value is None or isinstance(value, (dict, list, tuple, set)):
+        raise ValueError('Loon 参数不能为 null 或容器')
+    text = str(value)
+    if '\r' in text or '\n' in text:
+        raise ValueError('Loon 参数不能含换行')
+    if any(char in text for char in ',="\\') or text != text.strip():
         return loon_quote(text)
     return text
 
 
 def loon_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        raise ValueError('Loon 布尔参数不能为 null')
     return yaml_bool(value, "Loon 节点布尔参数", default)
 
 
 def loon_option(key: str, value: Any) -> str:
     if isinstance(value, list):
+        if any(not isinstance(item, str) or '\r' in item or '\n' in item for item in value):
+            raise ValueError('Loon 列表参数必须是无换行的字符串')
         value = ",".join(str(item) for item in value)
     return f"{key}={loon_atom(value)}"
 
@@ -1346,30 +1305,44 @@ def loon_transport_options(proxy: dict[str, Any]) -> list[str]:
     if network not in {"tcp", "ws", "http"}:
         raise ValueError(f"Loon 不支持传输方式 {network!r}")
 
-    options = [loon_option("transport", network)]
+    options = [loon_option("transport", network)] if 'network' in proxy else []
     if network not in {"ws", "http"}:
         return options
 
-    transport_opts = proxy.get(f"{network}-opts") or {}
+    transport_opts = proxy.get(f"{network}-opts", {})
     if not isinstance(transport_opts, dict):
         raise ValueError(f"{network}-opts 必须是映射")
-    path = transport_opts.get("path") or "/"
-    if isinstance(path, list):
-        path = path[0] if path else "/"
-    options.append(loon_option("path", path))
-    headers = transport_opts.get("headers") or {}
+    unknown = set(transport_opts) - {'path', 'headers'}
+    if unknown:
+        raise ValueError(f'Loon 无法保留 {network}-opts 字段：{", ".join(sorted(unknown))}')
+    if 'path' in transport_opts:
+        path = transport_opts['path']
+        if isinstance(path, list):
+            if len(path) != 1:
+                raise ValueError('Loon 无法保留多个或空的 path 列表')
+            path = path[0]
+        if not isinstance(path, str):
+            raise ValueError('Loon path 必须是字符串')
+        options.append(loon_option('path', path))
+    headers = transport_opts.get("headers", {})
     if not isinstance(headers, dict):
         raise ValueError(f"{network}-opts.headers 必须是映射")
-    host = headers.get("Host") or headers.get("host")
-    if host:
-        options.append(loon_option("host", host))
+    if any(not isinstance(k, str) or k.lower() != 'host' for k in headers) or len(headers) > 1:
+        raise ValueError('Loon 无法保留非 Host 或重复的传输 headers')
+    if headers:
+        host = next(iter(headers.values()))
+        if isinstance(host, list):
+            if len(host) != 1:
+                raise ValueError('Loon 无法保留多个或空的 Host 列表')
+            host = host[0]
+        if not isinstance(host, str):
+            raise ValueError('Loon Host 必须是字符串')
+        options.append(loon_option('host', host))
     return options
 
 
 def loon_vless(proxy: dict[str, Any]) -> str:
-    uuid = str(proxy.get("uuid", "")).strip()
-    if not uuid:
-        raise ValueError("VLESS 缺少 uuid")
+    uuid = require_nonempty_string(proxy.get('uuid'), 'VLESS uuid')
     fields = ["VLESS", *loon_server_fields(proxy), loon_quote(uuid)]
     options = loon_transport_options(proxy)
 
@@ -1380,50 +1353,43 @@ def loon_vless(proxy: dict[str, Any]) -> str:
     if public_key:
         options.extend(
             [
-                loon_option("flow", proxy.get("flow") or "xtls-rprx-vision"),
                 f"public-key={loon_quote(public_key)}",
             ]
         )
         if "short-id" in reality:
             options.append(loon_option("short-id", reality["short-id"]))
 
-    over_tls = loon_bool(proxy.get("tls"), bool(public_key))
-    options.extend(
-        [
-            loon_option("udp", loon_bool(proxy.get("udp"), True)),
-            loon_option("over-tls", over_tls),
-        ]
-    )
-    sni = proxy.get("sni") or proxy.get("servername")
-    if sni:
+    if 'flow' in proxy:
+        options.append(loon_option('flow', proxy['flow']))
+    for key, output_key in [('udp', 'udp'), ('tls', 'over-tls')]:
+        if key in proxy:
+            options.append(loon_option(output_key, loon_bool(proxy[key])))
+    sni = proxy.get('sni', proxy.get('servername'))
+    if sni is not None:
         options.append(loon_option("sni", sni))
-    if loon_bool(proxy.get("skip-cert-verify"), False):
-        options.append("skip-cert-verify=true")
-    if proxy.get("alpn"):
+    if 'skip-cert-verify' in proxy:
+        options.append(loon_option('skip-cert-verify', loon_bool(proxy['skip-cert-verify'])))
+    if 'alpn' in proxy:
         options.append(loon_option("alpn", proxy["alpn"]))
     return ",".join([*fields, *options])
 
 
 def loon_hysteria2(proxy: dict[str, Any]) -> str:
-    password = proxy.get("password")
-    if password is None or password == "" or isinstance(
-        password, (dict, list, set, tuple)
-    ):
-        raise ValueError("Hysteria2 缺少 password")
+    password = require_nonempty_string(proxy.get('password'), 'Hysteria2 password', trim=False)
     fields = ["Hysteria2", *loon_server_fields(proxy), loon_quote(password)]
     options: list[str] = []
-    sni = proxy.get("sni") or proxy.get("servername")
-    if sni:
+    sni = proxy.get('sni', proxy.get('servername'))
+    if sni is not None:
         options.append(loon_option("sni", sni))
-    if loon_bool(proxy.get("skip-cert-verify"), False):
-        options.append("skip-cert-verify=true")
+    if 'skip-cert-verify' in proxy:
+        options.append(loon_option('skip-cert-verify', loon_bool(proxy['skip-cert-verify'])))
     if "fast-open" in proxy:
         options.append(loon_option("fast-open", loon_bool(proxy["fast-open"])))
-    if proxy.get("salamander-password"):
+    if 'salamander-password' in proxy:
         options.append(
             f"salamander-password={loon_quote(proxy['salamander-password'])}"
         )
-    elif proxy.get("obfs-password"):
+    elif 'obfs-password' in proxy:
         options.append(
             f"salamander-password={loon_quote(proxy['obfs-password'])}"
         )
@@ -1458,11 +1424,11 @@ def loon_shadowsocks(proxy: dict[str, Any]) -> str:
         plugin_opts = proxy.get("plugin-opts") or {}
         if not isinstance(plugin_opts, dict):
             raise ValueError("plugin-opts 必须是映射")
-        if plugin_opts.get("mode"):
+        if "mode" in plugin_opts:
             options.append(loon_option("obfs-name", plugin_opts["mode"]))
-        if plugin_opts.get("host"):
+        if "host" in plugin_opts:
             options.append(loon_option("obfs-host", plugin_opts["host"]))
-        if plugin_opts.get("path"):
+        if "path" in plugin_opts:
             options.append(loon_option("obfs-uri", plugin_opts["path"]))
     if "udp" in proxy:
         options.append(loon_option("udp", loon_bool(proxy["udp"])))
@@ -1479,6 +1445,58 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
     converter = converters.get(protocol)
     if converter is None:
         raise ValueError(f"Loon 不支持节点协议 {protocol or '<empty>'}")
+    common = {'name', 'type', 'server', 'port', 'udp'}
+    supported = {
+        'vless': {'uuid', 'flow', 'tls', 'network', 'ws-opts', 'http-opts',
+                  'reality-opts', 'sni', 'servername', 'skip-cert-verify', 'alpn', 'encryption'},
+        'hysteria2': {'password', 'sni', 'servername', 'skip-cert-verify',
+                      'fast-open', 'salamander-password', 'obfs', 'obfs-password'},
+        'ss': {'cipher', 'password', 'plugin', 'plugin-opts'},
+    }
+    unknown = set(clean_proxy(proxy)) - common - supported[protocol]
+    if unknown:
+        raise ValueError(f'Loon 无法保留字段：{", ".join(sorted(unknown))}')
+    if 'sni' in proxy and 'servername' in proxy and proxy['sni'] != proxy['servername']:
+        raise ValueError('Loon sni 与 servername 冲突')
+    for key in ('sni', 'servername'):
+        if key in proxy and not isinstance(proxy[key], str):
+            raise ValueError(f'Loon {key} 必须是字符串')
+    if protocol == 'vless':
+        if proxy.get('encryption', 'none') not in ('', 'none'):
+            raise ValueError('Loon 无法保留 VLESS encryption')
+        reality = proxy.get('reality-opts', {})
+        if not isinstance(reality, dict) or set(reality) - {'public-key', 'short-id'}:
+            raise ValueError('Loon 无法保留 reality-opts 字段')
+        if reality and not reality.get('public-key'):
+            raise ValueError('Loon REALITY 缺少 public-key')
+        network = proxy.get('network', 'tcp')
+        if not isinstance(network, str):
+            raise ValueError('Loon network 必须是字符串')
+        network = network.strip().lower() or 'tcp'
+        network = {'raw': 'tcp', 'websocket': 'ws'}.get(network, network)
+        for key in {'ws-opts', 'http-opts'} & set(proxy):
+            if key != f'{network}-opts':
+                raise ValueError(f'Loon {key} 与 network 不一致')
+    if protocol == 'hysteria2':
+        if 'obfs' in proxy and proxy['obfs'] != 'salamander':
+            raise ValueError('Loon 不支持该 obfs 类型')
+        if 'obfs-password' in proxy and proxy.get('obfs') != 'salamander':
+            raise ValueError('Loon obfs-password 缺少明确的 salamander 类型')
+        if proxy.get('obfs') == 'salamander':
+            require_nonempty_string(proxy.get('obfs-password'), 'Loon obfs-password', trim=False)
+        if 'salamander-password' in proxy:
+            require_nonempty_string(proxy['salamander-password'], 'Loon salamander-password', trim=False)
+            if 'obfs-password' in proxy and proxy['obfs-password'] != proxy['salamander-password']:
+                raise ValueError('Loon 混淆密码字段冲突')
+    if protocol == 'ss':
+        require_nonempty_string(proxy.get('password'), 'Shadowsocks password', trim=False)
+        opts = proxy.get('plugin-opts', {})
+        if not isinstance(opts, dict) or set(opts) - {'mode', 'host', 'path'}:
+            raise ValueError('Loon 无法保留 plugin-opts 字段')
+        if opts and not proxy.get('plugin'):
+            raise ValueError('Loon plugin-opts 缺少 plugin')
+        if any(not isinstance(value, str) for value in opts.values()):
+            raise ValueError('Loon plugin-opts 参数必须是字符串')
     return converter(proxy)
 
 
@@ -1697,7 +1715,25 @@ def interactive_exclude_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, A
         return kept
 
 
+def eligible_fallback_source(proxy: dict[str, Any]) -> bool:
+    meta = node_meta(str(proxy.get('name', '')))
+    return bool(
+        meta and meta['role'] in {'Core', 'Exit'}
+        and not any(meta.get(k) for k in ('fallback', 'special', 'showip'))
+        and meta.get('direct') != 'false'
+        and proxy.get('_allow-direct-exit', True)
+        and not proxy.get('_allow-showip', False)
+        and proxy.get('_exit-type', 'general') == 'general'
+        and 'dialer-proxy' not in proxy
+    )
+
+
 def fallback_node(source: dict[str, Any], target_region: str) -> dict[str, Any]:
+    if not eligible_fallback_source(source):
+        raise ValueError('补位来源必须是允许直出的普通真实基础节点')
+    target_region = normalize_route_region(target_region)
+    if '.' in target_region:
+        raise ValueError('补位目标必须是普通地区代码')
     source_meta = node_meta(source["name"])
     if not source_meta:
         raise ValueError(f"无法识别备用来源节点名称：{source['name']}")
@@ -1711,6 +1747,10 @@ def fallback_node(source: dict[str, Any], target_region: str) -> dict[str, Any]:
     )
     node["_allow-relay"] = False
     node["_allow-chain-exit"] = False
+    node['_allow-direct-exit'] = True
+    node['_allow-download'] = False
+    node['_allow-showip'] = False
+    node['_exit-type'] = 'general'
     return node
 
 
@@ -1735,9 +1775,10 @@ def prompt_source_node(proxies: list[dict[str, Any]], target_region: str | None 
 
 
 def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources = [proxy for proxy in proxies if eligible_fallback_source(proxy)]
     real_regions = {
         meta["region"]
-        for proxy in proxies
+        for proxy in sources
         if (meta := node_meta(proxy["name"]))
         and not meta.get("fallback")
         and not meta.get("special")
@@ -1745,9 +1786,12 @@ def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, 
     missing = [region for region in FALLBACK_REGIONS if region not in real_regions]
     if not missing:
         return []
+    if not sources:
+        print('没有允许直出的普通基础节点，无法生成地区补位。')
+        return []
 
     print("\n以下地区没有真实节点：" + ", ".join(missing))
-    print("可生成逻辑占位节点，避免空策略组回退到 COMPATIBLE/直连。")
+    print("可生成逻辑占位节点供空的普通地区策略组使用。")
     print("占位节点的实际出口仍是所选来源节点，并且不会参与代理链组合。")
     print("  1. 不生成占位节点")
     print("  2. 所有缺失地区使用同一个来源节点（推荐当前用法）")
@@ -1762,16 +1806,19 @@ def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, 
 
     placeholders: list[dict[str, Any]] = []
     if choice == "2":
-        source = prompt_source_node(proxies)
+        source = prompt_source_node(sources)
         if source is None:
             return []
         placeholders = [fallback_node(source, region) for region in missing]
     else:
         for region in missing:
-            source = prompt_source_node(proxies, region)
+            source = prompt_source_node(sources, region)
             if source is not None:
                 placeholders.append(fallback_node(source, region))
     if placeholders:
+        for placeholder in placeholders:
+            meta = node_meta(placeholder['name'])
+            print(f"  分组地区 {meta['region']} -> 实际出口 {meta['fallback'].split('.')[0]}")
         print(f"已生成 {len(placeholders)} 个地区占位节点。")
     return placeholders
 
@@ -1970,6 +2017,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="输出文件（plain 默认 nodes.yaml，其余格式默认 clash-vps.generated.yaml）",
     )
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
+    parser.add_argument('--audit', action='store_true', help='显示参数转换审计（仅字段名，不显示凭据值）')
     parser.add_argument(
         "--loon-output",
         type=Path,
@@ -2045,19 +2093,52 @@ def apply_default_invocation(args: argparse.Namespace, invoked_without_args: boo
 
 def validate_output_paths(
     paths: list[tuple[str, Path | None]],
+    inputs: list[Path] | None = None,
 ) -> None:
     seen: dict[Path, str] = {}
+    inodes: dict[tuple[int, int], str] = {}
+    protected = {path.expanduser().resolve() for path in inputs or []}
+    protected_inodes = {
+        (p.stat().st_dev, p.stat().st_ino) for p in protected if p.is_file()
+    }
     for label, path in paths:
         if path is None:
             continue
         resolved = path.expanduser().resolve()
+        identity = None
+        if resolved.is_file():
+            status = resolved.stat()
+            identity = (status.st_dev, status.st_ino)
+        if resolved in protected or identity in protected_inodes:
+            raise SystemExit(f"输出路径冲突：{label} 会覆盖输入文件 {path}")
         previous = seen.get(resolved)
+        if identity is not None:
+            previous = previous or inodes.get(identity)
+            inodes[identity] = label
         if previous is not None:
             raise SystemExit(
                 f"输出路径冲突：{previous} 和 {label} 都是 {resolved}；"
                 "请显式指定不同文件"
             )
         seen[resolved] = label
+
+
+def input_paths(hosts_dir: Path, airport_dir: Path, trusted_file: Path,
+                ansible_dir: Path | None) -> list[Path]:
+    paths = [trusted_file, airport_dir / 'subscription.yaml',
+             airport_dir / 'selected-nodes.yaml']
+    for host in hosts_dir.glob('vps-*'):
+        if host.name == 'vps-template' or not (host / 'host.env').is_file():
+            continue
+        paths.extend(host / relative for relative in (
+            'host.env', 'secrets/client/clash-nodes.yaml', 'client/clash-nodes.yaml',
+            'secrets/xray-inbounds.json', 'secrets/hysteria.yaml',
+            'config/hysteria/config.yaml',
+        ))
+        paths.extend((host / 'config/xray').glob('*.json'))
+        if ansible_dir:
+            paths.append(ansible_dir / f'{host.name}.yml')
+    return paths
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2075,6 +2156,12 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     counters: dict[tuple[str, str], int] = {}
+    protected_inputs = input_paths(hosts_dir, airport_dir, trusted_nodes_file,
+                                   ansible_host_vars_dir)
+    validate_output_paths([
+        ('主输出', args.output), ('raw-output', args.raw_output),
+        ('loon-output', args.loon_output),
+    ], protected_inputs)
     try:
         proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
         trusted_nodes = load_trusted_nodes(trusted_nodes_file, counters)
@@ -2097,6 +2184,11 @@ def main(argv: list[str] | None = None) -> int:
             f"没有在 {hosts_dir} 或 {trusted_nodes_file} 找到节点；"
             "请检查 vps-*/host.env、trusted-nodes.yaml 或机场订阅"
         )
+    if args.audit:
+        for proxy in proxies:
+            audit = proxy.get('_conversion-audit')
+            if audit:
+                print(json.dumps({'node': proxy['name'], **audit}, ensure_ascii=False))
 
     fallback_nodes: list[dict[str, Any]] = []
     if args.interactive:
@@ -2132,31 +2224,51 @@ def main(argv: list[str] | None = None) -> int:
             ("主输出", output),
             ("raw-output", raw_output),
             ("loon-output", loon_output),
-        ]
+        ],
+        protected_inputs,
     )
 
-    try:
-        if output_format == "plain":
-            write_plain(proxies, output)
-        else:
-            write_template(proxies + fallback_nodes, chains, output)
-    except (OSError, ValueError) as exc:
-        raise SystemExit(f"无法写入主输出 {output}：{exc}") from exc
+    # Render every requested format before replacing any user output. Staging
+    # files contain credentials and live only in a private temporary directory.
+    rendered: list[tuple[Path, str]] = []
+    with tempfile.TemporaryDirectory(prefix='clash-node-render-') as staging:
+        stage = Path(staging)
+        label, destination = '主输出', output
+        try:
+            primary = stage / 'main.yaml'
+            if output_format == 'plain':
+                write_plain(proxies, primary)
+            else:
+                write_template(proxies + fallback_nodes, chains, primary)
+            load_yaml(primary)
+            rendered.append((output, primary.read_text(encoding='utf-8')))
+            if raw_output:
+                label, destination = 'raw-output', raw_output
+                raw = stage / 'raw.yaml'
+                write_plain(proxies, raw)
+                load_yaml(raw)
+                rendered.append((raw_output, raw.read_text(encoding='utf-8')))
+            if loon_output:
+                label, destination = 'Loon 输出', loon_output
+                loon = stage / 'loon.conf'
+                loon_count, loon_skipped = write_loon(proxies, loon)
+                rendered.append((loon_output, loon.read_text(encoding='utf-8')))
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f'无法写入{label} {destination}：{exc}') from exc
+    validate_output_paths([('主输出', output), ('raw-output', raw_output),
+                           ('loon-output', loon_output)], protected_inputs)
+    for destination, content in rendered:
+        try:
+            secure_write(destination, content)
+        except OSError as exc:
+            raise SystemExit(f'无法写入输出 {destination}：{exc}') from exc
     print(
         f"wrote {output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
         f"{len(chains)} chains, format={output_format})"
     )
     if raw_output:
-        try:
-            write_plain(proxies, raw_output)
-        except (OSError, ValueError) as exc:
-            raise SystemExit(f"无法写入 raw-output {raw_output}：{exc}") from exc
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
     if loon_output:
-        try:
-            loon_count, loon_skipped = write_loon(proxies, loon_output)
-        except (OSError, ValueError) as exc:
-            raise SystemExit(f"无法写入 Loon 输出 {loon_output}：{exc}") from exc
         print(f"wrote {loon_output} ({loon_count} nodes, format=loon)")
         if loon_skipped:
             print(f"warning: skipped {len(loon_skipped)} node(s) unsupported by Loon:")

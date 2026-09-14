@@ -266,6 +266,29 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 这些文件包含真实凭据，已加入 `.gitignore`。
 
+### 参数保留与转换限制
+
+- 客户端 Clash inventory 的节点参数按原结构保留，包括未知扩展字段、嵌套字段、
+  `false`、`0` 和空值；内部能力及审计字段不写入节点配置。
+- 从服务端配置转换时，只转换明确支持的客户端参数。缺失的可选参数不补造；
+  缺少必要地址、端口或凭据会报错。有值但无法可靠转换的字段也会报错，
+  此时请在客户端 inventory 中提供完整 Clash 节点，不要删除参数来绕过检查。
+- Xray 支持 TCP、WS、gRPC、H2 的显式参数映射；WS 保留 path、Host、headers
+  和 early-data。REALITY 必须提供客户端公钥，不会把服务端私钥写入输出。
+  每个 inbound 继续选择第一个客户端账号；多个允许的 REALITY SNI / short-id
+  选择第一项。这些选择都会记录在审计中。
+- Hysteria2 保留 Salamander 混淆类型与密码。连接地址来自 `VPS_HOST`，与 TLS SNI
+  分开处理；未显式提供 SNI 时，可从已有证书的 `live/<域名>/` 路径推导 SNI，
+  该推导会记入审计。用户名、密码的首尾空格原样保留，换行和非法类型会被拒绝。
+- 添加 `--audit` 可查看转换、仅服务端使用和推导的字段记录，不输出凭据值。
+  审计字段不会进入生成的 Clash 配置。
+- Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
+  不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部跳过时 Loon 文件为空。
+
+地区补位只从允许直出的普通 Core / Exit 基础节点中选择，排除 HomeIP、ShowIP、
+代理链、禁止直出和已有补位节点。补位只是逻辑地区标签，不代表真实出口地区；
+交互界面会显示真实来源地区。仅有 HomeIP 不视为普通地区已具备直出节点。
+
 ## 编辑和安全
 
 `[Direct=false]`、`[ShowIP=true]` 等标记是生成器根据源配置自动写入的，不是 Clash
@@ -278,11 +301,17 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 `home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
 `rules` 或 `rule-providers`。
 
+两个脚本通过 `node_io.py` 统一读取 YAML：显式重复键会报错，合法的锚点和
+`<<` 合并覆盖仍可使用。生成器的输出不能与已识别的输入文件重合，也会检查符号链接
+及硬链接别名。所有请求的输出先在私有临时目录完成渲染、YAML 校验，再逐文件原子替换；
+转换失败不覆盖旧输出，但多个文件最终写入时发生磁盘错误不具有跨文件事务保证。
+服务端参数映射集中在 `node_conversion.py`；移动两个脚本时需同时带上这两个辅助模块。
+
 ## 维护与验证
 
 生成器的规则以本 README 和测试为准。修改命名、能力开关、代理链或输出格式后运行：
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py
 ```

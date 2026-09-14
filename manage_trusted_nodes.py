@@ -20,6 +20,7 @@ from typing import Any, Iterator
 import yaml
 
 import generate_raw_nodes as generator
+from node_io import load_yaml
 
 
 class TrustedNodesError(ValueError):
@@ -71,8 +72,8 @@ def _load_document(
     if require_private:
         _require_private_permissions(path, "trusted-nodes 文件")
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, yaml.YAMLError) as exc:
+        data = load_yaml(path)
+    except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
         raise TrustedNodesError(f"{path}: 不是有效 YAML：{exc}") from exc
 
     if data is None:

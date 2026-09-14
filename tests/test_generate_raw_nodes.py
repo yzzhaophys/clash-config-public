@@ -462,7 +462,7 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(nodes[0]["flow"], "xtls-rprx-vision")
         self.assertEqual(nodes[0]["reality-opts"]["public-key"], "public-key")
 
-    def test_tls_xray_node_requires_server_name_or_vps_host(self) -> None:
+    def test_tls_xray_node_requires_explicit_connection_host(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             host_dir = Path(directory) / "vps-us"
             source = host_dir / "secrets" / "xray-inbounds.json"
@@ -485,7 +485,7 @@ class GeneratorTests(unittest.TestCase):
                 )
             )
 
-            with self.assertRaisesRegex(ValueError, "serverName 或 VPS_HOST"):
+            with self.assertRaisesRegex(ValueError, "VPS_HOST"):
                 generator.xray_nodes(
                     host_dir,
                     {"VPS_CLASH_REGION": "us"},
@@ -676,7 +676,6 @@ class GeneratorTests(unittest.TestCase):
                 "tls": True,
                 "udp": True,
                 "servername": "edge.example",
-                "client-fingerprint": "firefox",
                 "reality-opts": {"public-key": "public-key", "short-id": "01"},
             }
         )
