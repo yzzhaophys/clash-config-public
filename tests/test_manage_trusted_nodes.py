@@ -44,6 +44,22 @@ def write_nodes(path: Path, nodes: list[dict]) -> None:
 
 
 class TrustedNodesMergeTests(unittest.TestCase):
+    def test_showip_capability_is_accepted_and_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "trusted-nodes.yaml"
+            source = root / "new.yaml"
+            showip = node("provider-us-showip")
+            showip["allow-showip"] = True
+            write_nodes(target, [])
+            write_nodes(source, [showip])
+
+            result = manager.merge_trusted_nodes_file(target, source, apply=True)
+
+            self.assertEqual((result.added, result.updated), (1, 0))
+            stored = yaml.safe_load(target.read_text())["nodes"][0]
+            self.assertTrue(stored["allow-showip"])
+
     def test_new_node_is_appended_and_existing_node_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

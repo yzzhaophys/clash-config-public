@@ -61,7 +61,7 @@
 | 来源 | 私有输入 | 导入时机 | 命名与标记 | 默认链路能力 |
 | --- | --- | --- | --- | --- |
 | 自建 VPS | `vps-*/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `vps-*/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
-| Trusted | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | `VPS-[US.Exit]-...`；交互时显示来源文件 | 按 `allow-*` 字段决定，默认仅允许直出 |
+| Trusted（未纳入主机管理的自建/客户端节点） | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | `VPS-[US.Core|Exit|HomeIP]-...`；交互时显示来源文件 | 按 `exit-type` 和 `allow-*` 字段决定，默认仅允许直出 |
 | 机场订阅 | `subscription.yaml` 和可选的 `selected-nodes.yaml` | 仅交互模式中确认导入 | `(...机场出口)-[Airport=...]` | 仅允许直出，不可 Relay，不可作为 Chain 落地 |
 
 三种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted
@@ -102,7 +102,7 @@ vps_clash_chain_exit_protocol: vless
 `allow_showip` 和 `allow_download` 为 `false`。普通 `general` 节点只有 HK、JP、SG
 默认开启 `allow_relay`；其他地区默认关闭。
 
-`exit_type` 决定节点角色：
+`exit_type` 决定自建 VPS 和 Trusted 节点的角色：
 
 - `homeip` → `HomeIP`，不能开启 `allow_relay`；
 - `general` 且 `allow_relay: true` → `Core`；
@@ -143,8 +143,11 @@ Clash 的 `DIRECT`（完全不经过代理）。
 `home.yaml`，避免生成器覆盖主配置的 DNS 策略。
 
 可信节点必须放在私有 `trusted-nodes.yaml` 的 `nodes` 列表中。每个节点都需要
-显式指定稳定 `id`、实际两位国家代码和 `proxy`；能力由
-`allow-*` 字段控制，默认只允许单节点直出。生成名称与自建 VPS 保持一致，
+显式指定稳定 `id`、实际两位国家代码和 `proxy`；`exit-type` 和能力由文件中的
+字段控制，默认只允许单节点直出。Trusted 是未纳入主机管理的自建/客户端节点，
+不是机场订阅节点；`allow-showip: true` 可用于已经核实实际公网出口地区的节点，
+并与自建 VPS 使用相同的 ShowIP 标记和筛选。
+生成名称与自建 VPS 保持一致，
 使用 `VPS-[地区.角色]-协议-编号-(地区节点)` 格式，
 并在交互选择时显示“来源文件: trusted-nodes.yaml”。脚本不再接受顶层
 `proxies:`。
@@ -154,10 +157,12 @@ nodes:
   - id: provider-us-01
     name: Provider US NAT 01
     region: US
+    exit-type: general       # general 或 homeip
     allow-relay: false
     allow-chain-exit: false
     allow-direct-exit: true
     allow-download: false
+    allow-showip: false
     proxy:
       type: vless
       server: example.com
@@ -189,9 +194,22 @@ nodes:
       servername: example.com
 ```
 
-可信节点的 `allow-relay` 和 `allow-chain-exit` 默认是 `false`，`allow-direct-exit`
-默认是 `true`。必须填写稳定的 `id` 和实际两位国家代码；可信节点不能声明
-`HomeIP`、`ShowIP` 或已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一物理节点自连。
+如果 Trusted 只作为代理链的最终落地节点，不作为中转或单节点直出，可使用：
+
+```yaml
+exit-type: general
+allow-relay: false
+allow-chain-exit: true
+allow-direct-exit: false
+allow-showip: false       # 需要作为 ShowIP 链路时改为 true
+```
+
+可信节点的 `allow-relay`、`allow-chain-exit`、`allow-showip` 和 `allow-download`
+默认是 `false`，`allow-direct-exit` 默认是 `true`。`exit-type` 可设为 `general`
+或 `homeip`；HomeIP 不能同时设置 `allow-relay: true`。必须填写稳定的 `id` 和
+实际两位国家代码，且不能包含已有 `dialer-proxy` 链。只有确认节点实际公网出口
+地区与 `region` 一致时，才应将 `allow-showip` 设为 `true`。稳定的 `id` 也用于
+禁止同一物理节点自连。
 
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记

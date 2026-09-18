@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -71,6 +72,7 @@ class GeneratorTests(unittest.TestCase):
         )
 
         self.assertEqual(generator.node_meta(airport[0]["name"])["idx"], "01")
+        self.assertNotIn("[ShowIP=true]", airport[0]["name"])
         self.assertNotEqual(
             generator.anchor_name(base["name"]),
             generator.anchor_name(airport[0]["name"]),
@@ -137,6 +139,113 @@ class GeneratorTests(unittest.TestCase):
         self.assertTrue(nodes[0]["_allow-direct-exit"])
         self.assertFalse(nodes[0]["_allow-chain-exit"])
         self.assertFalse(nodes[0]["_allow-download"])
+        self.assertFalse(nodes[0]["_allow-showip"])
+
+    def test_trusted_showip_capability_is_encoded_and_matches_home_filters(self) -> None:
+        nodes = generator.normalize_trusted_nodes(
+            [
+                {
+                    "id": "trusted-us-showip",
+                    "region": "US",
+                    "allow-chain-exit": True,
+                    "allow-showip": True,
+                    "proxy": {
+                        "type": "vless",
+                        "server": "trusted.example",
+                        "port": 443,
+                        "uuid": "trusted-uuid",
+                    },
+                }
+            ],
+            {},
+            Path("trusted-nodes.yaml"),
+        )
+
+        node = nodes[0]
+        self.assertTrue(node["_allow-showip"])
+        self.assertTrue(node["_allow-chain-exit"])
+        self.assertIn("[ShowIP=true]", node["name"])
+
+        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
+        direct_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸📍.DirectExit-[US.ShowIP]"
+        )
+        self.assertRegex(node["name"], direct_group["filter"])
+        self.assertIsNone(re.search(direct_group["exclude-filter"], node["name"]))
+
+        dialer = {"name": generator.node_name("jp", "vless", 0, "Core")}
+        chain = generator.chain_name(node, dialer)
+        chain_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸📍.Chain-[US.ShowIP]"
+        )
+        self.assertRegex(chain, chain_group["filter"])
+
+    def test_trusted_showip_flag_rejects_invalid_types(self) -> None:
+        base = {
+            "id": "trusted-us-showip",
+            "region": "US",
+            "proxy": {
+                "type": "vless",
+                "server": "trusted.example",
+                "port": 443,
+                "uuid": "trusted-uuid",
+            },
+        }
+        for value in ("maybe", 2, [], {}):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "allow-showip"
+            ):
+                generator.normalize_trusted_nodes(
+                    [{**base, "allow-showip": value}],
+                    {},
+                    Path("trusted-nodes.yaml"),
+                )
+
+    def test_trusted_homeip_uses_self_hosted_role_and_constraints(self) -> None:
+        source = {
+            "id": "trusted-us-homeip",
+            "region": "US",
+            "exit-type": "homeip",
+            "allow-chain-exit": True,
+            "allow-showip": True,
+            "proxy": {
+                "type": "vless",
+                "server": "trusted.example",
+                "port": 443,
+                "uuid": "trusted-uuid",
+            },
+        }
+        node = generator.normalize_trusted_nodes(
+            [source], {}, Path("trusted-nodes.yaml")
+        )[0]
+
+        self.assertEqual(generator.node_meta(node["name"])["role"], "HomeIP")
+        self.assertIn("[ShowIP=true]", node["name"])
+
+        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
+        homeip_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸🍟.DirectExit-[US.HomeIP]"
+        )
+        showip_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸📍.DirectExit-[US.ShowIP]"
+        )
+        self.assertRegex(node["name"], homeip_group["filter"])
+        self.assertRegex(node["name"], showip_group["filter"])
+
+        with self.assertRaisesRegex(ValueError, "allow-relay"):
+            generator.normalize_trusted_nodes(
+                [{**source, "allow-relay": True}],
+                {},
+                Path("trusted-nodes.yaml"),
+            )
 
     def test_trusted_socks5_is_supported_with_authentication(self) -> None:
         nodes = generator.normalize_trusted_nodes(

@@ -670,11 +670,12 @@ def normalize_trusted_nodes(
     """Normalize explicitly trusted, client-side nodes.
 
     These entries are deliberately separate from airport imports.  A trusted
-    node may relay or become a chain landing only when the private file says
-    so explicitly.  Since the generator has no way to verify residential
-    identity from a node description alone, trusted entries are always
-    ordinary (non-HomeIP, non-ShowIP) nodes. SOCKS5 entries are supported as
-    optional, authenticated client-facing nodes for special/NAT hosts.
+    node may relay, become a chain landing, enter ShowIP, or be classified as
+    HomeIP only when the private file says so explicitly.  Trusted entries are
+    unmanaged self-hosted/client nodes, so the generator preserves their
+    explicit capability declarations but does not infer them.  SOCKS5 entries
+    are supported as optional, authenticated client-facing nodes for
+    special/NAT hosts.
     """
     allowed_protocols = {"vless", "hysteria2", "socks5"}
     seen: set[tuple[str, str]] = set()
@@ -731,12 +732,14 @@ def normalize_trusted_nodes(
         seen.add(identity)
 
         exit_type = str(source.get("exit-type", "general")).strip().lower() or "general"
-        if exit_type != "general":
-            raise ValueError(f"{field}.exit-type 只能是 general；节点信息不能证明 HomeIP")
+        if exit_type not in {"general", "homeip"}:
+            raise ValueError(
+                f"{field}.exit-type 必须是 general 或 homeip，当前值为 {exit_type!r}"
+            )
         allow_showip = yaml_bool(source.get("allow-showip"), f"{field}.allow-showip", False)
-        if allow_showip:
-            raise ValueError(f"{field}.allow-showip 必须为 false；可信节点不会自动进入 ShowIP")
         allow_relay = yaml_bool(source.get("allow-relay"), f"{field}.allow-relay", False)
+        if exit_type == "homeip" and allow_relay:
+            raise ValueError(f"{field}.exit-type 为 homeip 时不能设置 allow-relay: true")
         allow_chain_exit = yaml_bool(
             source.get("allow-chain-exit"), f"{field}.allow-chain-exit", False
         )
@@ -774,8 +777,8 @@ def normalize_trusted_nodes(
             "allow_direct_exit": allow_direct_exit,
             "allow_chain_exit": allow_chain_exit,
             "allow_download": allow_download,
-            "allow_showip": False,
-            "exit_type": "general",
+            "allow_showip": allow_showip,
+            "exit_type": exit_type,
             "physical_node_id": f"trusted:{node_id}",
             "relay_protocol": relay_protocol,
             "chain_exit_protocol": chain_exit_protocol,
@@ -792,6 +795,7 @@ def normalize_trusted_nodes(
                 role,
                 allow_direct_exit=allow_direct_exit,
                 allow_download=allow_download,
+                allow_showip=allow_showip,
             )
         )
         normalized.append(attach_capabilities(proxy, capabilities))
