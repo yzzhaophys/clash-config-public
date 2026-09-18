@@ -128,7 +128,10 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 节点实际协议与相应的 relay/chain-exit 协议一致；自建节点的链路协议默认是 VLESS，
   可信节点未显式配置时默认使用其 `proxy.type`；
 - 两个节点不能来自同一个物理节点；
-- 普通 Core/Exit、ShowIP 和 HomeIP 都允许使用不同物理节点生成同地区代理链；
+- 普通 Core/Exit、ShowIP 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
+
+ShowIP 是出口节点的附加能力标记，不是独立出口角色。节点仍然是普通 Exit 或
+HomeIP；`[ShowIP=true]` 只让对应基础节点或代理链进入 ShowIP 策略组。
 
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
