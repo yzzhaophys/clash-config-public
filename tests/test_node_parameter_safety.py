@@ -296,7 +296,7 @@ class ConversionTests(unittest.TestCase):
                 g.normalize_trusted_nodes([source], {}, Path('fixture'))
 
 
-class FallbackAndLoonTests(unittest.TestCase):
+class LoonTests(unittest.TestCase):
     def test_loon_invalid_values_are_reported_as_skips(self):
         base = {'name': 'test', 'type': 'vless', 'server': 'node.example',
                 'port': 443, 'uuid': UUID}
@@ -313,50 +313,6 @@ class FallbackAndLoonTests(unittest.TestCase):
                                 'cipher': 'aes-128-gcm', 'password': ' pass ',
                                 'plugin': 'obfs', 'plugin-opts': {'mode': 'http', 'path': ''}})
         self.assertIn('obfs-uri=', body)
-
-    def source(self, **flags):
-        return g.normalize_trusted_nodes([trusted() | flags], {}, Path('fixture'))[0]
-
-    def test_disabled_direct_cannot_be_fallback_source(self):
-        source = self.source(**{'allow-direct-exit': False})
-        self.assertFalse(g.eligible_fallback_source(source))
-        with self.assertRaisesRegex(ValueError, '允许直出'):
-            g.fallback_node(source, 'UK')
-
-    def test_fallback_preserves_connection_and_clears_capabilities(self):
-        source = self.source(**{'allow-download': True})
-        source['ws-opts'] = {'path': '/ws', 'headers': {'Host': 's.example'}}
-        result = g.fallback_node(source, 'UK')
-        for key in ('type', 'server', 'port', 'uuid', 'ws-opts'):
-            self.assertEqual(result[key], source[key])
-        for key in ('_allow-download', '_allow-showip', '_allow-relay', '_allow-chain-exit'):
-            self.assertFalse(result[key])
-        self.assertFalse(g.eligible_fallback_source(result))
-        self.assertEqual(g.chain_candidates([source, result]), [])
-
-    def test_fallback_matches_actual_home_filters(self):
-        import re
-        home = load_yaml(g.SCRIPT_DIR / 'home.yaml')
-        for region in g.FALLBACK_REGIONS:
-            proxy = g.fallback_node(self.source(), region)
-            group = next(group for group in home['proxy-groups'] if f'.DirectExit-[{region}]' in group['name'])
-            self.assertRegex(proxy['name'], group['filter'])
-            self.assertIsNone(re.search(group['exclude-filter'], proxy['name']))
-
-    def test_homeip_does_not_fill_ordinary_region(self):
-        homeip = copy.deepcopy(self.source())
-        homeip['name'] = g.node_name('sg', 'vless', 0, 'HomeIP')
-        homeip['_exit-type'] = 'homeip'
-        with mock.patch('builtins.input', side_effect=['2', '1']), contextlib.redirect_stdout(io.StringIO()):
-            result = g.interactive_fallback_nodes([homeip, self.source()])
-        self.assertTrue(any(g.node_meta(p['name'])['region'] == 'SG' for p in result))
-        self.assertTrue(all(p['server'] == self.source()['server'] for p in result))
-
-    def test_no_eligible_fallback_source_does_not_prompt_success(self):
-        with mock.patch('builtins.input') as prompt, contextlib.redirect_stdout(io.StringIO()):
-            result = g.interactive_fallback_nodes([self.source(**{'allow-direct-exit': False})])
-        self.assertEqual(result, [])
-        prompt.assert_not_called()
 
     def test_loon_does_not_silently_drop_top_level_or_nested_fields(self):
         base = {'type': 'vless', 'server': 'node.example', 'port': 443, 'uuid': UUID}

@@ -20,7 +20,6 @@ from node_conversion import xray_options, hysteria_options
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
-FALLBACK_REGIONS = ("UK", "AU", "TW", "SG", "NL", "DE")
 AIRPORT_REGION_ALIASES = {"GB": "UK"}
 
 REGION_CN = {
@@ -330,7 +329,7 @@ def node_name(
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Fallback=(?P<fallback>[^]]+)\])?(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -349,11 +348,11 @@ def anchor_name(name: str) -> str:
     if not meta:
         return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
     base = f"VPS_{meta['region']}_{meta['role']}_{meta['proto']}_{meta['idx']}"
-    # Fallback, airport, and trusted nodes can intentionally reuse a base
+    # Airport and trusted nodes can intentionally reuse a base
     # region/protocol/index. Include their source marker so YAML anchors stay
     # unique even when a future caller does not share counters.
     markers: list[str] = []
-    for field in ("fallback", "source", "airport", "special", "trusted"):
+    for field in ("source", "airport", "special", "trusted"):
         value = meta.get(field)
         if not value:
             continue
@@ -1439,12 +1438,34 @@ def loon_shadowsocks(proxy: dict[str, Any]) -> str:
     return ",".join([*fields, *options])
 
 
+def loon_socks5(proxy: dict[str, Any]) -> str:
+    require_socks5_credentials(proxy, "SOCKS5")
+    fields = [
+        "socks5",
+        *loon_server_fields(proxy),
+        loon_atom(proxy["username"]),
+        loon_quote(proxy["password"]),
+    ]
+    options: list[str] = []
+    if "tls" in proxy:
+        options.append(loon_option("over-tls", loon_bool(proxy["tls"])))
+    sni = proxy.get("sni", proxy.get("servername"))
+    if sni is not None:
+        options.append(loon_option("sni", sni))
+    if "skip-cert-verify" in proxy:
+        options.append(loon_option("skip-cert-verify", loon_bool(proxy["skip-cert-verify"])))
+    if "udp" in proxy:
+        options.append(loon_option("udp", loon_bool(proxy["udp"])))
+    return ",".join([*fields, *options])
+
+
 def loon_node_body(proxy: dict[str, Any]) -> str:
     protocol = str(proxy.get("type", "")).strip().lower()
     converters = {
         "vless": loon_vless,
         "hysteria2": loon_hysteria2,
         "ss": loon_shadowsocks,
+        "socks5": loon_socks5,
     }
     converter = converters.get(protocol)
     if converter is None:
@@ -1456,6 +1477,7 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
         'hysteria2': {'password', 'sni', 'servername', 'skip-cert-verify',
                       'fast-open', 'salamander-password', 'obfs', 'obfs-password'},
         'ss': {'cipher', 'password', 'plugin', 'plugin-opts'},
+        'socks5': {'username', 'password', 'tls', 'sni', 'servername', 'skip-cert-verify'},
     }
     unknown = set(clean_proxy(proxy)) - common - supported[protocol]
     if unknown:
@@ -1501,6 +1523,8 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
             raise ValueError('Loon plugin-opts 缺少 plugin')
         if any(not isinstance(value, str) for value in opts.values()):
             raise ValueError('Loon plugin-opts 参数必须是字符串')
+    if protocol == 'socks5':
+        require_socks5_credentials(proxy, 'SOCKS5')
     return converter(proxy)
 
 
@@ -1596,14 +1620,10 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
             continue
         if exit_proxy.get("_chain-exit-protocol") not in {None, str(exit_proxy.get("type", "")).lower()}:
             continue
-        # 地区补位节点不生成代理链；HomeIP 是落地出口，需要参与。
-        if exit_meta.get("fallback") and exit_meta["role"] != "HomeIP":
-            continue
         for dialer in proxies:
             dialer_meta = node_meta(dialer["name"])
             if (
                 not dialer_meta
-                or dialer_meta.get("fallback")
                 or not dialer.get("_allow-relay", dialer_meta["role"] in {"Core", "Relay"})
                 or dialer.get("_relay-protocol") not in {None, str(dialer.get("type", "")).lower()}
             ):
@@ -1611,16 +1631,6 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
             exit_identity = exit_proxy.get("_physical-node-id")
             dialer_identity = dialer.get("_physical-node-id")
             if exit_identity and dialer_identity and exit_identity == dialer_identity:
-                continue
-            # Same-region chains add no useful route diversity for ordinary
-            # exits. The sole exception is a distinct HomeIP landing host.
-            if (
-                dialer_meta["region"] == exit_meta["region"]
-                and exit_meta["role"] != "HomeIP"
-            ):
-                continue
-            dialer_label = f"{dialer_meta['region']}.{dialer_meta['proto']}.{dialer_meta['idx']}"
-            if exit_meta.get("fallback") == dialer_label:
                 continue
             candidates.append((exit_proxy, dialer))
     return candidates
@@ -1717,114 +1727,6 @@ def interactive_exclude_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, A
         if excluded:
             print(f"已剔除 {len(excluded)} 个节点，剩余 {len(kept)} 个；相关代理链也不会生成。")
         return kept
-
-
-def eligible_fallback_source(proxy: dict[str, Any]) -> bool:
-    meta = node_meta(str(proxy.get('name', '')))
-    return bool(
-        meta and meta['role'] in {'Core', 'Exit'}
-        and not any(meta.get(k) for k in ('fallback', 'special', 'showip'))
-        and meta.get('direct') != 'false'
-        and proxy.get('_allow-direct-exit', True)
-        and not proxy.get('_allow-showip', False)
-        and proxy.get('_exit-type', 'general') == 'general'
-        and 'dialer-proxy' not in proxy
-    )
-
-
-def fallback_node(source: dict[str, Any], target_region: str) -> dict[str, Any]:
-    if not eligible_fallback_source(source):
-        raise ValueError('补位来源必须是允许直出的普通真实基础节点')
-    target_region = normalize_route_region(target_region)
-    if '.' in target_region:
-        raise ValueError('补位目标必须是普通地区代码')
-    source_meta = node_meta(source["name"])
-    if not source_meta:
-        raise ValueError(f"无法识别备用来源节点名称：{source['name']}")
-    target_cn = REGION_CN.get(target_region.lower(), target_region)
-    source_label = f"{source_meta['region']}.{source_meta['proto']}.{source_meta['idx']}"
-    node = copy.deepcopy(source)
-    node["name"] = (
-        f"VPS-[{target_region}.Exit]-{source_meta['proto']}-{source_meta['idx']}"
-        f"-({target_cn}补位出口)-[Fallback={source_label}]"
-        + capability_name_suffix(node.get("_allow-direct-exit", True), False)
-    )
-    node["_allow-relay"] = False
-    node["_allow-chain-exit"] = False
-    node['_allow-direct-exit'] = True
-    node['_allow-download'] = False
-    node['_allow-showip'] = False
-    node['_exit-type'] = 'general'
-    return node
-
-
-def prompt_source_node(proxies: list[dict[str, Any]], target_region: str | None = None) -> dict[str, Any] | None:
-    suffix = f"（{target_region}）" if target_region else ""
-    title = "备用来源节点"
-    print(f"\n可选的{title}{suffix}：")
-    for index, proxy in enumerate(proxies, 1):
-        print(f"  {index:>2}. {interactive_proxy_label(proxy)}")
-    while True:
-        raw = input(f"请选择{title}{suffix} [1-{len(proxies)}；0=跳过]：").strip()
-        if raw in {"", "0", "none", "n"}:
-            return None
-        try:
-            number = int(raw)
-        except ValueError:
-            print("输入无效，请输入节点编号。")
-            continue
-        if 1 <= number <= len(proxies):
-            return proxies[number - 1]
-        print(f"编号超出范围 1-{len(proxies)}。")
-
-
-def interactive_fallback_nodes(proxies: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    sources = [proxy for proxy in proxies if eligible_fallback_source(proxy)]
-    real_regions = {
-        meta["region"]
-        for proxy in sources
-        if (meta := node_meta(proxy["name"]))
-        and not meta.get("fallback")
-        and not meta.get("special")
-    }
-    missing = [region for region in FALLBACK_REGIONS if region not in real_regions]
-    if not missing:
-        return []
-    if not sources:
-        print('没有允许直出的普通基础节点，无法生成地区补位。')
-        return []
-
-    print("\n以下地区没有真实节点：" + ", ".join(missing))
-    print("可生成逻辑占位节点供空的普通地区策略组使用。")
-    print("占位节点的实际出口仍是所选来源节点，并且不会参与代理链组合。")
-    print("  1. 不生成占位节点")
-    print("  2. 所有缺失地区使用同一个来源节点（推荐当前用法）")
-    print("  3. 每个缺失地区分别选择来源节点")
-    while True:
-        choice = input("请选择 [1-3，默认 2]：").strip() or "2"
-        if choice in {"1", "2", "3"}:
-            break
-        print("输入无效，请选择 1、2 或 3。")
-    if choice == "1":
-        return []
-
-    placeholders: list[dict[str, Any]] = []
-    if choice == "2":
-        source = prompt_source_node(sources)
-        if source is None:
-            return []
-        placeholders = [fallback_node(source, region) for region in missing]
-    else:
-        for region in missing:
-            source = prompt_source_node(sources, region)
-            if source is not None:
-                placeholders.append(fallback_node(source, region))
-    if placeholders:
-        for placeholder in placeholders:
-            meta = node_meta(placeholder['name'])
-            print(f"  分组地区 {meta['region']} -> 实际出口 {meta['fallback'].split('.')[0]}")
-        print(f"已生成 {len(placeholders)} 个地区占位节点。")
-    return placeholders
 
 
 def interactive_selection(
@@ -2194,11 +2096,8 @@ def main(argv: list[str] | None = None) -> int:
             if audit:
                 print(json.dumps({'node': proxy['name'], **audit}, ensure_ascii=False))
 
-    fallback_nodes: list[dict[str, Any]] = []
     if args.interactive:
         proxies, output_format, chains = interactive_selection(proxies)
-        if output_format != "plain":
-            fallback_nodes = interactive_fallback_nodes(proxies)
     else:
         before = len(proxies)
         proxies = exclude_by_patterns(proxies, args.exclude_node)
@@ -2243,7 +2142,7 @@ def main(argv: list[str] | None = None) -> int:
             if output_format == 'plain':
                 write_plain(proxies, primary)
             else:
-                write_template(proxies + fallback_nodes, chains, primary)
+                write_template(proxies, chains, primary)
             load_yaml(primary)
             rendered.append((output, primary.read_text(encoding='utf-8')))
             if raw_output:
@@ -2267,8 +2166,8 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             raise SystemExit(f'无法写入输出 {destination}：{exc}') from exc
     print(
-        f"wrote {output} ({len(proxies)} base nodes, {len(fallback_nodes)} additional nodes, "
-        f"{len(chains)} chains, format={output_format})"
+        f"wrote {output} ({len(proxies)} base nodes, {len(chains)} chains, "
+        f"format={output_format})"
     )
     if raw_output:
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")

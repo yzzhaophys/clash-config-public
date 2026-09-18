@@ -128,8 +128,7 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 节点实际协议与相应的 relay/chain-exit 协议一致；自建节点的链路协议默认是 VLESS，
   可信节点未显式配置时默认使用其 `proxy.type`；
 - 两个节点不能来自同一个物理节点；
-- 普通出口不生成同地区代理链；HomeIP 允许不同物理节点的同地区落地例外；
-- 地区补位节点不参与代理链。
+- 普通 Core/Exit、ShowIP 和 HomeIP 都允许使用不同物理节点生成同地区代理链；
 
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
@@ -254,7 +253,7 @@ python3 manage_trusted_nodes.py remove \
 中反向搜索稳定 `id`，确认无残留；检查完备份后再按控制端保留策略处置临时源文件和过期备份。
 
 SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，默认只作为直出节点；
-它会进入 Clash/Mihomo 输出。当前 Loon 输出仍会跳过 SOCKS5，因为 Loon 转换器尚未覆盖该协议。
+它会进入 Clash/Mihomo 输出，Loon 输出也会转换已认证 SOCKS5，并保留可表达的 TLS、SNI、证书校验和 UDP 参数。
 
 ### 策略组筛选
 
@@ -273,13 +272,13 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 默认交互运行会生成：
 
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
-- `nodes.yaml`：选中的基础节点，不含代理链和地区补位节点；
-- `loon-nodes.conf`：选中的基础节点的 Loon 格式，不含 Clash 专用代理链和地区补位节点。
+- `nodes.yaml`：选中的基础节点，不含代理链；
+- `loon-nodes.conf`：选中的基础节点的 Loon 格式，不含 Clash 专用代理链。
 
 显式 `--plain` 时主输出默认为 `nodes.yaml`；`--template`、`--merge`、`--chains` 或
 `--routes` 时主输出默认为 `clash-vps.generated.yaml`。显式指定的输出路径不能相同。
-除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前仅转换 VLESS、Hysteria2
-和 Shadowsocks，其他协议会跳过并在终端列出。交互模式还可以排除基础节点、选择代理链
+除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前转换 VLESS、Hysteria2、
+Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交互模式还可以排除基础节点、选择代理链
 方向或逐条选择代理链；被排除节点的相关代理链不会生成。
 
 这些文件包含真实凭据，已加入 `.gitignore`。
@@ -303,9 +302,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 - Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
   不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部跳过时 Loon 文件为空。
 
-地区补位只从允许直出的普通 Core / Exit 基础节点中选择，排除 HomeIP、ShowIP、
-代理链、禁止直出和已有补位节点。补位只是逻辑地区标签，不代表真实出口地区；
-交互界面会显示真实来源地区。仅有 HomeIP 不视为普通地区已具备直出节点。
+生成器不会为缺失地区创建占位节点，地区策略组只会匹配实际生成的节点。
 
 ## 编辑和安全
 

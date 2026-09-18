@@ -1,3 +1,4 @@
+import contextlib
 import io
 import json
 import re
@@ -12,6 +13,55 @@ import generate_raw_nodes as generator
 
 
 class GeneratorTests(unittest.TestCase):
+    def test_same_region_general_chain_can_use_a_distinct_landing(self) -> None:
+        dialer = {
+            "name": generator.node_name("us", "vless", 0, "Core"),
+            "type": "vless",
+            "_allow-relay": True,
+            "_relay-protocol": "vless",
+            "_physical-node-id": "vps-us-relay",
+        }
+        exit_proxy = {
+            "name": generator.node_name("us", "vless", 1, "Exit"),
+            "type": "vless",
+            "_allow-chain-exit": True,
+            "_chain-exit-protocol": "vless",
+            "_physical-node-id": "vps-us-landing",
+        }
+
+        candidates = generator.chain_candidates([dialer, exit_proxy])
+
+        self.assertEqual(candidates, [(exit_proxy, dialer)])
+        self.assertEqual(generator.route_key(candidates[0]), ("US", "US"))
+        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
+        chain_group = next(
+            group for group in home["proxy-groups"] if group["name"] == "🇺🇸🔗.Chain-[US]"
+        )
+        self.assertRegex(generator.chain_name(*candidates[0]), chain_group["filter"])
+
+    def test_same_region_showip_general_chain_can_use_a_distinct_landing(self) -> None:
+        dialer = {
+            "name": generator.node_name("us", "vless", 0, "Core"),
+            "type": "vless",
+            "_allow-relay": True,
+            "_relay-protocol": "vless",
+            "_physical-node-id": "vps-us-relay",
+        }
+        showip_exit = {
+            "name": generator.node_name("us", "vless", 1, "Exit", allow_showip=True),
+            "type": "vless",
+            "_allow-chain-exit": True,
+            "_allow-showip": True,
+            "_chain-exit-protocol": "vless",
+            "_physical-node-id": "vps-us-showip",
+        }
+
+        candidates = generator.chain_candidates([dialer, showip_exit])
+
+        self.assertEqual(candidates, [(showip_exit, dialer)])
+        self.assertEqual(generator.route_key(candidates[0]), ("US", "US"))
+        self.assertTrue(generator.chain_name(*candidates[0]).endswith("[ShowIP=true]"))
+
     def test_homeip_route_is_case_insensitive(self) -> None:
         dialer = {
             "name": generator.node_name("jp", "vless", 0, "Core"),
@@ -499,32 +549,6 @@ class GeneratorTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "字段名必须是字符串"):
                         writer(root / filename)
 
-    def test_fallback_anchor_does_not_collide_with_real_target_region(self) -> None:
-        source = {
-            "name": generator.node_name("us", "vless", 0, "Exit"),
-            "type": "vless",
-            "server": "source.example",
-            "port": 443,
-            "uuid": "source-uuid",
-        }
-        real_target = {
-            "name": generator.node_name("uk", "vless", 0, "Exit"),
-            "type": "vless",
-            "server": "target.example",
-            "port": 443,
-            "uuid": "target-uuid",
-        }
-        fallback = generator.fallback_node(source, "UK")
-
-        self.assertNotEqual(
-            generator.anchor_name(real_target["name"]),
-            generator.anchor_name(fallback["name"]),
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "fallback.yaml"
-            generator.write_template([real_target, fallback], [], output)
-            self.assertEqual(len(yaml.safe_load(output.read_text())["proxies"]), 2)
-
     def test_reality_flow_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             host_dir = Path(directory) / "vps-us"
@@ -794,6 +818,74 @@ class GeneratorTests(unittest.TestCase):
         self.assertNotIn("client-fingerprint", body)
         self.assertNotIn("block-quic", body)
 
+    def test_loon_socks5_preserves_authentication_and_supported_options(self) -> None:
+        password = ' pass "测试 '
+        body = generator.loon_node_body(
+            {
+                "type": "socks5",
+                "server": "nat.example",
+                "port": 1080,
+                "username": "user,name",
+                "password": password,
+                "tls": True,
+                "servername": "proxy.example",
+                "skip-cert-verify": False,
+                "udp": False,
+            }
+        )
+
+        self.assertTrue(body.startswith('socks5,nat.example,1080,"user,name",'))
+        self.assertIn(generator.loon_quote(password), body)
+        self.assertIn("over-tls=true", body)
+        self.assertIn("sni=proxy.example", body)
+        self.assertIn("skip-cert-verify=false", body)
+        self.assertIn("udp=false", body)
+
+    def test_loon_writes_authenticated_socks5_without_skipping_it(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "socks5", 0, "Exit"),
+            "type": "socks5",
+            "server": "nat.example",
+            "port": 1080,
+            "username": "nat-user",
+            "password": "nat-password",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "nodes.conf"
+            count, skipped = generator.write_loon([proxy], output)
+            content = output.read_text()
+
+        self.assertEqual(count, 1)
+        self.assertEqual(skipped, [])
+        self.assertIn('socks5,nat.example,1080,nat-user,"nat-password"', content)
+
+    def test_loon_socks5_requires_authentication(self) -> None:
+        with self.assertRaisesRegex(ValueError, "SOCKS5.*username"):
+            generator.loon_node_body(
+                {
+                    "type": "socks5",
+                    "server": "nat.example",
+                    "port": 1080,
+                    "password": "password",
+                }
+            )
+
+    def test_loon_socks5_rejects_missing_null_invalid_and_nested_fields(self) -> None:
+        base = {
+            "type": "socks5",
+            "server": "nat.example",
+            "port": 1080,
+            "username": "user",
+            "password": "password",
+        }
+        for extra in (
+            {"password": None},
+            {"tls": []},
+            {"smux": {"enabled": False}},
+        ):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                generator.loon_node_body(base | extra)
+
     def test_loon_skips_non_scalar_credentials_without_crashing(self) -> None:
         proxy = {
             "name": generator.node_name("us", "hysteria2", 0, "Exit"),
@@ -875,6 +967,36 @@ class GeneratorTests(unittest.TestCase):
                 generator.main(
                     ["--plain", "--no-loon", "--output", "/tmp/test-output.yaml"]
                 )
+
+    def test_interactive_template_contains_only_real_nodes(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "type": "vless",
+            "server": "edge.example",
+            "port": 443,
+            "uuid": "uuid",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "generated.yaml"
+            with (
+                mock.patch.object(generator, "collect_proxies", return_value=[proxy]),
+                mock.patch.object(generator, "load_trusted_nodes", return_value=[]),
+                mock.patch.object(generator, "interactive_airport_import", return_value=([], {})),
+                mock.patch.object(
+                    generator,
+                    "interactive_selection",
+                    return_value=([proxy], "template", []),
+                ),
+                mock.patch("builtins.input", side_effect=AssertionError("unexpected prompt")),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                generator.main(
+                    ["--interactive", "--no-loon", "--output", str(output)]
+                )
+
+            rendered = yaml.safe_load(output.read_text())
+
+        self.assertEqual(rendered["proxies"], [proxy])
 
 
 if __name__ == "__main__":
