@@ -59,6 +59,8 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertEqual(group["url"], "https://www.apple.com/library/test/success.html")
                 if group["type"] == "url-test":
                     self.assertGreaterEqual(group["tolerance"], 50)
+                else:
+                    self.assertNotIn("tolerance", group)
                 if "filter" in group:
                     self.assertEqual(group["empty-fallback"], "REJECT")
                 else:
@@ -117,6 +119,14 @@ class ProxyGroupPolicyTests(unittest.TestCase):
         self.assertTrue(regional)
         for group in regional:
             with self.subTest(group=group["name"]):
+                if group["name"] in {
+                    "🌎.Line-[Americas]",
+                    "🌏.Line-[Oceania]",
+                    "🌍.Line-[Europe]",
+                }:
+                    self.assertEqual(group["proxies"][-1], "♾️.Line-[Final]")
+                    self.assertGreaterEqual(len(group["proxies"]), 2)
+                    continue
                 suffix = group["name"].split(".Line-", 1)[1]
                 chain, direct = group["proxies"]
                 self.assertTrue(chain.endswith(".Chain-" + suffix))

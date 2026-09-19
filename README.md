@@ -286,7 +286,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | 地区及 HomeIP / ShowIP Line | `fallback` | 每 60 秒检测，代理链优先、同地区同用途直出备用 |
 | 跨地区、Final、Low.Latency | `url-test` | 每 60 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
-| Americas / Oceania | `url-test` | 每 60 秒检测；当前各只有一个子组，本层没有第二条可切换线路 |
+| Americas / Oceania / Europe | `fallback` | 每 60 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
 | CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
 
 所有自动组设置 `lazy: false`、`timeout: 5000`、`max-failed-times: 2`。
@@ -307,8 +307,9 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 当前统一探测 Apple 测试页面并要求 HTTP 200，它只能代表该地址可达，不能证明
 linux.do、其他站点或 UDP 正常，也不衡量下载带宽。上层探测一个子组时，检验的
 是子组当时选中的路径，不能替代底层节点池的独立检测；不能承诺嵌套后瞬时恢复。
-因此保留底层主动检测。单子项 `select` 入口不再重复定时探测；Americas / Oceania
-仍保留自动组形式，便于以后增加候选，但当前不能增加本层的切换能力。
+因此保留底层主动检测。单子项 `select` 入口不再重复定时探测。Americas / Oceania /
+Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区候选失效后才尝试
+`♾️.Line-[Final]`；它关注可用性，不按延迟重新排序。
 
 加载候选配置后应分别验证：
 
