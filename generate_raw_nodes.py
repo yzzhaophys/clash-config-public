@@ -1470,6 +1470,8 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
     converter = converters.get(protocol)
     if converter is None:
         raise ValueError(f"Loon 不支持节点协议 {protocol or '<empty>'}")
+    if not yaml_bool(proxy.get('_allow-direct-exit'), 'allow-direct-exit', True):
+        raise ValueError('Loon 基础节点输出不支持禁止直出的代理链节点')
     common = {'name', 'type', 'server', 'port', 'udp'}
     supported = {
         'vless': {'uuid', 'flow', 'tls', 'network', 'ws-opts', 'http-opts',
@@ -2056,6 +2058,8 @@ def main(argv: list[str] | None = None) -> int:
     trusted_nodes_file = (
         args.trusted_nodes_file or default_trusted_nodes_file(airport_dir)
     ).expanduser().resolve()
+    if args.trusted_nodes_file is not None and not trusted_nodes_file.is_file():
+        raise SystemExit('显式指定的 trusted-nodes 文件不存在或不是普通文件')
     ansible_host_vars_dir = (
         args.ansible_host_vars_dir.expanduser().resolve()
         if args.ansible_host_vars_dir

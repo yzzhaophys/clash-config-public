@@ -5,7 +5,9 @@
 ## 文件
 
 - `home.yaml`：主配置模板。它负责策略组和分流规则，`proxies` 列表保持为空。
+- `home-stash.yaml`：由 `home.yaml` 生成的 Stash 配置骨架；不包含节点、订阅或代理链。
 - `generate_raw_nodes.py`：读取私有节点配置，生成基础节点和可选的代理链。
+- `generate_stash_config.py`：将公开的 `home.yaml` 转换为 Stash 配置骨架。
 
 生成器负责生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
 
@@ -41,6 +43,35 @@
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 输出文件，或关闭 Loon 输出。
+
+生成 Stash 配置骨架：
+
+```bash
+python3 generate_stash_config.py
+```
+
+该文件只保留 Stash 的策略组、规则集和分流结构；节点、代理提供者和生成的代理链
+必须在私有环境中另行加入。原本使用 `empty-fallback: REJECT` 的自动组会转换为显式
+的 `REJECT` 候选，且筛选表达式显式保留该候选，防止它被过滤成空组；实际空组行为仍须在 Stash 上验证。
+`DirectExit` 组把原先的 `filter` + `exclude-filter` 合并成 Stash 文档支持的
+单个 `filter`：通过有限状态机将排除词转换为不含前瞻的普通正则，保留描述中的
+排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
+源筛选发生变化时脚本会报错，要求重新审核转换。Stash 延迟测试地址和超时应在将来加入的
+节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
+关闭默认的递归周期测速，自动组继续按原模板的 30/60 秒间隔测速。
+源配置中 115 个手动 `PASS` 选项未出现在 Stash 文档的内置出口列表中，
+转换时将其移除；`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
+DNS 中仅保留 Stash 可表达的精确域名、通配域名和 `geosite:` policy；模板里的
+Clash Meta `rule-set:` DNS policy 和 DNS URL 代理组后缀会被移除，普通 `RULE-SET`
+分流规则不受影响，但这不代表原 DNS 策略完全等价：被移除的 DNS policy 不再单独选 DNS，
+DNS 请求也不再使用 URL 后缀指定的代理组，而是依赖 `follow-rule` 和普通路由规则。
+Stash 的通配 DNS policy 优先于 geosite，因此 `+.*` 被迁移到默认 `nameserver`，
+避免遮蔽 geosite 策略，并保留其 DNS 服务器顺序。参见
+[Stash DNS 文档](https://stash.wiki/en/features/dns-server)。
+输出通过同目录临时文件校验后原子替换，权限保留 `0600`；替换失败时旧文件不变。
+当前只转换 HTTP rule-provider 和 `empty-fallback: REJECT`，遇到其他值明确报错。
+自动化测试覆盖源配置对比、筛选反例和写入失败；Mihomo 辅助加载检查不等于
+Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试导入、DNS、空组和故障切换。
 
 默认目录和环境变量：
 
@@ -217,6 +248,7 @@ allow-showip: false       # 需要作为 ShowIP 链路时改为 true
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
 VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
 时间戳备份并进行锁定和原子替换。目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
+源文件与目标文件不能指向同一个文件，包括硬链接别名。
 以下命令从本仓库根目录执行：
 
 ```bash
@@ -244,11 +276,14 @@ python3 manage_trusted_nodes.py remove \
 ```
 
 合并或删除只修改私密事实源。应用后必须使用当前已审查的选项重新运行生成器并重新加载客户端；
-交互流程会重写三份默认输出：
+要重写三份输出，请显式提供输出路径；带参数的交互调用不会自动补充 `--raw-output`：
 
 ```bash
 ./generate_raw_nodes.py \
   --trusted-nodes-file ~/.config/clash/airport/trusted-nodes.yaml \
+  --output clash-vps.generated.yaml \
+  --raw-output nodes.yaml \
+  --loon-output loon-nodes.conf \
   --interactive
 ```
 
@@ -265,7 +300,8 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 - `DirectExit` 组筛选基础节点，并排除 `PrxChain` 和 `[Direct=false]`；
 - `Chain` 组只筛选 `PrxChain-*`；
 - `ShowIP` 组筛选 `[ShowIP=true]`；
-- 下载组筛选 `[Download=true]`，并排除 HomeIP、ShowIP、代理链和 `[Direct=false]`。
+- 下载组只要求节点带 `[Download=true]`，另外排除名称中包含 `PrxChain` 的代理链；
+  `HomeIP`、`ShowIP` 和 `[Direct=false]` 节点只要带有该下载标记也会进入 Download。
 
 地区 `Line` 组再根据 `home.yaml` 的定义组合 `DirectExit` 和 `Chain`。因此修改
 节点能力后，需要重新运行生成器并重新加载生成的配置。
@@ -349,6 +385,9 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
 - 从服务端配置转换时，只转换明确支持的客户端参数。缺失的可选参数不补造；
   缺少必要地址、端口或凭据会报错。有值但无法可靠转换的字段也会报错，
   此时请在客户端 inventory 中提供完整 Clash 节点，不要删除参数来绕过检查。
+- Shadowrocket 原始节点 JSON 不属于这里的 Clash inventory；不能只套一层 `nodes`。
+  转换 VLESS 时必须核对原导出的 `password` 认证值与节点记录 `uuid`，不能按同名字段猜测。
+  转换前保留私密原件；结构和内核加载通过后仍需真实代理链请求验收。
 - Xray 支持 TCP、WS、gRPC、H2 的显式参数映射；WS 保留 path、Host、headers
   和 early-data。REALITY 必须提供客户端公钥，不会把服务端私钥写入输出。
   每个 inbound 继续选择第一个客户端账号；多个允许的 REALITY SNI / short-id
@@ -358,8 +397,12 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
   该推导会记入审计。用户名、密码的首尾空格原样保留，换行和非法类型会被拒绝。
 - 添加 `--audit` 可查看转换、仅服务端使用和推导的字段记录，不输出凭据值。
   审计字段不会进入生成的 Clash 配置。
+- 显式指定 `--trusted-nodes-file` 时，该文件必须存在；路径错误会在生成前停止，
+  避免把缺失的 trusted 节点误当作空列表而覆盖现有输出。
 - Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
   不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部跳过时 Loon 文件为空。
+  Loon 基础节点文件不生成代理链，因此也跳过 `allow-direct-exit: false` 的节点，
+  避免导出后丢失禁止直出的限制。链出口应使用包含代理链和相应筛选规则的 Mihomo 配置。
 
 生成器不会为缺失地区创建占位节点，地区策略组只会匹配实际生成的节点。
 

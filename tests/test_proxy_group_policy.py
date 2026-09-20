@@ -84,6 +84,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
         self.assertFalse(download.get("proxies"))
         self.assertFalse(download.get("use"))
         self.assertTrue(download["include-all"])
+        self.assertEqual(download["exclude-filter"], r"(?i)PrxChain")
 
         def included(name):
             return bool(re.search(download["filter"], name)) and not bool(
@@ -101,8 +102,9 @@ class ProxyGroupPolicyTests(unittest.TestCase):
             name = node_name("jp", "vless", 0, role, allow_direct_exit=direct,
                              allow_download=allowed, allow_showip=showip)
             with self.subTest(node=name):
-                self.assertFalse(included(name))
+                self.assertEqual(included(name), allowed)
         self.assertFalse(included("PrxChain-[JP]-example-[Download=true]"))
+        self.assertFalse(included("VPS-[JP.Exit]-VLESS-00-(PrxChain)-[Download=true]"))
 
     def test_cdn_keeps_manual_choices_without_an_extra_failover_layer(self):
         business = self.groups["☁️.<Global>--CDN"]

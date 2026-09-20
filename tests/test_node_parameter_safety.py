@@ -102,6 +102,18 @@ class FileSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, '冲突'):
             g.validate_output_paths([('one', first), ('two', second)])
 
+    def test_merge_rejects_hardlinked_source_before_any_write(self):
+        target = self.write('target.yaml', yaml.safe_dump({'nodes': [trusted()]}))
+        source = self.root / 'source.yaml'
+        os.link(target, source)
+        before = target.read_bytes()
+        for apply in (False, True):
+            with self.subTest(apply=apply), self.assertRaisesRegex(m.TrustedNodesError, '同一个文件'):
+                m.merge_trusted_nodes_file(target, source, apply=apply)
+        self.assertEqual(target.read_bytes(), before)
+        self.assertEqual(source.read_bytes(), before)
+        self.assertEqual(set(self.root.iterdir()), {source, target})
+
     def test_cli_cannot_destroy_trusted_input(self):
         source = self.write('source.yaml', yaml.safe_dump({'nodes': [trusted()]}))
         before = source.read_bytes()
@@ -109,6 +121,16 @@ class FileSafetyTests(unittest.TestCase):
             g.main(['--plain', '--no-loon', '--hosts-dir', str(self.root / 'hosts'),
                     '--trusted-nodes-file', str(source), '--output', str(source)])
         self.assertEqual(source.read_bytes(), before)
+
+    def test_explicit_missing_trusted_file_fails_before_collecting_or_writing(self):
+        output = self.write('out.yaml', 'old output\n')
+        with mock.patch.object(g, 'collect_proxies') as collect:
+            with self.assertRaisesRegex(SystemExit, '显式指定'):
+                g.main(['--plain', '--no-loon', '--hosts-dir', str(self.root / 'hosts'),
+                        '--trusted-nodes-file', str(self.root / 'missing.yaml'),
+                        '--output', str(output)])
+            collect.assert_not_called()
+        self.assertEqual(output.read_text(), 'old output\n')
 
     def test_input_discovery_protects_all_source_kinds(self):
         host = self.root / 'vps-us'

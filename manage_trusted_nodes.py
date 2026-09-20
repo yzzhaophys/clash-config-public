@@ -341,7 +341,9 @@ def merge_trusted_nodes_file(
     target = target.expanduser()
     source = source.expanduser()
     _reject_symlink(source, "源 trusted-nodes 文件")
-    if target.resolve() == source.resolve():
+    if target.resolve() == source.resolve() or (
+        target.exists() and source.exists() and target.samefile(source)
+    ):
         raise TrustedNodesError("源文件和目标文件不能是同一个文件")
     if apply:
         target.parent.mkdir(parents=True, exist_ok=True)
