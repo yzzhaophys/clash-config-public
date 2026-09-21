@@ -172,8 +172,9 @@ HomeIP；`[ShowIP=true]` 只让对应基础节点或代理链进入 ShowIP 策�
 机场订阅目录中的 `subscription.yaml` 需要在交互运行时选择节点，选择结果可保存到
 `selected-nodes.yaml`。节点名称末尾需要有两位地区代码（例如 `... US`）；导入后的
 机场节点固定为：允许单节点直出、不允许中转、不允许作为代理链落地，也不会被标记为
-`HomeIP` 或 `ShowIP`。订阅中匹配到的 `dns.nameserver-policy` 只会报告，不会自动改写
-`home.yaml`，避免生成器覆盖主配置的 DNS 策略。
+`HomeIP` 或 `ShowIP`。订阅中匹配到的 `dns.nameserver-policy` 仅报告数量，不打印或导出
+策略内容，也不会自动改写 `home.yaml`。需要时在私有订阅中核对所选节点域名对应的策略，
+再手动合入主配置；包含私有域名或认证信息的策略不得提交到公开模板。
 
 可信节点必须放在私有 `trusted-nodes.yaml` 的 `nodes` 列表中。每个节点都需要
 显式指定稳定 `id`、实际两位国家代码和 `proxy`；`exit-type` 和能力由文件中的
@@ -287,8 +288,12 @@ python3 manage_trusted_nodes.py remove \
   --interactive
 ```
 
-退役后应在 `trusted-nodes.yaml`、`nodes.yaml`、`clash-vps.generated.yaml` 和 `loon-nodes.conf`
-中反向搜索稳定 `id`，确认无残留；检查完备份后再按控制端保留策略处置临时源文件和过期备份。
+退役后先在 `trusted-nodes.yaml` 中确认稳定 `id` 已删除。稳定 `id` 不会导出到
+`nodes.yaml`、`clash-vps.generated.yaml` 或 `loon-nodes.conf`，不能靠搜索它检查生成产物。
+应在私有环境中使用退役前记录的协议、连接地址、端口及凭据组合核对三份重新生成的输出，
+同时检查基础节点和代理链；不要仅凭可能重新编号的名称或共享地址判定。
+若其他事实源仍提供同一节点，需同步退役。另行确认客户端实际加载了新配置，
+检查完备份后再按控制端保留策略处置临时源文件和过期备份；核对过程不得输出凭据。
 
 SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，默认只作为直出节点；
 它会进入 Clash/Mihomo 输出，Loon 输出也会转换已认证 SOCKS5，并保留可表达的 TLS、SNI、证书校验和 UDP 参数。
@@ -423,6 +428,13 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
 及硬链接别名。所有请求的输出先在私有临时目录完成渲染、YAML 校验，再逐文件原子替换；
 转换失败不覆盖旧输出，但多个文件最终写入时发生磁盘错误不具有跨文件事务保证。
 服务端参数映射集中在 `node_conversion.py`；移动两个脚本时需同时带上这两个辅助模块。
+服务端转换对已映射的字符串、字符串列表、布尔及非负整数参数检查类型，显式空值
+不会被当成缺失值补默认；合法的空字符串、空列表、`false` 和 `0` 原样保留。
+VLESS UUID 与密码一样保留首尾空格，不通过裁剪来修正输入；实际可用性仍需内核及连通性验证。
+Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非法时跳过整条节点
+并报告原因，不将数字等强制转换成字符串。
+通过命令行或 `CLASH_TRUSTED_NODES_FILE` 显式指定的 inventory 不存在时均会报错，
+不会静默退回其他事实源。
 
 ## 维护与验证
 
@@ -430,5 +442,6 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py
+git diff --check
 ```

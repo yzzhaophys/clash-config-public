@@ -40,6 +40,14 @@ def convert(stream=None):
 
 
 class FileSafetyTests(unittest.TestCase):
+    def test_missing_environment_inventory_fails_before_collection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {'CLASH_TRUSTED_NODES_FILE': str(Path(directory) / 'missing')}), \
+                    mock.patch.object(g, 'collect_proxies') as collect, \
+                    self.assertRaisesRegex(SystemExit, 'trusted-nodes'):
+                g.main(['--plain'])
+            collect.assert_not_called()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -224,6 +232,68 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(result['network'], 'h2')
         self.assertEqual(result['h2-opts'], {'host': ['h.example'], 'path': '/h2'})
 
+    def test_mapped_optional_types_reject_null_and_containers(self):
+        cases = [
+            ('tls', 'tlsSettings', 'serverName'), ('tls', 'tlsSettings', 'fingerprint'),
+            ('tls', 'tlsSettings', 'alpn'), ('tls', 'tlsSettings', 'allowInsecure'),
+            ('grpc', 'grpcSettings', 'serviceName'), ('http', 'httpSettings', 'host'),
+            ('http', 'httpSettings', 'path'), ('ws', 'wsSettings', 'host'),
+            ('ws', 'wsSettings', 'earlyDataHeaderName'), ('ws', 'wsSettings', 'maxEarlyData'),
+        ]
+        for transport, section, key in cases:
+            for value in (None, {'secret': 'DO_NOT_ECHO'}, 1.5):
+                stream = {'security' if transport == 'tls' else 'network': transport,
+                          section: {key: value}}
+                with self.subTest(section=section, key=key, value=value), self.assertRaises(ValueError) as caught:
+                    convert(stream)
+                self.assertNotIn('DO_NOT_ECHO', str(caught.exception))
+        for value in (True, -1, '0'):
+            with self.subTest(early=value), self.assertRaises(ValueError):
+                convert({'network': 'ws', 'wsSettings': {'maxEarlyData': value}})
+        for value in (None, [], 123, 'bad\nvalue'):
+            with self.subTest(header=value), self.assertRaises(ValueError):
+                convert({'network': 'ws', 'wsSettings': {'host': 'host.example', 'headers': {'Host': value}}})
+            with self.subTest(sni=value), self.assertRaises(ValueError):
+                hysteria_options({'auth': {'password': 'pw'}, 'tls': {'sni': value}}, 'fixture')
+        for key in ('flow', 'encryption'):
+            data = inbound()
+            client = data['settings']['clients'][0] | {key: None}
+            with self.subTest(client=key), self.assertRaises(ValueError):
+                xray_options(data, client, 'fixture')
+        for key in ('shortIds', 'serverNames'):
+            with self.subTest(reality=key), self.assertRaises(ValueError):
+                convert({'security': 'reality', 'realitySettings': {'publicKey': 'key', key: ['bad\nvalue']}})
+
+    def test_mapped_empty_and_false_values_are_preserved(self):
+        result = convert({'security': 'tls', 'tlsSettings': {
+            'serverName': '', 'alpn': [], 'allowInsecure': False, 'fingerprint': ''}})
+        for key, value in {'servername': '', 'alpn': [], 'skip-cert-verify': False,
+                           'client-fingerprint': ''}.items():
+            self.assertEqual(result[key], value)
+        result = convert({'network': 'ws', 'wsSettings': {
+            'headers': {}, 'host': '', 'path': '', 'maxEarlyData': 0, 'earlyDataHeaderName': ''}})
+        self.assertEqual(result['ws-opts'], {'headers': {'Host': ''}, 'path': '',
+                         'max-early-data': 0, 'early-data-header-name': ''})
+        self.assertEqual(convert({'network': 'http', 'httpSettings': {'host': [], 'path': ''}})['h2-opts'],
+                         {'host': [], 'path': ''})
+        self.assertEqual(convert({'network': 'grpc', 'grpcSettings': {'serviceName': ''}})['grpc-opts'],
+                         {'grpc-service-name': ''})
+
+    def test_vless_credentials_preserved_in_inventory_server_and_loon(self):
+        credential = ' ' + UUID + ' '
+        source = trusted()
+        source['proxy']['uuid'] = credential
+        result = g.normalize_trusted_nodes([source], {}, Path('fixture'))[0]
+        self.assertEqual(result['uuid'], credential)
+        self.assertIn(g.loon_quote(credential), g.loon_node_body(result))
+        with tempfile.TemporaryDirectory() as directory:
+            host = Path(directory) / 'vps-us'
+            data = inbound()
+            data['settings']['clients'][0]['id'] = credential
+            g.secure_write(host / 'secrets/xray-inbounds.json', json.dumps({'inbounds': [data]}))
+            result = g.xray_nodes(host, {'VPS_CLASH_REGION': 'us', 'VPS_HOST': 'node.example'}, {})[0]
+            self.assertEqual(result['uuid'], credential)
+
     def test_unmapped_fields_fail_without_echoing_values(self):
         for stream in ({'network': 'xhttp'}, {'network': 'ws', 'wsSettings': {'unknown': 'SECRET'}},
                        {'security': 'tls', 'tlsSettings': {'unknown': 'SECRET'}},
@@ -324,7 +394,9 @@ class LoonTests(unittest.TestCase):
                 'port': 443, 'uuid': UUID}
         for extra in ({'network': {}}, {'encryption': []}, {'tls': None},
                       {'sni': None}, {'sni': 'bad\nvalue'},
-                      {'alpn': [{'invalid': True}]}):
+                      {'alpn': [{'invalid': True}]}, {'alpn': 123}, {'flow': 123},
+                      {'reality-opts': {'public-key': 123}},
+                      {'reality-opts': {'public-key': 'key', 'short-id': 123}}):
             with self.subTest(extra=extra), tempfile.TemporaryDirectory() as tmp:
                 count, skipped = g.write_loon([base | extra], Path(tmp) / 'loon.conf')
                 self.assertEqual(count, 0)

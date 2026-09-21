@@ -210,7 +210,7 @@ def require_proxy_credentials(
 ) -> None:
     """Validate credentials required to produce a usable client node."""
     if protocol == "vless":
-        proxy["uuid"] = require_nonempty_string(proxy.get("uuid"), f"{field}.uuid")
+        proxy["uuid"] = require_nonempty_string(proxy.get("uuid"), f"{field}.uuid", trim=False)
     elif protocol == "hysteria2":
         proxy["password"] = require_nonempty_string(
             proxy.get("password"),
@@ -495,6 +495,7 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
             uuid = require_nonempty_string(
                 uuid,
                 f"{file}: inbounds[{inbound_index}].settings.clients[0].id",
+                trim=False,
             )
 
             field = f'{file}: inbounds[{inbound_index}]'
@@ -1208,7 +1209,8 @@ def interactive_airport_import(
     normalized = normalize_airport_nodes(selected, counters)
     print(
         f"已导入 {len(normalized)} 个机场独立节点（不参与代理链），"
-        f"匹配 {len(dns_policy)} 条节点专用 DNS 策略；请手动合入 home.yaml。"
+        f"匹配 {len(dns_policy)} 条节点专用 DNS 策略（仅报告数量，不打印或导出内容）；"
+        "请在私有订阅的 dns.nameserver-policy 中核对，按需手动合入 home.yaml。"
     )
     return normalized, dns_policy
 
@@ -1345,7 +1347,7 @@ def loon_transport_options(proxy: dict[str, Any]) -> list[str]:
 
 
 def loon_vless(proxy: dict[str, Any]) -> str:
-    uuid = require_nonempty_string(proxy.get('uuid'), 'VLESS uuid')
+    uuid = require_nonempty_string(proxy.get('uuid'), 'VLESS uuid', trim=False)
     fields = ["VLESS", *loon_server_fields(proxy), loon_quote(uuid)]
     options = loon_transport_options(proxy)
 
@@ -1490,6 +1492,12 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
         if key in proxy and not isinstance(proxy[key], str):
             raise ValueError(f'Loon {key} 必须是字符串')
     if protocol == 'vless':
+        if 'flow' in proxy and (not isinstance(proxy['flow'], str)
+                                or '\n' in proxy['flow'] or '\r' in proxy['flow']):
+            raise ValueError('Loon flow 必须是有效字符串')
+        if 'alpn' in proxy and (not isinstance(proxy['alpn'], list)
+                                or any(not isinstance(v, str) for v in proxy['alpn'])):
+            raise ValueError('Loon alpn 必须是字符串列表')
         if proxy.get('encryption', 'none') not in ('', 'none'):
             raise ValueError('Loon 无法保留 VLESS encryption')
         reality = proxy.get('reality-opts', {})
@@ -1497,6 +1505,10 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
             raise ValueError('Loon 无法保留 reality-opts 字段')
         if reality and not reality.get('public-key'):
             raise ValueError('Loon REALITY 缺少 public-key')
+        if 'public-key' in reality:
+            require_nonempty_string(reality['public-key'], 'Loon REALITY public-key', trim=False)
+        if 'short-id' in reality and not isinstance(reality['short-id'], str):
+            raise ValueError('Loon REALITY short-id 必须是字符串')
         network = proxy.get('network', 'tcp')
         if not isinstance(network, str):
             raise ValueError('Loon network 必须是字符串')
@@ -2058,7 +2070,8 @@ def main(argv: list[str] | None = None) -> int:
     trusted_nodes_file = (
         args.trusted_nodes_file or default_trusted_nodes_file(airport_dir)
     ).expanduser().resolve()
-    if args.trusted_nodes_file is not None and not trusted_nodes_file.is_file():
+    explicit_trusted = args.trusted_nodes_file is not None or bool(os.environ.get('CLASH_TRUSTED_NODES_FILE'))
+    if explicit_trusted and not trusted_nodes_file.is_file():
         raise SystemExit('显式指定的 trusted-nodes 文件不存在或不是普通文件')
     ansible_host_vars_dir = (
         args.ansible_host_vars_dir.expanduser().resolve()

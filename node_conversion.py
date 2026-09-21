@@ -41,6 +41,26 @@ def string(value: Any, field: str, *, empty: bool = False) -> str:
     return value
 
 
+def validate_fields(data: dict, field: str, *, strings=(), lists=(),
+                    booleans=(), integers=()) -> None:
+    """Validate present mapped fields without defaults, coercion or value disclosure."""
+    for key in strings:
+        if key in data:
+            string(data[key], f'{field}.{key}', empty=True)
+    for key in lists:
+        if key in data:
+            if not isinstance(data[key], list):
+                raise ValueError(f'{field}.{key} 必须是字符串列表')
+            for value in data[key]:
+                string(value, f'{field}.{key}[]', empty=True)
+    for key in booleans:
+        if key in data and not isinstance(data[key], bool):
+            raise ValueError(f'{field}.{key} 必须是布尔值')
+    for key in integers:
+        if key in data and (type(data[key]) is not int or data[key] < 0):
+            raise ValueError(f'{field}.{key} 必须是非负整数')
+
+
 def xray_options(inbound: dict, client: dict, field: str) -> dict:
     audit = {'converted': [], 'server-only': [], 'derived': []}
     audit_fields(inbound, {'protocol', 'port', 'settings', 'streamSettings'},
@@ -50,6 +70,7 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
     if settings.get('decryption') not in (None, '', 'none'):
         raise ValueError(f'{field}.settings.decryption: 加密客户端参数需由 inventory 明确提供')
     audit_fields(client, {'id', 'flow', 'encryption'}, {'email', 'level'}, f'{field}.client', audit)
+    validate_fields(client, f'{field}.client', strings=('flow', 'encryption'))
     out = {}
     copy_fields(client, out, {'flow': 'flow', 'encryption': 'encryption'})
     stream = mapping(inbound.get('streamSettings', {}), f'{field}.streamSettings')
@@ -87,10 +108,15 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
         if ws.get('acceptProxyProtocol', False) is not False:
             raise ValueError(f'{field}.wsSettings.acceptProxyProtocol 需要显式客户端 inventory')
         opts = {}
+        validate_fields(ws, f'{field}.wsSettings',
+                        strings=('path', 'host', 'earlyDataHeaderName'),
+                        integers=('maxEarlyData',))
         copy_fields(ws, opts, {'path': 'path', 'headers': 'headers',
                               'maxEarlyData': 'max-early-data', 'earlyDataHeaderName': 'early-data-header-name'})
         if 'headers' in opts:
             mapping(opts['headers'], f'{field}.wsSettings.headers')
+            for value in opts['headers'].values():
+                string(value, f'{field}.wsSettings.headers value', empty=True)
         if 'host' in ws:
             headers = opts.setdefault('headers', {})
             existing = next((v for k, v in headers.items() if k.lower() == 'host'), None)
@@ -124,6 +150,7 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
     elif network == 'grpc':
         grpc = mapping(stream.get('grpcSettings', {}), f'{field}.grpcSettings')
         audit_fields(grpc, {'serviceName'}, set(), f'{field}.grpcSettings', audit)
+        validate_fields(grpc, f'{field}.grpcSettings', strings=('serviceName',))
         opts = {}
         copy_fields(grpc, opts, {'serviceName': 'grpc-service-name'})
         if opts or 'grpcSettings' in stream:
@@ -131,6 +158,7 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
     elif network == 'h2':
         http = mapping(stream.get('httpSettings', {}), f'{field}.httpSettings')
         audit_fields(http, {'host', 'path'}, set(), f'{field}.httpSettings', audit)
+        validate_fields(http, f'{field}.httpSettings', strings=('path',), lists=('host',))
         opts = {}
         copy_fields(http, opts, {'host': 'host', 'path': 'path'})
         if opts or 'httpSettings' in stream:
@@ -148,6 +176,8 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
         tls = mapping(stream.get('tlsSettings', {}), f'{field}.tlsSettings')
         audit_fields(tls, {'serverName', 'alpn', 'allowInsecure', 'fingerprint'},
                      {'certificates', 'rejectUnknownSni'}, f'{field}.tlsSettings', audit)
+        validate_fields(tls, f'{field}.tlsSettings', strings=('serverName', 'fingerprint'),
+                        lists=('alpn',), booleans=('allowInsecure',))
         copy_fields(tls, out, {'serverName': 'servername', 'alpn': 'alpn',
                               'allowInsecure': 'skip-cert-verify', 'fingerprint': 'client-fingerprint'})
     elif security == 'reality':
@@ -158,6 +188,8 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
                      f'{field}.realitySettings', audit)
         public = string(reality.get('publicKey'), f'{field}.realitySettings.publicKey 缺失；请提供客户端 inventory，私钥不会导出')
         opts = {'public-key': public}
+        validate_fields(reality, f'{field}.realitySettings', strings=('fingerprint',),
+                        lists=('shortIds', 'serverNames'))
         for source, target in [('shortIds', 'short-id'), ('serverNames', 'servername')]:
             if source in reality:
                 choices = reality[source]
@@ -185,6 +217,7 @@ def hysteria_options(data: dict, field: str) -> dict:
     out = {'password': string(auth.get('password'), f'{field}.auth.password')}
     tls = mapping(data.get('tls', {}), f'{field}.tls')
     audit_fields(tls, {'sni'}, {'cert', 'key', 'sniGuard'}, f'{field}.tls', audit)
+    validate_fields(tls, f'{field}.tls', strings=('sni',))
     copy_fields(tls, out, {'sni': 'sni'})
     if 'obfs' in data:
         obfs = mapping(data['obfs'], f'{field}.obfs')
