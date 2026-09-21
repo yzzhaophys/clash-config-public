@@ -8,7 +8,6 @@ hosts:
   - 127.0.0.1
   +.stash.dev:
   - 127.0.0.1
-  ec3bcbcc-f748-4556-b821-88badb739206.aixifan7498.com: 4bcd3033-6655-4d56-8763-4da6f376c1ee.sfr-bouygues.cloud
 dns:
   enable: true
   skip-cert-verify: false
@@ -1598,7 +1597,7 @@ proxy-groups:
   - 🇸🇬📍.Chain-[SG.ShowIP]
   - 🇸🇬📍.DirectExit-[SG.ShowIP]
 - name: 🌏.Line-[EastAsia]
-  type: url-test
+  type: fallback
   interval: 60
   lazy: false
   proxies:
@@ -1606,7 +1605,7 @@ proxy-groups:
   - 🇭🇰.Line-[HK]
   - 🇹🇼.Line-[TW]
 - name: 🌏.Line-[SoutheastAsia]
-  type: url-test
+  type: fallback
   interval: 60
   lazy: false
   proxies:
@@ -1637,7 +1636,7 @@ proxy-groups:
   - 🇫🇷.Line-[FR]
   - ♾️.Line-[Final]
 - name: ♾️.Line-[Final]
-  type: url-test
+  type: fallback
   interval: 60
   lazy: false
   proxies:
@@ -1647,7 +1646,7 @@ proxy-groups:
   - 🇸🇬.Line-[SG]
   - 🇺🇸.Line-[US]
 - name: 🔰⚡.Line-[Relay.VPS]-Low.Latency
-  type: url-test
+  type: fallback
   interval: 60
   lazy: false
   proxies:
@@ -1656,10 +1655,11 @@ proxy-groups:
   - 🇲🇾.Line-[MY]
   - 🇸🇬.Line-[SG]
 - name: 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  type: select
+  type: fallback
+  interval: 60
+  lazy: false
   proxies:
   - ⬇️🔰.DirectExit-[Download]
-  interval: -1
 - name: _______________________________________________________________________________________________________________________
   type: select
   proxies:
@@ -1670,78 +1670,78 @@ proxy-groups:
   interval: 60
   lazy: false
   proxies:
-  - 🇺🇸🔗.Chain-[US]
   - 🇺🇸🔰.DirectExit-[US]
+  - 🇺🇸🔗.Chain-[US]
 - name: 🇯🇵.Line-[JP]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇯🇵🔗.Chain-[JP]
   - 🇯🇵🔰.DirectExit-[JP]
+  - 🇯🇵🔗.Chain-[JP]
 - name: 🇸🇬.Line-[SG]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇸🇬🔗.Chain-[SG]
   - 🇸🇬🔰.DirectExit-[SG]
+  - 🇸🇬🔗.Chain-[SG]
 - name: 🇭🇰.Line-[HK]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇭🇰🔗.Chain-[HK]
   - 🇭🇰🔰.DirectExit-[HK]
+  - 🇭🇰🔗.Chain-[HK]
 - name: 🇲🇾.Line-[MY]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇲🇾🔗.Chain-[MY]
   - 🇲🇾🔰.DirectExit-[MY]
+  - 🇲🇾🔗.Chain-[MY]
 - name: 🇹🇼.Line-[TW]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇹🇼🔗.Chain-[TW]
   - 🇹🇼🔰.DirectExit-[TW]
+  - 🇹🇼🔗.Chain-[TW]
 - name: 🇦🇺.Line-[AU]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇦🇺🔗.Chain-[AU]
   - 🇦🇺🔰.DirectExit-[AU]
+  - 🇦🇺🔗.Chain-[AU]
 - name: 🇬🇧.Line-[UK]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇬🇧🔗.Chain-[UK]
   - 🇬🇧🔰.DirectExit-[UK]
+  - 🇬🇧🔗.Chain-[UK]
 - name: 🇩🇪.Line-[DE]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇩🇪🔗.Chain-[DE]
   - 🇩🇪🔰.DirectExit-[DE]
+  - 🇩🇪🔗.Chain-[DE]
 - name: 🇳🇱.Line-[NL]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇳🇱🔗.Chain-[NL]
   - 🇳🇱🔰.DirectExit-[NL]
+  - 🇳🇱🔗.Chain-[NL]
 - name: 🇫🇷.Line-[FR]
   type: fallback
   interval: 60
   lazy: false
   proxies:
-  - 🇫🇷🔗.Chain-[FR]
   - 🇫🇷🔰.DirectExit-[FR]
+  - 🇫🇷🔗.Chain-[FR]
 - name: 🇨🇳.Line-[CN]
   type: select
   proxies:

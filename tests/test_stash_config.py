@@ -36,10 +36,10 @@ class StashConfigTest(unittest.TestCase):
         self.assertNotIn("sniffer", self.config)
 
     def test_cname_host_is_rendered_as_scalar(self):
-        source_hosts = self.source["hosts"]
-        cname = next(key for key, value in source_hosts.items()
-                     if isinstance(value, list) and value and value[0].endswith(".cloud"))
-        self.assertEqual(self.config["hosts"][cname], source_hosts[cname][0])
+        source = copy.deepcopy(self.source)
+        source["hosts"]["cname.example"] = ["target.example.cloud"]
+        converted = generate_stash_config.convert_config(source)
+        self.assertEqual(converted["hosts"]["cname.example"], "target.example.cloud")
 
     def test_dns_catchall_becomes_default_without_shadowing_geosite(self):
         policy = self.config["dns"]["nameserver-policy"]

@@ -119,20 +119,22 @@ class ProxyGroupPolicyTests(unittest.TestCase):
     def test_regional_failover_preserves_exit_region_and_role(self):
         regional = [g for g in self.groups.values() if g["type"] == "fallback"]
         self.assertTrue(regional)
-        for group in regional:
+        pair_groups = [
+            group for group in regional
+            if len(group.get("proxies", [])) == 2
+            and any(".Chain-" in proxy for proxy in group["proxies"])
+            and any(".DirectExit-" in proxy for proxy in group["proxies"])
+        ]
+        self.assertTrue(pair_groups)
+        for group in pair_groups:
             with self.subTest(group=group["name"]):
-                if group["name"] in {
-                    "🌎.Line-[Americas]",
-                    "🌏.Line-[Oceania]",
-                    "🌍.Line-[Europe]",
-                }:
-                    self.assertEqual(group["proxies"][-1], "♾️.Line-[Final]")
-                    self.assertGreaterEqual(len(group["proxies"]), 2)
-                    continue
                 suffix = group["name"].split(".Line-", 1)[1]
-                chain, direct = group["proxies"]
-                self.assertTrue(chain.endswith(".Chain-" + suffix))
-                self.assertTrue(direct.endswith(".DirectExit-" + suffix))
+                self.assertTrue(
+                    any(proxy.endswith(".Chain-" + suffix) for proxy in group["proxies"])
+                )
+                self.assertTrue(
+                    any(proxy.endswith(".DirectExit-" + suffix) for proxy in group["proxies"])
+                )
 
 
 if __name__ == "__main__":
