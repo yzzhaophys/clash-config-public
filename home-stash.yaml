@@ -452,7 +452,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇺🇸.Line-[US]
+  - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -461,7 +461,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇺🇸.Line-[US]
+  - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -486,7 +486,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇯🇵.Line-[JP]
+  - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -494,7 +494,8 @@ proxy-groups:
 - name: 🇭🇰.<Bank>--HK
   type: select
   proxies:
-  - 🇭🇰.Line-[HK]
+  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -503,7 +504,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇸🇬.Line-[SG]
+  - 🌏.Line-[SoutheastAsia]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -536,7 +537,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇺🇸.Line-[US]
+  - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -545,7 +546,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇺🇸.Line-[US]
+  - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -570,7 +571,7 @@ proxy-groups:
   type: select
   proxies:
   - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇯🇵.Line-[JP]
+  - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -1604,6 +1605,7 @@ proxy-groups:
   - 🇯🇵.Line-[JP]
   - 🇭🇰.Line-[HK]
   - 🇹🇼.Line-[TW]
+  - ♾️.Line-[Final]
 - name: 🌏.Line-[SoutheastAsia]
   type: fallback
   interval: 60
