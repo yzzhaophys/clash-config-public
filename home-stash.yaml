@@ -1564,50 +1564,50 @@ proxy-groups:
   interval: -1
 - name: 🇺🇸🍟.Line-[US.HomeIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇺🇸🍟.Chain-[US.HomeIP]
   - 🇺🇸🍟.DirectExit-[US.HomeIP]
 - name: 🇺🇸📍.Line-[US.ShowIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇺🇸📍.Chain-[US.ShowIP]
   - 🇺🇸📍.DirectExit-[US.ShowIP]
 - name: 🇯🇵🍟.Line-[JP.HomeIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇯🇵🍟.Chain-[JP.HomeIP]
   - 🇯🇵🍟.DirectExit-[JP.HomeIP]
 - name: 🇯🇵📍.Line-[JP.ShowIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇯🇵📍.Chain-[JP.ShowIP]
   - 🇯🇵📍.DirectExit-[JP.ShowIP]
 - name: 🇸🇬🍟.Line-[SG.HomeIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇸🇬🍟.Chain-[SG.HomeIP]
   - 🇸🇬🍟.DirectExit-[SG.HomeIP]
 - name: 🇸🇬📍.Line-[SG.ShowIP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇸🇬📍.Chain-[SG.ShowIP]
   - 🇸🇬📍.DirectExit-[SG.ShowIP]
 - name: 🌏.Line-[EastAsia]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - 🇯🇵.Line-[JP]
   - 🇭🇰.Line-[HK]
@@ -1615,60 +1615,63 @@ proxy-groups:
   - ♾️.Line-[Final]
 - name: 🌏.Line-[SoutheastAsia]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - 🇸🇬.Line-[SG]
   - 🇲🇾.Line-[MY]
+  - ♾️.Line-[Final]
 - name: 🌎.Line-[Americas]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - 🇺🇸.Line-[US]
   - ♾️.Line-[Final]
 - name: 🌏.Line-[Oceania]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - 🇦🇺.Line-[AU]
   - ♾️.Line-[Final]
 - name: 🌍.Line-[Europe]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - 🇬🇧.Line-[UK]
   - 🇩🇪.Line-[DE]
   - 🇳🇱.Line-[NL]
   - 🇫🇷.Line-[FR]
   - ♾️.Line-[Final]
-- name: ♾️.Line-[Final]
-  type: fallback
-  interval: 60
-  lazy: false
-  proxies:
-  - 🇭🇰.Line-[HK]
-  - 🇯🇵.Line-[JP]
-  - 🇲🇾.Line-[MY]
-  - 🇸🇬.Line-[SG]
-  - 🇺🇸.Line-[US]
 - name: 🔰⚡.Line-[Relay.VPS]-Low.Latency
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
-  - 🇯🇵.Line-[JP]
-  - 🇭🇰.Line-[HK]
   - 🇲🇾.Line-[MY]
+  - 🇭🇰.Line-[HK]
+  - 🇯🇵.Line-[JP]
   - 🇸🇬.Line-[SG]
+  - ♾️.Line-[Final]
 - name: 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 90
+  lazy: true
   proxies:
   - ⬇️🔰.DirectExit-[Download]
+  - ♾️.Line-[Final]
+- name: ♾️.Line-[Final]
+  type: fallback
+  interval: 90
+  lazy: true
+  proxies:
+  - 🇭🇰.Line-[HK]
+  - 🇲🇾.Line-[MY]
+  - 🇯🇵.Line-[JP]
+  - 🇸🇬.Line-[SG]
+  - 🇺🇸.Line-[US]
 - name: _______________________________________________________________________________________________________________________
   type: select
   proxies:
@@ -1676,78 +1679,78 @@ proxy-groups:
   interval: -1
 - name: 🇺🇸.Line-[US]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇺🇸🔰.DirectExit-[US]
   - 🇺🇸🔗.Chain-[US]
 - name: 🇯🇵.Line-[JP]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇯🇵🔰.DirectExit-[JP]
   - 🇯🇵🔗.Chain-[JP]
 - name: 🇸🇬.Line-[SG]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇸🇬🔰.DirectExit-[SG]
   - 🇸🇬🔗.Chain-[SG]
 - name: 🇭🇰.Line-[HK]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇭🇰🔰.DirectExit-[HK]
   - 🇭🇰🔗.Chain-[HK]
 - name: 🇲🇾.Line-[MY]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇲🇾🔰.DirectExit-[MY]
   - 🇲🇾🔗.Chain-[MY]
 - name: 🇹🇼.Line-[TW]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇹🇼🔰.DirectExit-[TW]
   - 🇹🇼🔗.Chain-[TW]
 - name: 🇦🇺.Line-[AU]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇦🇺🔰.DirectExit-[AU]
   - 🇦🇺🔗.Chain-[AU]
 - name: 🇬🇧.Line-[UK]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇬🇧🔰.DirectExit-[UK]
   - 🇬🇧🔗.Chain-[UK]
 - name: 🇩🇪.Line-[DE]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇩🇪🔰.DirectExit-[DE]
   - 🇩🇪🔗.Chain-[DE]
 - name: 🇳🇱.Line-[NL]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇳🇱🔰.DirectExit-[NL]
   - 🇳🇱🔗.Chain-[NL]
 - name: 🇫🇷.Line-[FR]
   type: fallback
-  interval: 60
-  lazy: false
+  interval: 45
+  lazy: true
   proxies:
   - 🇫🇷🔰.DirectExit-[FR]
   - 🇫🇷🔗.Chain-[FR]
@@ -1763,136 +1766,136 @@ proxy-groups:
   interval: -1
 - name: 🇺🇸🔗.Chain-[US]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[US\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇺🇸🍟.Chain-[US.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[US\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇺🇸📍.Chain-[US.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[US(?:\.HomeIP)?\]-.*\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵🔗.Chain-[JP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[JP\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵🍟.Chain-[JP.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[JP\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵📍.Chain-[JP.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[JP(?:\.HomeIP)?\]-.*\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬🔗.Chain-[SG]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[SG\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬🍟.Chain-[SG.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[SG\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬📍.Chain-[SG.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[SG(?:\.HomeIP)?\]-.*\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇭🇰🔗.Chain-[HK]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[HK\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇲🇾🔗.Chain-[MY]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[MY\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇹🇼🔗.Chain-[TW]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[TW\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇦🇺🔗.Chain-[AU]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[AU\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇬🇧🔗.Chain-[UK]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[UK\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇩🇪🔗.Chain-[DE]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[DE\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇳🇱🔗.Chain-[NL]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[NL\]-|^REJECT$
   proxies:
   - REJECT
 - name: 🇫🇷🔗.Chain-[FR]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^PrxChain-\[FR\]-|^REJECT$
   proxies:
@@ -1905,143 +1908,143 @@ proxy-groups:
 - name: ⬇️🔰.DirectExit-[Download]
   type: url-test
   interval: 30
-  lazy: false
+  lazy: true
   include-all: true
   filter: (?i)^VPS-(?:(?:(?:(?:[achinrx]|[^achinprx\n])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[achinx]|[^achinprx\n])|[r](?:[achinr]|[^achinprx\n]))|[r][x](?:(?:(?:(?:[ahinrx]|[^achinprx\n])|[c](?:[acinrx]|[^achinprx\n]))|[c][h](?:[chinrx]|[^achinprx\n]))|[c][h][a](?:(?:[achnrx]|[^achinprx\n])|[i](?:[achirx]|[^achinprx\n]))))))*(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i])))))\[Download=true\](?:(?:(?:(?:[achinrx]|[^achinprx\n])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[achinx]|[^achinprx\n])|[r](?:[achinr]|[^achinprx\n]))|[r][x](?:(?:(?:(?:[ahinrx]|[^achinprx\n])|[c](?:[acinrx]|[^achinprx\n]))|[c][h](?:[chinrx]|[^achinprx\n]))|[c][h][a](?:(?:[achnrx]|[^achinprx\n])|[i](?:[achirx]|[^achinprx\n]))))))*(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i])))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇺🇸🔰.DirectExit-[US]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[US\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇺🇸🍟.DirectExit-[US.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[US\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇺🇸📍.DirectExit-[US.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[US\.(?:Core|Exit|HomeIP)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx\n])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx\n]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx\n])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx\n])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx\n])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx\n]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx\n])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx\n]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵🔰.DirectExit-[JP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[JP\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵🍟.DirectExit-[JP.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[JP\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇯🇵📍.DirectExit-[JP.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[JP\.(?:Core|Exit|HomeIP)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx\n])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx\n]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx\n])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx\n])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx\n])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx\n]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx\n])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx\n]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬🔰.DirectExit-[SG]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[SG\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬🍟.DirectExit-[SG.HomeIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[SG\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇸🇬📍.DirectExit-[SG.ShowIP]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[SG\.(?:Core|Exit|HomeIP)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx\n])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx\n]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx\n])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx\n])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx\n])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx\n])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx\n]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx\n])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx\n]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx\n])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx\n]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx\n])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx\n]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx\n]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx\n])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx\n])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))\[ShowIP=true\]$|^REJECT$
   proxies:
   - REJECT
 - name: 🇭🇰🔰.DirectExit-[HK]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[HK\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇲🇾🔰.DirectExit-[MY]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[MY\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇹🇼🔰.DirectExit-[TW]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[TW\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇦🇺🔰.DirectExit-[AU]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[AU\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇬🇧🔰.DirectExit-[UK]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[UK\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇩🇪🔰.DirectExit-[DE]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[DE\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇳🇱🔰.DirectExit-[NL]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[NL\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
 - name: 🇫🇷🔰.DirectExit-[FR]
   type: url-test
-  interval: 60
-  lazy: false
+  interval: 30
+  lazy: true
   include-all: true
   filter: (?i)^VPS-\[FR\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:

@@ -42,16 +42,15 @@ class ProxyGroupPolicyTests(unittest.TestCase):
             with self.subTest(rule=rule):
                 self.assertIn(target, targets)
 
-    def test_automatic_pools_have_active_bounded_health_checks(self):
+    def test_automatic_pools_have_lazy_bounded_health_checks(self):
         automatic = [g for g in self.groups.values() if g["type"] != "select"]
         self.assertTrue(automatic)
         for group in automatic:
             with self.subTest(group=group["name"]):
                 self.assertIn(group["type"], {"url-test", "fallback"})
-                self.assertIs(group["lazy"], False)
-                self.assertGreater(group["interval"], 0)
-                limit = 30 if group["name"] == "⬇️🔰.DirectExit-[Download]" else 60
-                self.assertLessEqual(group["interval"], limit)
+                self.assertIs(group["lazy"], True)
+                self.assertIn(group["interval"], {30, 45, 90})
+                self.assertIn(group["timeout"], {3000, 4000, 5000})
                 self.assertGreater(group["timeout"], 0)
                 self.assertLess(group["timeout"], group["interval"] * 1000)
                 self.assertIn(group["max-failed-times"], (1, 2))
@@ -76,10 +75,10 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                     self.assertNotIn("lazy", group)
                     self.assertNotIn("tolerance", group)
 
-    def test_download_route_cannot_escape_approved_node_pool(self):
+    def test_download_route_has_explicit_final_fallback(self):
         maximum = self.groups["🔰⬇️.Line-[Relay.VPS]-Max.Traffic"]
         download = self.groups["⬇️🔰.DirectExit-[Download]"]
-        self.assertEqual(maximum["proxies"], [download["name"]])
+        self.assertEqual(maximum["proxies"], [download["name"], "♾️.Line-[Final]"])
         self.assertEqual(download["type"], "url-test")
         self.assertFalse(download.get("proxies"))
         self.assertFalse(download.get("use"))

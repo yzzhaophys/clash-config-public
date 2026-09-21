@@ -321,16 +321,18 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | 层级 | 策略 | 检测安排与边界 |
 | --- | --- | --- |
 | 业务入口 | `select` | 手动选择线路；无额外周期检测 |
-| Max.Traffic | 单子项 `select` | 只引用 Download，沿用下载能力限制 |
+| Max.Traffic | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Line-[Final]` |
 | Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
-| 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 60 秒检测各自节点池 |
-| 地区及 HomeIP / ShowIP Line | `fallback` | 每 60 秒检测，代理链优先、同地区同用途直出备用 |
-| 跨地区、Final、Low.Latency | `url-test` | 每 60 秒检测候选线路 |
+| 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
+| 地区及 HomeIP / ShowIP Line | `fallback` | 每 45 秒检测，代理链优先、同地区同用途直出备用 |
+| 跨地区、Final、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
-| Americas / Oceania / Europe | `fallback` | 每 60 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
+| Americas / Oceania / Europe | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
 | CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
 
-所有自动组设置 `lazy: false`、`timeout: 5000`、`max-failed-times: 2`。
+所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
+`timeout: 3000`，地区线路 `fallback` 使用 `timeout: 4000`，跨地区及入口线路
+使用 `timeout: 5000`。
 `url-test` 使用 `tolerance: 50` 毫秒，减少健康节点间的小幅延迟切换；
 该容差不会阻止内核替换已被探测判定失效的节点。失败阈值只用于触发额外检查，
 其计数受内核版本、失败类型及时间窗口影响，不保证两次业务请求失败就换线。
@@ -340,9 +342,10 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 `☁️.<Global>--CDN` 的首选项为 Max.Traffic，保留 Low.Latency、DIRECT 等手动选项。
 配置启用了 `store-selected`，已有选择可能优先于列表首项。CDN 不会在 Download
 整体失效时自动改选 Low.Latency 或 DIRECT，需要手动选择；Download 内部仍自主换节点。
-下载业务仍走 Max.Traffic；Download 全部故障时不会借用普通或住宅节点绕过
-`allow_download` 限制。`empty-fallback: REJECT` 只处理节点池为空，不等于全部
-节点测速失败时的跨组灾备。缺失地区不会生成占位节点。地区 `fallback` 只有在
+下载业务仍走 Max.Traffic；它优先使用 Download 节点池，Download 全部故障时明确
+回退到 `♾️.Line-[Final]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
+`empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备。
+缺失地区不会生成占位节点。地区 `fallback` 只有在
 备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
 
 当前统一探测 Apple 测试页面并要求 HTTP 200，它只能代表该地址可达，不能证明
@@ -358,8 +361,8 @@ Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区�
    自动组保持自动选择，检查面板/API 是否存在手动固定的 `fixed` 状态。
 2. 在隔离测试环境使当前节点失效，观察组内检测历史和 `now` 是否变化，
    再用新连接访问目标站点；旧的 TCP/下载连接不能自动迁移，应用需要重连。
-3. 测试 Download 全部失效时，下载业务是否仍限制在 Download，CDN 是否保持手选；
-   有实际备用节点时，测试代理链故障后同用途直出是否接替。
+3. 测试 Download 全部失效时，Max.Traffic 是否按 Download → `♾️.Line-[Final]` 回退，
+   CDN 是否保持手选；有实际备用节点时，测试代理链故障后同用途直出是否接替。
 4. 如果手动测速后仍不切换，确认测的是整个自动组而非仅一个节点或外层入口，
    核对自动组测试 URL 对应的结果、候选节点健康状态和 `fixed`。
    目标站点失败而 Apple 正常时，缩短检测周期不能解决，需要单独诊断站点路径。

@@ -131,8 +131,8 @@ class StashConfigTest(unittest.TestCase):
             if group["type"] == "select":
                 self.assertEqual(group["interval"], -1, group["name"])
             else:
-                self.assertIn(group["interval"], {30, 60}, group["name"])
-                self.assertIs(group["lazy"], False, group["name"])
+                self.assertIn(group["interval"], {30, 45, 90}, group["name"])
+                self.assertIs(group["lazy"], True, group["name"])
             for reference in group.get("proxies", []):
                 self.assertIn(reference, valid_targets, (group["name"], reference))
 
