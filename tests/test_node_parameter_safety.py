@@ -343,6 +343,31 @@ class ConversionTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     g.xray_nodes(host, {'VPS_CLASH_REGION': 'us', 'VPS_HOST': 'node.example'}, {})
 
+    def test_xray_invalid_clients_abort_before_replacing_outputs(self):
+        for value in ('missing', None, [], False, 0, '', {}, 'SYNTHETIC_SECRET', [None]):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                host = root / 'hosts/vps-us'
+                g.secure_write(host / 'host.env', 'VPS_CLASH_REGION=us\nVPS_HOST=node.example\n')
+                invalid = inbound()
+                if value == 'missing':
+                    del invalid['settings']['clients']
+                else:
+                    invalid['settings']['clients'] = value
+                g.secure_write(host / 'secrets/xray-inbounds.json',
+                               json.dumps({'inbounds': [inbound(), invalid]}))
+                outputs = [root / name for name in ('main.yaml', 'raw.yaml', 'loon.conf')]
+                for output in outputs:
+                    g.secure_write(output, 'old output\n')
+                with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit) as caught:
+                    g.main(['--hosts-dir', str(root / 'hosts'), '--airport-dir', str(root / 'airport'),
+                            '--plain', '--output', str(outputs[0]), '--raw-output', str(outputs[1]),
+                            '--loon-output', str(outputs[2])])
+                self.assertIn('clients', str(caught.exception))
+                self.assertNotIn('SYNTHETIC_SECRET', str(caught.exception))
+                for output in outputs:
+                    self.assertEqual(output.read_text(), 'old output\n')
+
     def test_hysteria_obfs_and_password_preserved(self):
         result = hysteria_options({'auth': {'type': 'password', 'password': ' pw '},
                                    'obfs': {'type': 'salamander', 'salamander': {'password': ' obfs '}}}, 'fixture')

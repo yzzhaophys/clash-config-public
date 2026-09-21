@@ -58,7 +58,7 @@ python3 generate_stash_config.py
 排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
 源筛选发生变化时脚本会报错，要求重新审核转换。Stash 延迟测试地址和超时应在将来加入的
 节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
-关闭默认的递归周期测速，自动组继续按原模板的 30/60 秒间隔测速。
+关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
 源配置中 115 个手动 `PASS` 选项未出现在 Stash 文档的内置出口列表中，
 转换时将其移除；`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
 DNS 中仅保留 Stash 可表达的精确域名、通配域名和 `geosite:` policy；模板里的
@@ -248,7 +248,9 @@ allow-showip: false       # 需要作为 ShowIP 链路时改为 true
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
 VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
-时间戳备份并进行锁定和原子替换。目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
+时间戳备份并进行锁定和原子替换。判断节点是否变化时递归比较值及类型，
+嵌套参数的 `false` → `0` 或整数 → 浮点数也算更新。
+目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
 源文件与目标文件不能指向同一个文件，包括硬链接别名。
 以下命令从本仓库根目录执行：
 
@@ -324,14 +326,15 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | Max.Traffic | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Line-[Final]` |
 | Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
 | 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
-| 地区及 HomeIP / ShowIP Line | `fallback` | 每 45 秒检测，代理链优先、同地区同用途直出备用 |
+| 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒，直出优先、同地区代理链备用 |
+| HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
 | 跨地区、Final、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
 | Americas / Oceania / Europe | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
 | CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
 
 所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
-`timeout: 3000`，地区线路 `fallback` 使用 `timeout: 4000`，跨地区及入口线路
+`timeout: 3000`，普通国家线路 `fallback` 使用 `timeout: 4000`，HomeIP / ShowIP、跨地区及入口线路
 使用 `timeout: 5000`。
 `url-test` 使用 `tolerance: 50` 毫秒，减少健康节点间的小幅延迟切换；
 该容差不会阻止内核替换已被探测判定失效的节点。失败阈值只用于触发额外检查，
@@ -351,7 +354,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 当前统一探测 Apple 测试页面并要求 HTTP 200，它只能代表该地址可达，不能证明
 linux.do、其他站点或 UDP 正常，也不衡量下载带宽。上层探测一个子组时，检验的
 是子组当时选中的路径，不能替代底层节点池的独立检测；不能承诺嵌套后瞬时恢复。
-因此保留底层主动检测。单子项 `select` 入口不再重复定时探测。Americas / Oceania /
+底层保留独立检测配置，实际调度受 `lazy: true` 影响。单子项 `select` 入口不再重复定时探测。Americas / Oceania /
 Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区候选失效后才尝试
 `♾️.Line-[Final]`；它关注可用性，不按延迟重新排序。
 
@@ -391,7 +394,9 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
 - 客户端 Clash inventory 的节点参数按原结构保留，包括未知扩展字段、嵌套字段、
   `false`、`0` 和空值；内部能力及审计字段不写入节点配置。
 - 从服务端配置转换时，只转换明确支持的客户端参数。缺失的可选参数不补造；
-  缺少必要地址、端口或凭据会报错。有值但无法可靠转换的字段也会报错，
+  缺少必要地址、端口或凭据会报错。VLESS 入站的 `settings.clients` 必须是非空列表，
+  缺失、空值或非法类型会中止生成，即使还有其他有效节点也不会输出缺节点的配置。
+  有值但无法可靠转换的字段也会报错，
   此时请在客户端 inventory 中提供完整 Clash 节点，不要删除参数来绕过检查。
 - Shadowrocket 原始节点 JSON 不属于这里的 Clash inventory；不能只套一层 `nodes`。
   转换 VLESS 时必须核对原导出的 `password` 认证值与节点记录 `uuid`，不能按同名字段猜测。

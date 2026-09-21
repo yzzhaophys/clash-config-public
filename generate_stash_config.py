@@ -304,7 +304,7 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
         if converted.get("type") == "select":
             # Stash otherwise schedules tests for select groups every 600s,
             # including nested groups.  Let the contained automatic groups
-            # keep their own 30/60s schedules without duplicate recursion.
+            # keep their own schedules without duplicate recursion.
             converted["interval"] = -1
         if "exclude-filter" in group:
             converted["filter"] = _convert_group_filter(group)

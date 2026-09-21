@@ -44,6 +44,28 @@ def write_nodes(path: Path, nodes: list[dict]) -> None:
 
 
 class TrustedNodesMergeTests(unittest.TestCase):
+    def test_merge_preserves_nested_value_type_changes(self):
+        for old, new in ((False, 0), (0, False), (True, 1), (1, 1.0)):
+            with self.subTest(old=old, new=new), tempfile.TemporaryDirectory() as directory:
+                target, source = Path(directory) / 'target.yaml', Path(directory) / 'source.yaml'
+                existing, incoming = node('typed'), node('typed')
+                existing['proxy']['extension'] = {'values': [old, '', {}, []]}
+                incoming['proxy']['extension'] = {'values': [new, '', {}, []]}
+                write_nodes(target, [existing])
+                write_nodes(source, [incoming])
+                before = target.read_bytes()
+                preview = manager.merge_trusted_nodes_file(target, source)
+                self.assertEqual(preview.updated, 1)
+                self.assertEqual(target.read_bytes(), before)
+                result = manager.merge_trusted_nodes_file(target, source, apply=True)
+                self.assertEqual((result.updated, result.unchanged), (1, 0))
+                self.assertEqual(result.backup.read_bytes(), before)
+                stored = yaml.safe_load(target.read_text())['nodes'][0]
+                self.assertIs(type(stored['proxy']['extension']['values'][0]), type(new))
+                self.assertEqual(stored, incoming)
+                self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+                self.assertFalse(manager.merge_trusted_nodes_file(target, source, apply=True).changed)
+
     def test_showip_capability_is_accepted_and_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

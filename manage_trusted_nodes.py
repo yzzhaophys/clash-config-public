@@ -143,6 +143,27 @@ def _validate_nodes(nodes: list[Any], *, path: Path) -> None:
         raise TrustedNodesError(str(exc)) from exc
 
 
+def _same_yaml_value(left: Any, right: Any) -> bool:
+    """Compare YAML values without equating booleans, integers and floats."""
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return len(left) == len(right) and all(
+            any(_same_yaml_value(key, other_key) and _same_yaml_value(value, other_value)
+                for other_key, other_value in right.items())
+            for key, value in left.items()
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            _same_yaml_value(a, b) for a, b in zip(left, right)
+        )
+    if isinstance(left, set):
+        return len(left) == len(right) and all(
+            any(_same_yaml_value(a, b) for b in right) for a in left
+        )
+    return left == right
+
+
 def _merge_documents(
     existing: dict[str, Any], incoming: dict[str, Any], *, target: Path, source: Path
 ) -> tuple[dict[str, Any], int, int, int, int]:
@@ -161,7 +182,7 @@ def _merge_documents(
             existing_indexes[key] = len(merged_nodes)
             merged_nodes.append(copy.deepcopy(incoming_node))
             added += 1
-        elif merged_nodes[existing_index] == incoming_node:
+        elif _same_yaml_value(merged_nodes[existing_index], incoming_node):
             unchanged += 1
         else:
             merged_nodes[existing_index] = copy.deepcopy(incoming_node)

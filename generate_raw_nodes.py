@@ -476,16 +476,18 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                 raise ValueError(f"{file}: inbounds[{inbound_index}] 必须是映射")
             if inbound.get("protocol") != "vless":
                 continue
-            settings = inbound.get("settings", {}) or {}
+            settings = inbound.get("settings", {})
             if not isinstance(settings, dict):
                 raise ValueError(f"{file}: inbounds[{inbound_index}].settings 必须是映射")
-            clients = settings.get("clients", []) or []
+            clients = settings.get("clients")
             if not isinstance(clients, list):
                 raise ValueError(
-                    f"{file}: inbounds[{inbound_index}].settings.clients 必须是列表"
+                    f"{file}: inbounds[{inbound_index}].settings.clients 必须是非空列表，提供客户端凭据"
                 )
             if not clients:
-                continue
+                raise ValueError(
+                    f"{file}: inbounds[{inbound_index}].settings.clients 不能为空，缺少客户端凭据"
+                )
             client = clients[0]
             if not isinstance(client, dict):
                 raise ValueError(
