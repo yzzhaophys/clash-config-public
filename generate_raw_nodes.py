@@ -20,7 +20,9 @@ from node_conversion import xray_options, hysteria_options
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
+HOME_TEMPLATE = SCRIPT_DIR / "home.yaml"
 AIRPORT_REGION_ALIASES = {"GB": "UK"}
+PROXY_GROUP_BUILTINS = {"DIRECT", "REJECT", "REJECT-DROP", "PASS"}
 
 REGION_CN = {
     "hk": "香港",
@@ -335,6 +337,184 @@ def node_meta(name: str) -> dict[str, Any]:
     if not match:
         return {}
     return match.groupdict()
+
+
+def load_home_proxy_groups(path: Path = HOME_TEMPLATE) -> dict[str, dict[str, Any]]:
+    """Load and validate the public group graph used by template output."""
+
+    try:
+        source = load_yaml(path)
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError(f"{path}: 无法读取 home 模板") from exc
+    if not isinstance(source, dict):
+        raise ValueError(f"{path}: home 模板顶层必须是映射")
+    groups = source.get("proxy-groups")
+    if not isinstance(groups, list):
+        raise ValueError(f"{path}: proxy-groups 必须是列表")
+
+    by_name: dict[str, dict[str, Any]] = {}
+    references: dict[str, list[str]] = {}
+    for index, group in enumerate(groups):
+        if not isinstance(group, dict):
+            raise ValueError(f"{path}: proxy-groups[{index}] 必须是映射")
+        name = group.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"{path}: proxy-groups[{index}].name 必须是非空字符串")
+        if name in by_name:
+            raise ValueError(f"{path}: proxy-groups 存在重复名称 {name}")
+        by_name[name] = group
+
+        for field in ("filter", "exclude-filter"):
+            if field not in group:
+                continue
+            value = group[field]
+            if not isinstance(value, str):
+                raise ValueError(f"{path}: 代理组 {name} 的 {field} 必须是字符串")
+            try:
+                re.compile(value)
+            except re.error as exc:
+                raise ValueError(f"{path}: 代理组 {name} 的 {field} 不是有效正则") from exc
+
+        candidates = group.get("proxies", [])
+        if not isinstance(candidates, list):
+            raise ValueError(f"{path}: 代理组 {name} 的 proxies 必须是列表")
+        if any(not isinstance(candidate, str) or not candidate for candidate in candidates):
+            raise ValueError(f"{path}: 代理组 {name} 的 proxies 必须只包含非空字符串")
+        references[name] = candidates
+
+    for name, candidates in references.items():
+        for candidate in candidates:
+            if candidate not in by_name and candidate not in PROXY_GROUP_BUILTINS:
+                raise ValueError(f"{path}: 代理组 {name} 引用了不存在的代理组 {candidate}")
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in visited:
+            return
+        if name in visiting:
+            raise ValueError(f"{path}: 代理组存在循环引用 {name}")
+        visiting.add(name)
+        for candidate in references[name]:
+            if candidate in by_name:
+                visit(candidate)
+        visiting.remove(name)
+        visited.add(name)
+
+    for name in by_name:
+        visit(name)
+    return by_name
+
+
+def _group_matches_proxy(group: dict[str, Any], proxy_name: str) -> bool:
+    expression = group.get("filter")
+    if not isinstance(expression, str) or re.search(expression, proxy_name) is None:
+        return False
+    excluded = group.get("exclude-filter")
+    return not isinstance(excluded, str) or re.search(excluded, proxy_name) is None
+
+
+def _group_with_suffix(
+    groups: dict[str, dict[str, Any]], suffix: str
+) -> dict[str, Any] | None:
+    matches = [group for name, group in groups.items() if name.endswith(suffix)]
+    if len(matches) > 1:
+        names = ", ".join(str(group.get("name")) for group in matches)
+        raise ValueError(f"home 模板中存在重复的组后缀 {suffix}: {names}")
+    return matches[0] if matches else None
+
+
+def _check_optional_group_match(
+    groups: dict[str, dict[str, Any]],
+    suffix: str,
+    proxy_name: str,
+    *,
+    expected: bool,
+    label: str,
+) -> None:
+    group = _group_with_suffix(groups, suffix)
+    if group is None or "filter" not in group:
+        return
+    actual = _group_matches_proxy(group, proxy_name)
+    if actual != expected:
+        raise ValueError(
+            f"生成节点 {proxy_name} 与 home 模板的 {label} 筛选不一致: {group['name']}"
+        )
+
+
+def validate_generated_against_home(
+    proxies: list[dict[str, Any]],
+    chains: list[tuple[dict[str, Any], dict[str, Any]]],
+    home_template: Path = HOME_TEMPLATE,
+) -> None:
+    """Check generated names against the active home.yaml filters and groups."""
+
+    groups = load_home_proxy_groups(home_template)
+    for proxy in proxies:
+        name = proxy.get("name")
+        if not isinstance(name, str) or not node_meta(name):
+            raise ValueError("生成节点名称无法按 home 模板解析")
+        meta = node_meta(name)
+        region = meta["region"]
+        role = meta["role"]
+        direct_tag = f"{region}.HomeIP" if role == "HomeIP" else region
+        _check_optional_group_match(
+            groups,
+            f".DirectExit-[{direct_tag}]",
+            name,
+            expected=bool(proxy.get("_allow-direct-exit", True)),
+            label="DirectExit",
+        )
+        if proxy.get("_allow-showip", False):
+            _check_optional_group_match(
+                groups,
+                f".DirectExit-[{region}.ShowIP]",
+                name,
+                expected=True,
+                label="ShowIP DirectExit",
+            )
+        if proxy.get("_allow-download", False):
+            _check_optional_group_match(
+                groups,
+                ".DirectExit-[Download]",
+                name,
+                expected=True,
+                label="Download",
+            )
+
+    for candidate in chains:
+        if not isinstance(candidate, tuple) or len(candidate) != 2:
+            raise ValueError("生成代理链候选项格式无效")
+        exit_proxy, dialer = candidate
+        exit_name = exit_proxy.get("name")
+        dialer_name = dialer.get("name")
+        exit_meta = node_meta(exit_name) if isinstance(exit_name, str) else {}
+        if not exit_meta or not isinstance(dialer_name, str) or not node_meta(dialer_name):
+            raise ValueError("生成代理链包含无法按 home 模板解析的节点")
+        chain = chain_name(exit_proxy, dialer)
+        exit_tag = exit_meta["region"]
+        if exit_meta["role"] == "HomeIP":
+            exit_tag += ".HomeIP"
+        chain_group = _group_with_suffix(groups, f".Chain-[{exit_tag}]")
+        if chain_group is None or "filter" not in chain_group:
+            raise ValueError(f"home 模板缺少代理链组: .Chain-[{exit_tag}]")
+        if not _group_matches_proxy(chain_group, chain):
+            raise ValueError(
+                f"生成代理链 {chain} 未命中 home 模板筛选: {chain_group['name']}"
+            )
+        if exit_proxy.get("_allow-showip", False):
+            show_group = _group_with_suffix(
+                groups, f".Chain-[{exit_meta['region']}.ShowIP]"
+            )
+            if show_group is None or "filter" not in show_group:
+                raise ValueError(
+                    f"home 模板缺少 ShowIP 代理链组: .Chain-[{exit_meta['region']}.ShowIP]"
+                )
+            if not _group_matches_proxy(show_group, chain):
+                raise ValueError(
+                    f"生成 ShowIP 代理链 {chain} 未命中 home 模板筛选: {show_group['name']}"
+                )
 
 
 def source_marker_label(value: Any) -> str:
@@ -1904,6 +2084,12 @@ def write_template(
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="从各 VPS 本地配置生成 Mihomo 节点和代理链")
     parser.add_argument(
+        "--home-template",
+        type=Path,
+        default=HOME_TEMPLATE,
+        help="用于校验代理组筛选的 home.yaml（默认仓库中的 home.yaml）",
+    )
+    parser.add_argument(
         "--hosts-dir",
         type=Path,
         default=default_hosts_dir(),
@@ -2083,6 +2269,8 @@ def main(argv: list[str] | None = None) -> int:
     counters: dict[tuple[str, str], int] = {}
     protected_inputs = input_paths(hosts_dir, airport_dir, trusted_nodes_file,
                                    ansible_host_vars_dir)
+    home_template = args.home_template.expanduser().resolve()
+    protected_inputs.append(home_template)
     validate_output_paths([
         ('主输出', args.output), ('raw-output', args.raw_output),
         ('loon-output', args.loon_output),
@@ -2149,6 +2337,12 @@ def main(argv: list[str] | None = None) -> int:
         ],
         protected_inputs,
     )
+
+    if output_format != "plain":
+        try:
+            validate_generated_against_home(proxies, chains, home_template)
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            raise SystemExit(f"生成结果与 home 模板不一致：{exc}") from exc
 
     # Render every requested format before replacing any user output. Staging
     # files contain credentials and live only in a private temporary directory.

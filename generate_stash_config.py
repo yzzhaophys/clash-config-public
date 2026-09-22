@@ -80,6 +80,8 @@ RULE_HEADS = {
     "url-regex",
 }
 
+PROXY_GROUP_BUILTINS = {"DIRECT", "REJECT", "REJECT-DROP", "PASS"}
+
 
 def _copy_mapping_fields(mapping: dict[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
     result: dict[str, Any] = {}
@@ -171,9 +173,16 @@ def _convert_group_filter(group: dict[str, Any]) -> str:
     if not isinstance(name, str):
         raise ValueError("代理组名称必须是字符串")
 
-    if name == "⬇️🔰.DirectExit-[Download]":
-        original = r"(?i)^VPS-.*\[Download=true\].*$"
-        excluded = r"(?i)PrxChain"
+    source_filter = group.get("filter")
+    source_exclude = group.get("exclude-filter")
+    if (
+        source_filter == r"(?i)^VPS-.*\[Download=true\].*$"
+        and source_exclude == r"(?i)PrxChain"
+    ):
+        # Identify Download by its filter contract rather than its decorative
+        # prefix.  The public template is free to rename the group icon.
+        original = source_filter
+        excluded = source_exclude
         safe_part = _without_words(("PrxChain",), True)
         result = rf"(?i)^VPS-{safe_part}\[Download=true\]{safe_part}$"
     else:
@@ -196,6 +205,107 @@ def _convert_group_filter(group: dict[str, Any]) -> str:
     if group.get("filter") != original or group.get("exclude-filter") != excluded:
         raise ValueError(f"代理组筛选规则已变化，需要重新审核 Stash 转换: {name}")
     return result
+
+
+def _validate_proxy_groups(
+    groups: Any,
+    *,
+    allowed_builtins: set[str] = PROXY_GROUP_BUILTINS,
+) -> dict[str, dict[str, Any]]:
+    """Validate group names, references, filters and cycles before rendering."""
+
+    if not isinstance(groups, list):
+        raise ValueError("proxy-groups 必须是列表")
+
+    by_name: dict[str, dict[str, Any]] = {}
+    references: dict[str, list[str]] = {}
+    for index, group in enumerate(groups):
+        if not isinstance(group, dict):
+            raise ValueError(f"proxy-groups[{index}] 必须是映射")
+        name = group.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"proxy-groups[{index}].name 必须是非空字符串")
+        if name in by_name:
+            raise ValueError(f"proxy-groups 存在重复名称: {name}")
+        by_name[name] = group
+
+        for field in ("filter", "exclude-filter"):
+            value = group.get(field)
+            if field not in group:
+                continue
+            if not isinstance(value, str):
+                raise ValueError(f"代理组 {name} 的 {field} 必须是字符串")
+            try:
+                re.compile(value)
+            except re.error as exc:
+                raise ValueError(f"代理组 {name} 的 {field} 不是有效正则") from exc
+
+        if "proxies" not in group:
+            references[name] = []
+            continue
+        candidates = group["proxies"]
+        if not isinstance(candidates, list):
+            raise ValueError(f"代理组 {name} 的 proxies 必须是列表")
+        if any(not isinstance(candidate, str) or not candidate for candidate in candidates):
+            raise ValueError(f"代理组 {name} 的 proxies 必须只包含非空字符串")
+        references[name] = candidates
+
+    for name, candidates in references.items():
+        for candidate in candidates:
+            if candidate not in by_name and candidate not in allowed_builtins:
+                raise ValueError(f"代理组 {name} 引用了不存在的代理组: {candidate}")
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in visited:
+            return
+        if name in visiting:
+            raise ValueError(f"代理组存在循环引用: {name}")
+        visiting.add(name)
+        for candidate in references[name]:
+            if candidate in by_name:
+                visit(candidate)
+        visiting.remove(name)
+        visited.add(name)
+
+    for name in by_name:
+        visit(name)
+    return by_name
+
+
+def _validate_rule_targets(
+    rules: Any,
+    groups: dict[str, dict[str, Any]],
+    providers: dict[str, Any],
+) -> None:
+    """Reject stale group/provider names after a template rename."""
+
+    if not isinstance(rules, list):
+        raise ValueError("rules 必须是列表")
+    valid_targets = set(groups) | (PROXY_GROUP_BUILTINS - {"PASS"})
+    for index, rule in enumerate(rules):
+        if not isinstance(rule, str) or "," not in rule:
+            continue
+        fields = [field.strip() for field in rule.split(",")]
+        head = fields[0].upper()
+        if head == "RULE-SET":
+            if len(fields) < 3:
+                raise ValueError(f"rules[{index}] 的 RULE-SET 缺少目标组")
+            if fields[1] not in providers:
+                raise ValueError(f"rules[{index}] 引用了不存在的 rule-provider: {fields[1]}")
+            target = fields[2]
+        elif head == "MATCH":
+            if len(fields) < 2:
+                raise ValueError(f"rules[{index}] 的 MATCH 缺少目标组")
+            target = fields[1]
+        elif head in {"AND", "OR", "NOT"}:
+            target = fields[-1]
+        else:
+            target = fields[2] if len(fields) >= 3 else fields[-1]
+        if target not in valid_targets:
+            raise ValueError(f"rules[{index}] 引用了不存在的代理组: {target}")
 
 
 def _normalize_rule(rule: Any) -> Any:
@@ -286,10 +396,9 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
     groups = source.get("proxy-groups")
     if not isinstance(groups, list):
         raise ValueError("源配置缺少有效的 proxy-groups 列表")
+    _validate_proxy_groups(groups)
     output_groups: list[dict[str, Any]] = []
     for group in groups:
-        if not isinstance(group, dict):
-            raise ValueError("proxy-groups 中存在非映射项")
         converted = {
             key: copy.deepcopy(value)
             for key, value in group.items()
@@ -322,6 +431,10 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
                 # Also retain the guard if Stash filters explicit candidates.
                 converted["filter"] += "|^REJECT$"
         output_groups.append(converted)
+    output_group_map = _validate_proxy_groups(
+        output_groups,
+        allowed_builtins=PROXY_GROUP_BUILTINS - {"PASS"},
+    )
     output["proxy-groups"] = output_groups
 
     rules = source.get("rules")
@@ -344,6 +457,7 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
             if key not in RULE_PROVIDER_FIELDS_TO_DROP
         }
     output["rule-providers"] = output_providers
+    _validate_rule_targets(output["rules"], output_group_map, output_providers)
 
     return output
 

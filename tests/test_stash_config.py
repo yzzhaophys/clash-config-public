@@ -221,6 +221,28 @@ class StashConfigTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generate_stash_config.convert_config(source)
 
+    def test_filter_conversion_uses_download_contract_after_prefix_rename(self):
+        source_group = next(
+            group
+            for group in self.source["proxy-groups"]
+            if group.get("name", "").endswith(".DirectExit-[Download]")
+        )
+        renamed = copy.deepcopy(source_group)
+        renamed["name"] = "🧪.DirectExit-[Download]"
+        converted = generate_stash_config._convert_group_filter(renamed)
+        self.assertIsNotNone(
+            re.search(converted, "VPS-[US.HomeIP]-VLESS-00-(住宅)-[Download=true]")
+        )
+        self.assertIsNone(
+            re.search(converted, "VPS-[US.HomeIP]-PrxChain-[Download=true]")
+        )
+
+    def test_group_reference_validation_rejects_stale_name_after_rename(self):
+        source = copy.deepcopy(self.source)
+        source["proxy-groups"][0]["name"] = "renamed-group"
+        with self.assertRaisesRegex(ValueError, "不存在的代理组"):
+            generate_stash_config.convert_config(source)
+
     def test_rule_providers_use_stash_fields(self):
         self.assertEqual(len(self.config["rule-providers"]), len(self.source["rule-providers"]))
         for name, provider in self.config["rule-providers"].items():

@@ -41,6 +41,7 @@
 - `--chains all|none`：非交互模式下生成或跳过代理链；指定该选项时默认使用模板格式。
 - `--routes 'HK<-JP,US<-HK'`：只生成指定的“最终出口 <- 中转入口”方向，并默认使用模板格式；HomeIP 可写成 `US.HomeIP<-JP`，大小写不敏感。
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
+- `--home-template PATH`：指定模板模式校验所用的 `home.yaml`；生成器会校验组引用和实际节点/代理链筛选。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 输出文件，或关闭 Loon 输出。
 
@@ -56,6 +57,8 @@ python3 generate_stash_config.py
 `DirectExit` 组把原先的 `filter` + `exclude-filter` 合并成 Stash 文档支持的
 单个 `filter`：通过有限状态机将排除词转换为不含前瞻的普通正则，保留描述中的
 排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
+转换前还会检查代理组引用、循环和规则目标；`DirectExit` 的转换根据筛选契约识别
+Download 组，因此调整组名前缀不会让 Stash 输出静默失效。
 源筛选发生变化时脚本会报错，要求重新审核转换。Stash 延迟测试地址和超时应在将来加入的
 节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
 关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
@@ -390,6 +393,10 @@ Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区�
 除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前转换 VLESS、Hysteria2、
 Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交互模式还可以排除基础节点、选择代理链
 方向或逐条选择代理链；被排除节点的相关代理链不会生成。
+
+模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
+节点名和代理链名匹配 `DirectExit`、`Download`、`ShowIP`、`Chain` 筛选表达式。
+筛选不一致时会在替换任何输出前失败；`--plain` 只生成基础节点，因此跳过这项模板校验。
 
 这些文件包含真实凭据，已加入 `.gitignore`。
 

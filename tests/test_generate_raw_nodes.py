@@ -255,6 +255,98 @@ class GeneratorTests(unittest.TestCase):
                     Path("trusted-nodes.yaml"),
                 )
 
+    def test_generated_names_match_current_home_filters(self) -> None:
+        exit_proxy = {
+            "name": generator.node_name(
+                "us", "vless", 0, "HomeIP", allow_showip=True, allow_download=True
+            ),
+            "_allow-direct-exit": True,
+            "_allow-chain-exit": True,
+            "_allow-showip": True,
+            "_allow-download": True,
+            "_chain-exit-protocol": "vless",
+            "_physical-node-id": "vps-us-homeip",
+        }
+        dialer = {
+            "name": generator.node_name("jp", "vless", 0, "Core"),
+            "_allow-relay": True,
+            "_relay-protocol": "vless",
+            "_physical-node-id": "vps-jp-core",
+        }
+        generator.validate_generated_against_home(
+            [exit_proxy, dialer], [(exit_proxy, dialer)]
+        )
+
+    def test_generated_chain_is_rejected_when_home_filter_changes(self) -> None:
+        exit_proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "_allow-chain-exit": True,
+            "_chain-exit-protocol": "vless",
+            "_physical-node-id": "vps-us-exit",
+        }
+        dialer = {
+            "name": generator.node_name("jp", "vless", 0, "Core"),
+            "_allow-relay": True,
+            "_relay-protocol": "vless",
+            "_physical-node-id": "vps-jp-core",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            template = Path(directory) / "home.yaml"
+            source = generator.load_yaml(generator.HOME_TEMPLATE)
+            group = next(
+                group
+                for group in source["proxy-groups"]
+                if group["name"].endswith(".Chain-[US]")
+            )
+            group["filter"] = r"(?i)^NO_MATCH$"
+            template.write_text(
+                yaml.safe_dump(source, allow_unicode=True), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "未命中 home 模板筛选"):
+                generator.validate_generated_against_home(
+                    [exit_proxy, dialer], [(exit_proxy, dialer)], template
+                )
+
+    def test_home_template_failure_keeps_existing_template_output(self) -> None:
+        proxy = {
+            "name": generator.node_name("us", "vless", 0, "Exit"),
+            "type": "vless",
+            "server": "edge.example",
+            "port": 443,
+            "uuid": "uuid",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / "home.yaml"
+            source = generator.load_yaml(generator.HOME_TEMPLATE)
+            group = next(
+                group
+                for group in source["proxy-groups"]
+                if group["name"].endswith(".DirectExit-[US]")
+            )
+            group["filter"] = r"(?i)^NO_MATCH$"
+            template.write_text(
+                yaml.safe_dump(source, allow_unicode=True), encoding="utf-8"
+            )
+            output = root / "generated.yaml"
+            output.write_text("old output\n", encoding="utf-8")
+            with (
+                mock.patch.object(generator, "collect_proxies", return_value=[proxy]),
+                mock.patch.object(generator, "load_trusted_nodes", return_value=[]),
+                self.assertRaisesRegex(SystemExit, "home 模板"),
+            ):
+                generator.main(
+                    [
+                        "--template",
+                        "--no-loon",
+                        "--home-template",
+                        str(template),
+                        "--output",
+                        str(output),
+                    ]
+                )
+            self.assertEqual(output.read_text(encoding="utf-8"), "old output\n")
+
     def test_trusted_homeip_uses_self_hosted_role_and_constraints(self) -> None:
         source = {
             "id": "trusted-us-homeip",
