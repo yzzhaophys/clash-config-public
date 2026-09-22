@@ -228,17 +228,17 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
   - 🌎.Line-[Americas]
   - 🌍.Line-[Europe]
   - ♾️.Line-[Final]
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
   interval: -1
 - name: ____________________________________________________________________________________________________________________________________
   type: select
@@ -248,8 +248,8 @@ proxy-groups:
 - name: 📡.<DNS>--GlobalDNS
   type: select
   proxies:
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
   - DIRECT
   - REJECT-DROP
   - REJECT
@@ -304,8 +304,8 @@ proxy-groups:
 - name: 💻.<NAS>--Synology
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -313,8 +313,8 @@ proxy-groups:
 - name: 🔌.<Home>--AqaraGlobal
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -322,8 +322,8 @@ proxy-groups:
 - name: 📂.<Drive>--OneDrive
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -331,8 +331,8 @@ proxy-groups:
 - name: 📂.<Drive>--Dropbox
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -340,8 +340,8 @@ proxy-groups:
 - name: 📂.<Drive>--GoogleDrive
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -349,8 +349,8 @@ proxy-groups:
 - name: 📂.<Drive>--MEGA
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -358,8 +358,8 @@ proxy-groups:
 - name: 📂.<Drive>--Imgur
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -367,8 +367,8 @@ proxy-groups:
 - name: 📂.<Drive>--InternetArchive
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -376,8 +376,8 @@ proxy-groups:
 - name: ⬇️.<P2P>--PT-Server
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -385,8 +385,8 @@ proxy-groups:
 - name: ⬇️.<P2P>--eMule-Server
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -394,8 +394,8 @@ proxy-groups:
 - name: ⬇️.<Download>--MacAppUpgrade
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -403,9 +403,9 @@ proxy-groups:
 - name: 💰.<Finance>--Paypal
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -413,9 +413,9 @@ proxy-groups:
 - name: 💰.<Finance>--Wise
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -423,9 +423,9 @@ proxy-groups:
 - name: ₿.<Crypto>--Binance
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -433,9 +433,9 @@ proxy-groups:
 - name: ₿.<Crypto>--OKX
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -443,9 +443,9 @@ proxy-groups:
 - name: 💳.<Virtual>--Monzo
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -453,9 +453,9 @@ proxy-groups:
 - name: 💳.<Virtual>--Revolut
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -463,7 +463,7 @@ proxy-groups:
 - name: 🇺🇸.<Bank>--US
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -472,7 +472,7 @@ proxy-groups:
 - name: 🇨🇦.<Bank>--CA
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -497,7 +497,7 @@ proxy-groups:
 - name: 🇯🇵.<Bank>--JP
   type: select
   proxies:
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
@@ -506,7 +506,7 @@ proxy-groups:
 - name: 🇭🇰.<Bank>--HK
   type: select
   proxies:
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
@@ -515,7 +515,7 @@ proxy-groups:
 - name: 🇸🇬.<Bank>--SG
   type: select
   proxies:
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[SoutheastAsia]
   - DIRECT
   - REJECT
@@ -548,7 +548,7 @@ proxy-groups:
 - name: 🇺🇸.<HomeIP>--US
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -557,7 +557,7 @@ proxy-groups:
 - name: 🇨🇦.<HomeIP>--CA
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -582,7 +582,7 @@ proxy-groups:
 - name: 🇯🇵.<HomeIP>--JP
   type: select
   proxies:
-  - 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
   - 🌏.Line-[EastAsia]
   - DIRECT
   - REJECT
@@ -598,9 +598,9 @@ proxy-groups:
 - name: 🛒.<Shopping>--eBay
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -613,9 +613,9 @@ proxy-groups:
 - name: 🛒.<Shopping>--Patreon
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -629,8 +629,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -638,8 +638,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -647,8 +647,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -656,8 +656,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -665,8 +665,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -674,8 +674,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -683,8 +683,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -692,8 +692,8 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
@@ -701,17 +701,17 @@ proxy-groups:
   type: select
   proxies:
   - DIRECT
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - REJECT
   - REJECT-DROP
   interval: -1
 - name: 📺.<Video>--YouTube
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -724,9 +724,9 @@ proxy-groups:
 - name: 📺.<Video>--Netflix
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -739,9 +739,9 @@ proxy-groups:
 - name: 📺.<Video>--PrimeVideo
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -754,9 +754,9 @@ proxy-groups:
 - name: 📺.<Video>--Disney
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -769,9 +769,9 @@ proxy-groups:
 - name: 📺.<Video>--HBO
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -784,9 +784,9 @@ proxy-groups:
 - name: 📺.<Video>--FOX
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -799,9 +799,9 @@ proxy-groups:
 - name: 📺.<Video>--AppleTV
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -814,9 +814,9 @@ proxy-groups:
 - name: 📺.<Video>--Porn
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -829,9 +829,9 @@ proxy-groups:
 - name: 🎬.<Short>--TikTok
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -844,9 +844,9 @@ proxy-groups:
 - name: 🎬.<Short>--Kwai
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -859,9 +859,9 @@ proxy-groups:
 - name: 🎬.<Short>--Instagram
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -874,9 +874,9 @@ proxy-groups:
 - name: 🎞️.<Live>--Twitch
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -889,9 +889,9 @@ proxy-groups:
 - name: 🎧.<Audio>--Spotify
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -904,9 +904,9 @@ proxy-groups:
 - name: 🎧.<Audio>--YouTubeMusic
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -919,9 +919,9 @@ proxy-groups:
 - name: 💛.<Social>--Facebook
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -934,9 +934,9 @@ proxy-groups:
 - name: 💛.<Social>--Twitter
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -949,9 +949,9 @@ proxy-groups:
 - name: 💛.<Social>--Reddit
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -964,9 +964,9 @@ proxy-groups:
 - name: 💛.<Social>--Telegram
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -979,9 +979,9 @@ proxy-groups:
 - name: 💛.<Social>--Whatsapp
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -994,9 +994,9 @@ proxy-groups:
 - name: 💛.<Social>--Line
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1009,9 +1009,9 @@ proxy-groups:
 - name: 💛.<Social>--Discord
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1024,9 +1024,9 @@ proxy-groups:
 - name: 💛.<Social>--LinkedIn
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1039,9 +1039,9 @@ proxy-groups:
 - name: 💛.<Social>--Clubhouse
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1054,9 +1054,9 @@ proxy-groups:
 - name: 💛.<Social>--Signal
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1069,9 +1069,9 @@ proxy-groups:
 - name: 📰.<News>--Wikipedia
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1084,9 +1084,9 @@ proxy-groups:
 - name: 💡.<AI>--AppleAI
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1099,9 +1099,9 @@ proxy-groups:
 - name: 💡.<AI>--OpenAI
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1114,9 +1114,9 @@ proxy-groups:
 - name: 💡.<AI>--Grok
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1129,9 +1129,9 @@ proxy-groups:
 - name: 💡.<AI>--Claude
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1144,9 +1144,9 @@ proxy-groups:
 - name: 💡.<AI>--Gemini
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1159,9 +1159,9 @@ proxy-groups:
 - name: 💡.<AI>--Copilot
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1174,9 +1174,9 @@ proxy-groups:
 - name: 💡.<AI>--GlobalAI
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1189,9 +1189,9 @@ proxy-groups:
 - name: 🔧.<Tools>--Adobe
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1204,9 +1204,9 @@ proxy-groups:
 - name: 🔧.<Tools>--GitHub
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1219,9 +1219,9 @@ proxy-groups:
 - name: 🔧.<Tools>--Notion
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1234,9 +1234,9 @@ proxy-groups:
 - name: 🔧.<Tools>--Pinterest
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1249,9 +1249,9 @@ proxy-groups:
 - name: 🔧.<Tools>--Bing/Edge
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1264,9 +1264,9 @@ proxy-groups:
 - name: 🖥️.<Remote>--RustDesk
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1279,9 +1279,9 @@ proxy-groups:
 - name: 🖥️.<Remote>--Parsec
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1299,9 +1299,9 @@ proxy-groups:
 - name: ☁️.<Apps>--Google
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1314,9 +1314,9 @@ proxy-groups:
 - name: ☁️.<Apps>--Microsoft
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1329,9 +1329,9 @@ proxy-groups:
 - name: ☁️.<Apps>--Apple
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1344,9 +1344,9 @@ proxy-groups:
 - name: ☁️.<Apps>--Amazon
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🌏.Line-[EastAsia]
   - 🌏.Line-[SoutheastAsia]
   - 🌏.Line-[Oceania]
@@ -1364,9 +1364,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--BiliBili
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1375,9 +1375,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--抖音
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1386,9 +1386,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--快手
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1397,9 +1397,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--小红书
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1408,9 +1408,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--西瓜
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1419,9 +1419,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--微博
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1430,9 +1430,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--知乎
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1441,9 +1441,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--贴吧
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1452,9 +1452,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--豆瓣
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1463,9 +1463,9 @@ proxy-groups:
 - name: 🇨🇳.<ShowIP>--闲鱼
   type: select
   proxies:
-  - 🇺🇸📍.Line-[US.ShowIP]
-  - 🇯🇵🍟.Line-[JP.HomeIP]
-  - 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🌏🇺🇸.Line-[US.ShowIP]
+  - 🌏🇯🇵.Line-[JP.HomeIP]
+  - 🌏🇸🇬.Line-[SG.HomeIP]
   - 🇨🇳.Line-[CN]
   - DIRECT
   - REJECT
@@ -1487,7 +1487,7 @@ proxy-groups:
 - name: 🇺🇸.<Country>--US
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -1501,7 +1501,7 @@ proxy-groups:
 - name: 🌎.<Region>--North.America
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -1510,7 +1510,7 @@ proxy-groups:
 - name: 🌎.<Region>--South.America
   type: select
   proxies:
-  - 🇺🇸🍟.Line-[US.HomeIP]
+  - 🌏🇺🇸.Line-[US.HomeIP]
   - 🌎.Line-[Americas]
   - DIRECT
   - REJECT
@@ -1559,8 +1559,8 @@ proxy-groups:
 - name: ☁️.<Global>--CDN
   type: select
   proxies:
-  - 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
-  - 🔰⚡.Line-[Relay.VPS]-Low.Latency
+  - ⬇️.Line-[Relay.VPS]-Max.Traffic
+  - ⚡.Line-[Relay.VPS]-Low.Latency
   - DIRECT
   - REJECT
   - REJECT-DROP
@@ -1583,48 +1583,48 @@ proxy-groups:
   proxies:
   - DIRECT
   interval: -1
-- name: 🇺🇸🍟.Line-[US.HomeIP]
+- name: 🌏🇺🇸.Line-[US.HomeIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇺🇸🍟.Chain-[US.HomeIP]
-  - 🇺🇸🍟.DirectExit-[US.HomeIP]
-- name: 🇺🇸📍.Line-[US.ShowIP]
+  - 🇺🇸.Line-[US.HomeIP]
+  - 🇺🇸.Line-[US]
+- name: 🌏🇺🇸.Line-[US.ShowIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇺🇸📍.Chain-[US.ShowIP]
-  - 🇺🇸📍.DirectExit-[US.ShowIP]
-- name: 🇯🇵🍟.Line-[JP.HomeIP]
+  - 🇺🇸.Line-[US.ShowIP]
+  - 🇺🇸.Line-[US]
+- name: 🌏🇯🇵.Line-[JP.HomeIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇯🇵🍟.Chain-[JP.HomeIP]
-  - 🇯🇵🍟.DirectExit-[JP.HomeIP]
-- name: 🇯🇵📍.Line-[JP.ShowIP]
+  - 🇯🇵.Line-[JP.HomeIP]
+  - 🇯🇵.Line-[JP]
+- name: 🌏🇯🇵.Line-[JP.ShowIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇯🇵📍.Chain-[JP.ShowIP]
-  - 🇯🇵📍.DirectExit-[JP.ShowIP]
-- name: 🇸🇬🍟.Line-[SG.HomeIP]
+  - 🇯🇵.Line-[JP.ShowIP]
+  - 🇯🇵.Line-[JP]
+- name: 🌏🇸🇬.Line-[SG.HomeIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇸🇬🍟.Chain-[SG.HomeIP]
-  - 🇸🇬🍟.DirectExit-[SG.HomeIP]
-- name: 🇸🇬📍.Line-[SG.ShowIP]
+  - 🇸🇬.Line-[SG.HomeIP]
+  - 🇸🇬.Line-[SG]
+- name: 🌏🇸🇬.Line-[SG.ShowIP]
   type: fallback
-  interval: 45
+  interval: 90
   lazy: true
   proxies:
-  - 🇸🇬📍.Chain-[SG.ShowIP]
-  - 🇸🇬📍.DirectExit-[SG.ShowIP]
+  - 🇸🇬.Line-[SG.ShowIP]
+  - 🇸🇬.Line-[SG]
 - name: 🌏.Line-[EastAsia]
   type: fallback
   interval: 90
@@ -1666,7 +1666,7 @@ proxy-groups:
   - 🇳🇱.Line-[NL]
   - 🇫🇷.Line-[FR]
   - ♾️.Line-[Final]
-- name: 🔰⚡.Line-[Relay.VPS]-Low.Latency
+- name: ⚡.Line-[Relay.VPS]-Low.Latency
   type: fallback
   interval: 90
   lazy: true
@@ -1676,7 +1676,7 @@ proxy-groups:
   - 🇯🇵.Line-[JP]
   - 🇸🇬.Line-[SG]
   - ♾️.Line-[Final]
-- name: 🔰⬇️.Line-[Relay.VPS]-Max.Traffic
+- name: ⬇️.Line-[Relay.VPS]-Max.Traffic
   type: fallback
   interval: 90
   lazy: true
@@ -1705,6 +1705,20 @@ proxy-groups:
   proxies:
   - 🇺🇸🔰.DirectExit-[US]
   - 🇺🇸🔗.Chain-[US]
+- name: 🇺🇸.Line-[US.HomeIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇺🇸🔗.Chain-[US.HomeIP]
+  - 🇺🇸🔰.DirectExit-[US.HomeIP]
+- name: 🇺🇸.Line-[US.ShowIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇺🇸🔗.Chain-[US.ShowIP]
+  - 🇺🇸🔰.DirectExit-[US.ShowIP]
 - name: 🇯🇵.Line-[JP]
   type: fallback
   interval: 45
@@ -1712,6 +1726,20 @@ proxy-groups:
   proxies:
   - 🇯🇵🔰.DirectExit-[JP]
   - 🇯🇵🔗.Chain-[JP]
+- name: 🇯🇵.Line-[JP.HomeIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇯🇵🔗.Chain-[JP.HomeIP]
+  - 🇯🇵🔰.DirectExit-[JP.HomeIP]
+- name: 🇯🇵.Line-[JP.ShowIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇯🇵🔗.Chain-[JP.ShowIP]
+  - 🇯🇵🔰.DirectExit-[JP.ShowIP]
 - name: 🇸🇬.Line-[SG]
   type: fallback
   interval: 45
@@ -1719,6 +1747,20 @@ proxy-groups:
   proxies:
   - 🇸🇬🔰.DirectExit-[SG]
   - 🇸🇬🔗.Chain-[SG]
+- name: 🇸🇬.Line-[SG.HomeIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇸🇬🔗.Chain-[SG.HomeIP]
+  - 🇸🇬🔰.DirectExit-[SG.HomeIP]
+- name: 🇸🇬.Line-[SG.ShowIP]
+  type: fallback
+  interval: 45
+  lazy: true
+  proxies:
+  - 🇸🇬🔗.Chain-[SG.ShowIP]
+  - 🇸🇬🔰.DirectExit-[SG.ShowIP]
 - name: 🇭🇰.Line-[HK]
   type: fallback
   interval: 45
@@ -1793,7 +1835,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[US\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇺🇸🍟.Chain-[US.HomeIP]
+- name: 🇺🇸🔗.Chain-[US.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1801,7 +1843,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[US\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇺🇸📍.Chain-[US.ShowIP]
+- name: 🇺🇸🔗.Chain-[US.ShowIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1817,7 +1859,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[JP\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇯🇵🍟.Chain-[JP.HomeIP]
+- name: 🇯🇵🔗.Chain-[JP.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1825,7 +1867,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[JP\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇯🇵📍.Chain-[JP.ShowIP]
+- name: 🇯🇵🔗.Chain-[JP.ShowIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1841,7 +1883,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[SG\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇸🇬🍟.Chain-[SG.HomeIP]
+- name: 🇸🇬🔗.Chain-[SG.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1849,7 +1891,7 @@ proxy-groups:
   filter: (?i)^PrxChain-\[SG\.HomeIP\]-|^REJECT$
   proxies:
   - REJECT
-- name: 🇸🇬📍.Chain-[SG.ShowIP]
+- name: 🇸🇬🔗.Chain-[SG.ShowIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1942,7 +1984,7 @@ proxy-groups:
   filter: (?i)^VPS-\[US\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇺🇸🍟.DirectExit-[US.HomeIP]
+- name: 🇺🇸🔰.DirectExit-[US.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1950,7 +1992,7 @@ proxy-groups:
   filter: (?i)^VPS-\[US\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇺🇸📍.DirectExit-[US.ShowIP]
+- name: 🇺🇸🔰.DirectExit-[US.ShowIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1966,7 +2008,7 @@ proxy-groups:
   filter: (?i)^VPS-\[JP\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇯🇵🍟.DirectExit-[JP.HomeIP]
+- name: 🇯🇵🔰.DirectExit-[JP.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1974,7 +2016,7 @@ proxy-groups:
   filter: (?i)^VPS-\[JP\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇯🇵📍.DirectExit-[JP.ShowIP]
+- name: 🇯🇵🔰.DirectExit-[JP.ShowIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1990,7 +2032,7 @@ proxy-groups:
   filter: (?i)^VPS-\[SG\.(?:Core|Exit)\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇸🇬🍟.DirectExit-[SG.HomeIP]
+- name: 🇸🇬🔰.DirectExit-[SG.HomeIP]
   type: url-test
   interval: 30
   lazy: true
@@ -1998,7 +2040,7 @@ proxy-groups:
   filter: (?i)^VPS-\[SG\.HomeIP\]-(?:(?:(?:(?:(?:[=acefhilnrstx]|[^=acdefhilnprstx])|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilnstx]|[^=acdefhilnprstx]))|[i][r](?:(?:[=acfhilnrstx]|[^=acdefhilnprstx])|[e](?:[=aefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c](?:(?:[=acefhilnrsx]|[^=acdefhilnprstx])|[t](?:[acefhilnrstx]|[^=acdefhilnprstx])))|[i][r][e][c][t][=](?:(?:(?:(?:[=acehilnrstx]|[^=acdefhilnprstx])|[f](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[f][a](?:[=acefhinrstx]|[^=acdefhilnprstx]))|[f][a][l](?:(?:[=acefhilnrtx]|[^=acdefhilnprstx])|[s](?:[=acfhilnrstx]|[^=acdefhilnprstx]))))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:(?:[=acefhilnstx]|[^=acdefhilnprstx])|[r](?:[=acefhilnrst]|[^=acdefhilnprstx]))|[r][x](?:(?:(?:(?:[=aefhilnrstx]|[^=acdefhilnprstx])|[c](?:[=acefilnrstx]|[^=acdefhilnprstx]))|[c][h](?:[=cefhilnrstx]|[^=acdefhilnprstx]))|[c][h][a](?:(?:[=acefhlnrstx]|[^=acdefhilnprstx])|[i](?:[=acefhilrstx]|[^=acdefhilnprstx])))))))*(?:(?:|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))|(?:[d]|[p](?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d]))))(?:(?:(?:(?:(?:(?:[d]|[i][d])|[i][r](?:[d]|[e][d]))|[i][r][e][c](?:[d]|[t][d]))|[i][r][e][c][t][=](?:(?:(?:[d]|[f][d])|[f][a][d])|[f][a][l](?:[d]|[s][d])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:[d]|[r][d])|[r][x](?:(?:(?:[d]|[c][d])|[c][h][d])|[c][h][a](?:[d]|[i][d])))))*(?:(?:(?:(?:(?:|[i])|[i][r](?:|[e]))|[i][r][e][c](?:|[t]))|[i][r][e][c][t][=](?:(?:(?:|[f])|[f][a])|[f][a][l](?:|[s])))|(?:(?:(?:(?:[p]|[i][p])|[i][r](?:[p]|[e][p]))|[i][r][e][c](?:[p]|[t][p]))|[i][r][e][c][t][=](?:(?:(?:[p]|[f][p])|[f][a][p])|[f][a][l](?:[p]|[s][p])))(?:(?:(?:[p]|[r][p])|[r][x](?:(?:(?:[p]|[c][p])|[c][h][p])|[c][h][a](?:[p]|[i][p]))))*(?:(?:|[r])|[r][x](?:(?:(?:|[c])|[c][h])|[c][h][a](?:|[i]))))))$|^REJECT$
   proxies:
   - REJECT
-- name: 🇸🇬📍.DirectExit-[SG.ShowIP]
+- name: 🇸🇬🔰.DirectExit-[SG.ShowIP]
   type: url-test
   interval: 30
   lazy: true

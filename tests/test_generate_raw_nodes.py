@@ -220,7 +220,7 @@ class GeneratorTests(unittest.TestCase):
         direct_group = next(
             group
             for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸📍.DirectExit-[US.ShowIP]"
+            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
         )
         self.assertRegex(node["name"], direct_group["filter"])
         self.assertIsNone(re.search(direct_group["exclude-filter"], node["name"]))
@@ -230,7 +230,7 @@ class GeneratorTests(unittest.TestCase):
         chain_group = next(
             group
             for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸📍.Chain-[US.ShowIP]"
+            if group["name"] == "🇺🇸🔗.Chain-[US.ShowIP]"
         )
         self.assertRegex(chain, chain_group["filter"])
 
@@ -280,12 +280,12 @@ class GeneratorTests(unittest.TestCase):
         homeip_group = next(
             group
             for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🍟.DirectExit-[US.HomeIP]"
+            if group["name"] == "🇺🇸🔰.DirectExit-[US.HomeIP]"
         )
         showip_group = next(
             group
             for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸📍.DirectExit-[US.ShowIP]"
+            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
         )
         self.assertRegex(node["name"], homeip_group["filter"])
         self.assertRegex(node["name"], showip_group["filter"])

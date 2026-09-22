@@ -327,11 +327,15 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
 | 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
 | 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒，直出优先、同地区代理链备用 |
-| HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
+| 内层 HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
 | 跨地区、Final、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
 | Americas / Oceania / Europe | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
 | CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
+
+业务组引用的 `🌏🇺🇸.Line-[US.HomeIP]`、`🌏🇺🇸.Line-[US.ShowIP]` 等外层 Line
+每 90 秒检查一次，先使用对应的内层用途线路；内层线路没有可用候选时再回退到同地区普通
+Line。内层 HomeIP / ShowIP 线路仍只在各自的 Chain 和 DirectExit 组之间切换。
 
 所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
 `timeout: 3000`，普通国家线路 `fallback` 使用 `timeout: 4000`，HomeIP / ShowIP、跨地区及入口线路

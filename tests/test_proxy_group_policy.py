@@ -76,7 +76,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                     self.assertNotIn("tolerance", group)
 
     def test_download_route_has_explicit_final_fallback(self):
-        maximum = self.groups["🔰⬇️.Line-[Relay.VPS]-Max.Traffic"]
+        maximum = self.groups["⬇️.Line-[Relay.VPS]-Max.Traffic"]
         download = self.groups["⬇️🔰.DirectExit-[Download]"]
         self.assertEqual(maximum["proxies"], [download["name"], "♾️.Line-[Final]"])
         self.assertEqual(download["type"], "url-test")
@@ -110,8 +110,8 @@ class ProxyGroupPolicyTests(unittest.TestCase):
         self.assertEqual(business["type"], "select")
         self.assertNotIn("☁️.Line-[CDN]", self.groups)
         self.assertEqual(business["proxies"][:2], [
-            "🔰⬇️.Line-[Relay.VPS]-Max.Traffic",
-            "🔰⚡.Line-[Relay.VPS]-Low.Latency",
+            "⬇️.Line-[Relay.VPS]-Max.Traffic",
+            "⚡.Line-[Relay.VPS]-Low.Latency",
         ])
         self.assertIn("DIRECT", business["proxies"])
 
