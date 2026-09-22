@@ -156,7 +156,7 @@ dns                               :
   use-system-hosts                : true                                                # 
   skip-cert-verify                : false                                               # TLS 握手时是否忽略证书验证    （ 如果设置为 true ，即，跳过证书验证，用来解决部分兼容性问题 ）
  
-  proxy-server-nameserver         : [  223.5.5.5 , 119.29.29.29  ]                      # 仅用于，代理节点  的 域名解析
+  proxy-server-nameserver         : [  223.5.5.5 , 119.29.29.29  ]                      # 仅用于，代理节点的域名解析；当前 Stash 版本也支持此独立解析链路
   default-nameserver              : [  223.5.5.5 , 119.29.29.29  ]                      # 仅用于，DNS服务器 的 域名解析
   direct-nameserver               :                                                     # 仅用于，直连请求  的 域名解析 (同时请求境内外，通过respect-rules进行分流，以便于同时适配于，肉身出国、肉身回国)
                                     - 'https://dns.alidns.com/dns-query'
@@ -170,7 +170,7 @@ dns                               :
                                   # - 'https://dns.adguard-dns.com/dns-query'           # AdGuard          # 94.140.14.14        94.140.15.15
   respect-rules                   : true                                                # Clash.meta 专属。默认为false ： DNS 查询请求，直接出站。true ：DNS查询请求，经rule代理规则转发。 ⚠️⚠️⚠️  建议：使用IP配置节点的Server字段，而非域名，否则应配置 proxy-server-nameserver。详情请看：https://wiki.metacubex.one/config/dns/#_1 
   follow-rule                     : true                                                # Stash      专属。默认为false ： DNS 查询请求，直接出站，true ：DNS查询请求，经rule代理规则转发。 ⚠️⚠️⚠️  建议：使用IP配置节点的Server字段，而非域名，详情请看：https://stash.wiki/features/dns-server
-                                                                                        # 请注意：由于 Stash 没有 proxy-server-nameserver字段，所以，开启follow-rule 后，请保证如下规则： 转发 DNS 请求的代理地址为 IP 地址，而不是域名，或 DNS 服务器地址为 IP 地址，而不是域名
+                                                                                        # 请注意：开启 follow-rule 后，建议保留 proxy-server-nameserver，避免代理节点域名解析产生递归；也可直接使用 IP 地址作为节点 Server
   
   enhanced-mode                   : redir-host                                          # 可选值 fake-ip / redir-host ，默认 redir-host   （ ⚠️⚠️⚠️ 注意 ：Stash 3.0 不支持 redir-host ）
   fake-ip-range                   : '198.18.0.1/16'

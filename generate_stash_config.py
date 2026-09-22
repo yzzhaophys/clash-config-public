@@ -34,6 +34,7 @@ TOP_LEVEL_FIELDS = ("mode", "log-level", "hosts")
 DNS_FIELDS = (
     "enable",
     "skip-cert-verify",
+    "proxy-server-nameserver",
     "default-nameserver",
     "nameserver",
     "nameserver-policy",

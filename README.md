@@ -64,7 +64,9 @@ Download 组，因此调整组名前缀不会让 Stash 输出静默失效。
 关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
 源配置中 115 个手动 `PASS` 选项未出现在 Stash 文档的内置出口列表中，
 转换时将其移除；`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
-DNS 中仅保留 Stash 可表达的精确域名、通配域名和 `geosite:` policy；模板里的
+DNS 中仅保留 Stash 可表达的精确域名、通配域名和 `geosite:` policy，并保留
+`proxy-server-nameserver` 用于独立解析代理节点域名（要求 Stash iOS/tvOS 3.6+、
+macOS 4.3+，旧版本不能依赖该字段防止解析递归）；模板里的
 Clash Meta `rule-set:` DNS policy 和 DNS URL 代理组后缀会被移除，普通 `RULE-SET`
 分流规则不受影响，但这不代表原 DNS 策略完全等价：被移除的 DNS policy 不再单独选 DNS，
 DNS 请求也不再使用 URL 后缀指定的代理组，而是依赖 `follow-rule` 和普通路由规则。
@@ -75,6 +77,27 @@ Stash 的通配 DNS policy 优先于 geosite，因此 `+.*` 被迁移到默认 `
 当前只转换 HTTP rule-provider 和 `empty-fallback: REJECT`，遇到其他值明确报错。
 自动化测试覆盖源配置对比、筛选反例和写入失败；Mihomo 辅助加载检查不等于
 Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试导入、DNS、空组和故障切换。
+
+Stash 对比审查中需要注意的行为差异：
+
+- DNS policy 支持多个服务器，但采用并发查询，列表顺序不是主备优先级。
+  `follow-rule` 路由的是 DNS 服务器连接，不保证 DNS 与被查询网站使用相同出口。
+- `📡.<DNS>--ChinaDNS` 在两份模板中保持原模板的 `REJECT` 首选，拒绝命中该组的
+  DNS 连接，并保留手动选择 `DIRECT` 的选项。这是既定拦截策略，不能仅因配置了
+  国内 DoH 就判定有误；如遇解析异常，应先检查实际连接日志和规则命中。
+  已保存的客户端选择不会因候选顺序变化自动重置。独立节点 DNS 不跟随该组。
+- 35 个动态节点池中的 `REJECT` 是常驻候选，不是仅在空组时注入。
+  静态校验只证明候选存在及筛选保留；健康节点存在、全部失败、节点恢复时，
+  `url-test` 和上层 `fallback` 如何处理它，必须在 Stash 上验证。
+- 组级 `tolerance`、`max-failed-times` 和测速参数未等价迁移；Stash 使用节点级
+  测速结果，故障判定及切换时机可能与 Mihomo 不同。保留 30/45/90 秒间隔和
+  `lazy`，暂未针对移动端延长间隔，以免改变现有恢复速度。
+- 150 个规则集保留原 URL、缓存路径和更新间隔，但移除了下载用的 `proxy`。
+  这不构成上游 URL 失效时自动切换到备份仓库；Stash 内首次下载和更新仍须验证。
+
+参考：[策略组](https://stash.wiki/proxy-protocols/proxy-groups)、
+[延迟测试](https://stash.wiki/proxy-protocols/proxy-benchmark)、
+[规则集合](https://stash.wiki/rules/rule-set)。
 
 默认目录和环境变量：
 

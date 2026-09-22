@@ -26,6 +26,19 @@ class StashConfigTest(unittest.TestCase):
     def test_generated_file_matches_current_source(self):
         self.assertEqual(self.config, generate_stash_config.convert_config(self.source))
 
+    def test_domestic_dns_routes_default_to_reject_in_both_templates(self):
+        target = "📡.<DNS>--ChinaDNS"
+        for config in (self.source, self.config):
+            with self.subTest(stash=config is self.config):
+                group = next(g for g in config["proxy-groups"] if g["name"] == target)
+                self.assertEqual(group["proxies"][0], "REJECT")
+                self.assertIn("DIRECT", group["proxies"])
+                rules = [[part.strip() for part in r.split(",")] for r in config["rules"]]
+                for provider in ("ChinaDNS_Domain", "ChinaDNS_IP"):
+                    self.assertTrue(any(r[0].upper() == "RULE-SET" and
+                                        r[1:3] == [provider, target] for r in rules))
+                self.assertTrue(config["dns"]["follow-rule"])
+
     def test_public_shell_has_no_nodes_or_provider_urls(self):
         self.assertEqual(self.config["proxies"], [])
         self.assertEqual(self.config["proxy-providers"], {})
@@ -96,12 +109,17 @@ class StashConfigTest(unittest.TestCase):
             {
                 "enable",
                 "skip-cert-verify",
+                "proxy-server-nameserver",
                 "default-nameserver",
                 "nameserver",
                 "nameserver-policy",
                 "follow-rule",
                 "fake-ip-filter",
             },
+        )
+        self.assertEqual(
+            self.config["dns"]["proxy-server-nameserver"],
+            self.source["dns"]["proxy-server-nameserver"],
         )
 
     def test_proxy_groups_keep_structure_and_guard_empty_auto_groups(self):
