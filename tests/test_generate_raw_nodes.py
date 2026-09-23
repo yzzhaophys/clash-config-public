@@ -277,7 +277,7 @@ class GeneratorTests(unittest.TestCase):
             [exit_proxy, dialer], [(exit_proxy, dialer)]
         )
 
-    def test_showip_node_without_direct_exit_is_excluded_from_showip_direct_group(self) -> None:
+    def test_showip_without_direct_exit_can_match_showip_chain_filter(self) -> None:
         proxy = {
             "name": generator.node_name(
                 "us",
@@ -287,18 +287,42 @@ class GeneratorTests(unittest.TestCase):
                 allow_direct_exit=False,
                 allow_showip=True,
             ),
+            "type": "socks5",
             "_allow-direct-exit": False,
             "_allow-showip": True,
+            "_allow-chain-exit": True,
+            "_chain-exit-protocol": "socks5",
+            "_allow-relay": False,
+            "_physical-node-id": "trusted:us-showip",
         }
+        dialer = {
+            "name": generator.node_name("us", "vless", 0, "Core"),
+            "type": "vless",
+            "_allow-direct-exit": True,
+            "_allow-chain-exit": False,
+            "_allow-relay": True,
+            "_relay-protocol": "vless",
+            "_physical-node-id": "vps-us-relay",
+        }
+        chains = generator.chain_candidates([proxy, dialer])
+        self.assertEqual(chains, [(proxy, dialer)])
+
         home = generator.load_yaml(generator.HOME_TEMPLATE)
         showip_group = next(
             group
             for group in home["proxy-groups"]
             if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
         )
+        showip_chain_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸🔗.Chain-[US.ShowIP]"
+        )
+        chain_name = generator.chain_name(*chains[0])
 
         self.assertFalse(generator._group_matches_proxy(showip_group, proxy["name"]))
-        generator.validate_generated_against_home([proxy], [])
+        self.assertTrue(generator._group_matches_proxy(showip_chain_group, chain_name))
+        generator.validate_generated_against_home([proxy, dialer], chains)
 
     def test_generated_chain_is_rejected_when_home_filter_changes(self) -> None:
         exit_proxy = {
