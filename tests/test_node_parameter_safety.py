@@ -2,6 +2,7 @@ import contextlib
 import copy
 import io
 import json
+import math
 import os
 import tempfile
 import unittest
@@ -40,6 +41,54 @@ def convert(stream=None):
 
 
 class FileSafetyTests(unittest.TestCase):
+    def test_invalid_later_destination_keeps_all_old_outputs(self):
+        source = self.write('input.yaml', yaml.safe_dump({'nodes': [trusted()]}))
+        main = self.write('main.yaml', 'OLD MAIN')
+        raw = self.write('raw.yaml', 'OLD RAW')
+        directory = self.root / 'directory'
+        directory.mkdir()
+        alias = self.root / 'directory-link'
+        alias.symlink_to(directory, target_is_directory=True)
+        for invalid in (directory, alias, raw / 'child.yaml'):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(SystemExit, '输出路径'):
+                g.main(['--plain', '--hosts-dir', str(self.root / 'hosts'),
+                        '--airport-dir', str(self.root / 'airport'),
+                        '--trusted-nodes-file', str(source), '--output', str(main),
+                        '--raw-output', str(raw), '--loon-output', str(invalid)])
+            self.assertEqual(main.read_text(), 'OLD MAIN')
+            self.assertEqual(raw.read_text(), 'OLD RAW')
+
+    def test_outputs_cannot_be_ancestors_of_each_other(self):
+        parent = self.root / 'new-output'
+        child = parent / 'child.yaml'
+        for paths in ((parent, child), (child, parent)):
+            with self.subTest(paths=paths), self.assertRaisesRegex(SystemExit, '输出路径冲突'):
+                g.validate_output_paths(list(zip(('main', 'raw'), paths)))
+        self.assertFalse(parent.exists())
+
+    def test_nested_floats_keep_values_and_types_in_both_formats_and_chains(self):
+        source = trusted()
+        values = [1e-7, 1e20, -1e-9, 0.0, -0.0, float('inf'), float('-inf'), float('nan')]
+        source['proxy']['custom-extension'] = {'values': values}
+        proxy = g.normalize_trusted_nodes([source], {}, self.root / 'input')[0]
+        dialer = g.normalize_trusted_nodes([trusted('relay')], {('us', 'vless'): 1}, self.root / 'input')[0]
+        for mode in ('plain', 'template'):
+            path = self.root / f'{mode}.yaml'
+            if mode == 'plain':
+                g.write_plain([proxy], path)
+            else:
+                g.write_template([proxy, dialer], [(proxy, dialer)], path)
+            nodes = load_yaml(path)['proxies']
+            for node in (nodes[0], nodes[-1]) if mode == 'template' else (nodes[0],):
+                actual = node['custom-extension']['values']
+                for expected, value in zip(values, actual):
+                    self.assertIs(type(value), float)
+                    if math.isnan(expected):
+                        self.assertTrue(math.isnan(value))
+                    else:
+                        self.assertEqual(value, expected)
+                        self.assertEqual(math.copysign(1, value), math.copysign(1, expected))
+
     def test_missing_environment_inventory_fails_before_collection(self):
         with tempfile.TemporaryDirectory() as directory:
             with mock.patch.dict(os.environ, {'CLASH_TRUSTED_NODES_FILE': str(Path(directory) / 'missing')}), \
@@ -182,6 +231,42 @@ class FileSafetyTests(unittest.TestCase):
             output.pop('name')
             self.assertEqual(output, expected)
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+
+class AirportCredentialTests(unittest.TestCase):
+    def test_required_fields_reject_missing_null_empty_and_invalid_types(self):
+        missing = object()
+        for protocol, fields in [('ss', ('password', 'cipher')), ('trojan', ('password',)),
+                                 ('vmess', ('uuid',))]:
+            for field in fields:
+                for value in (missing, None, '', False, 0, [], {}, 'line\nbreak'):
+                    node = {'name': 'demo JP', 'type': protocol, 'server': 'example.invalid',
+                            'port': 443, **{key: 'fixture' for key in fields}}
+                    if value is missing:
+                        del node[field]
+                    else:
+                        node[field] = value
+                    with self.subTest(protocol=protocol, field=field, value=value):
+                        with self.assertRaises(ValueError):
+                            g.require_proxy_credentials(copy.deepcopy(node), protocol, 'fixture')
+                        log = io.StringIO()
+                        with contextlib.redirect_stdout(log):
+                            result = g.normalize_airport_nodes([node], {})
+                        self.assertEqual(result, [])
+                        self.assertIn(field, log.getvalue())
+                        self.assertNotIn('line\nbreak', log.getvalue())
+
+    def test_credentials_and_nested_extensions_survive_import(self):
+        for protocol, field in [('ss', 'password'), ('trojan', 'password'), ('vmess', 'uuid')]:
+            node = {'name': 'demo JP', 'type': protocol, 'server': 'example.invalid',
+                    'port': 443, field: ' credential with spaces ',
+                    'extension': {'nested': [False, 0, '', [], {}]}}
+            if protocol == 'ss':
+                node['cipher'] = 'aes-128-gcm'
+            with self.subTest(protocol=protocol):
+                result = g.normalize_airport_nodes([node], {})[0]
+                self.assertEqual(result[field], node[field])
+                self.assertEqual(result['extension'], node['extension'])
 
 
 class ConversionTests(unittest.TestCase):

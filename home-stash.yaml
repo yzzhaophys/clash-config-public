@@ -1706,8 +1706,8 @@ proxy-groups:
   interval: 45
   lazy: true
   proxies:
-  - 🇺🇸🔰.DirectExit-[US]
   - 🇺🇸🔗.Chain-[US]
+  - 🇺🇸🔰.DirectExit-[US]
 - name: 🇺🇸.Line-[US.HomeIP]
   type: fallback
   interval: 45
@@ -1727,8 +1727,8 @@ proxy-groups:
   interval: 45
   lazy: true
   proxies:
-  - 🇯🇵🔰.DirectExit-[JP]
   - 🇯🇵🔗.Chain-[JP]
+  - 🇯🇵🔰.DirectExit-[JP]
 - name: 🇯🇵.Line-[JP.HomeIP]
   type: fallback
   interval: 45
@@ -1748,8 +1748,8 @@ proxy-groups:
   interval: 45
   lazy: true
   proxies:
-  - 🇸🇬🔰.DirectExit-[SG]
   - 🇸🇬🔗.Chain-[SG]
+  - 🇸🇬🔰.DirectExit-[SG]
 - name: 🇸🇬.Line-[SG.HomeIP]
   type: fallback
   interval: 45

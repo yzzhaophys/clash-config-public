@@ -211,14 +211,18 @@ def require_proxy_credentials(
     authenticated_socks5: bool = False,
 ) -> None:
     """Validate credentials required to produce a usable client node."""
-    if protocol == "vless":
+    if protocol in {"vless", "vmess"}:
         proxy["uuid"] = require_nonempty_string(proxy.get("uuid"), f"{field}.uuid", trim=False)
-    elif protocol == "hysteria2":
+    elif protocol in {"hysteria2", "trojan", "ss"}:
         proxy["password"] = require_nonempty_string(
             proxy.get("password"),
             f"{field}.password",
             trim=False,
         )
+        if protocol == "ss":
+            proxy["cipher"] = require_nonempty_string(
+                proxy.get("cipher"), f"{field}.cipher", trim=False,
+            )
     elif protocol == "socks5" and authenticated_socks5:
         require_socks5_credentials(proxy, field)
 
@@ -567,7 +571,11 @@ def yaml_scalar(value: Any) -> str:
         return "true" if value else "false"
     if value is None:
         return "null"
-    if isinstance(value, (int, float)):
+    if isinstance(value, float):
+        # Use YAML's float spelling, including exponents and non-finite values.
+        # Python's str(1e-7) is read as a string by our YAML 1.1 loader.
+        return yaml.safe_dump(value, default_flow_style=True).splitlines()[0]
+    if isinstance(value, int):
         return str(value)
     if isinstance(value, list):
         return "[ " + " , ".join(yaml_scalar(item) for item in value) + " ]"
@@ -2216,6 +2224,14 @@ def validate_output_paths(
         if path is None:
             continue
         resolved = path.expanduser().resolve()
+        if resolved.exists() and not resolved.is_file():
+            raise SystemExit(f"输出路径无效：{label} 必须是普通文件 {path}")
+        for parent in resolved.parents:
+            if parent.exists() and not parent.is_dir():
+                raise SystemExit(f"输出路径无效：{label} 的父路径不是目录 {parent}")
+        for previous_path, previous_label in seen.items():
+            if previous_path in resolved.parents or resolved in previous_path.parents:
+                raise SystemExit(f"输出路径冲突：{previous_label} 和 {label} 不能互为父路径")
         identity = None
         if resolved.is_file():
             status = resolved.stat()
