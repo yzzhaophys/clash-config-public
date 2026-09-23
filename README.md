@@ -339,7 +339,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | Max.Traffic | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Line-[Final]` |
 | Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
 | 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
-| 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒，直出优先、同地区代理链备用 |
+| 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒；US / JP / SG 代理链优先、同地区直出备用，其余地区直出优先、代理链备用 |
 | 内层 HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
 | 跨地区、Final、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
@@ -353,6 +353,7 @@ Line。内层 HomeIP / ShowIP 线路仍只在各自的 Chain 和 DirectExit 组�
 所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
 `timeout: 3000`，普通国家线路 `fallback` 使用 `timeout: 4000`，HomeIP / ShowIP、跨地区及入口线路
 使用 `timeout: 5000`。
+HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Line 组引用。
 `url-test` 使用 `tolerance: 50` 毫秒，减少健康节点间的小幅延迟切换；
 该容差不会阻止内核替换已被探测判定失效的节点。失败阈值只用于触发额外检查，
 其计数受内核版本、失败类型及时间窗口影响，不保证两次业务请求失败就换线。

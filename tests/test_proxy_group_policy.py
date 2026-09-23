@@ -4,6 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
+import generate_raw_nodes as generator
 from generate_raw_nodes import node_name
 from node_io import load_yaml
 
@@ -134,6 +135,37 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertTrue(
                     any(proxy.endswith(".DirectExit-" + suffix) for proxy in group["proxies"])
                 )
+
+    def test_selected_regional_lines_prefer_chain_and_match_home_filters(self):
+        regions = {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬"}
+        for region, flag in regions.items():
+            with self.subTest(region=region):
+                line = self.groups[f"{flag}.Line-[{region}]"]
+                self.assertEqual(
+                    line["proxies"],
+                    [
+                        f"{flag}🔗.Chain-[{region}]",
+                        f"{flag}🔰.DirectExit-[{region}]",
+                    ],
+                )
+
+                exit_proxy = {
+                    "name": node_name(region.lower(), "vless", 0, "Exit"),
+                    "_allow-direct-exit": True,
+                    "_allow-chain-exit": True,
+                }
+                dialer = {
+                    "name": node_name("us", "vless", 1, "Core"),
+                    "_allow-relay": True,
+                }
+                generator.validate_generated_against_home(
+                    [exit_proxy, dialer], [(exit_proxy, dialer)]
+                )
+
+        for region, flag in {"HK": "🇭🇰", "MY": "🇲🇾"}.items():
+            with self.subTest(hidden_chain_region=region):
+                chain = self.groups[f"{flag}🔗.Chain-[{region}]"]
+                self.assertTrue(chain["hidden"])
 
 
 if __name__ == "__main__":
