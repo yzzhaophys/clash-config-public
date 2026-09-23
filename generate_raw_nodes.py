@@ -467,11 +467,14 @@ def validate_generated_against_home(
             label="DirectExit",
         )
         if proxy.get("_allow-showip", False):
+            # ShowIP is independent of single-node direct exit. A ShowIP node
+            # enters the direct-exit subgroup only when direct exit is allowed;
+            # chain eligibility is checked separately on generated chains.
             _check_optional_group_match(
                 groups,
                 f".DirectExit-[{region}.ShowIP]",
                 name,
-                expected=True,
+                expected=bool(proxy.get("_allow-direct-exit", True)),
                 label="ShowIP DirectExit",
             )
         if proxy.get("_allow-download", False):

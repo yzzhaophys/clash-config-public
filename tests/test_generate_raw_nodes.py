@@ -277,6 +277,29 @@ class GeneratorTests(unittest.TestCase):
             [exit_proxy, dialer], [(exit_proxy, dialer)]
         )
 
+    def test_showip_node_without_direct_exit_is_excluded_from_showip_direct_group(self) -> None:
+        proxy = {
+            "name": generator.node_name(
+                "us",
+                "socks5",
+                0,
+                "Exit",
+                allow_direct_exit=False,
+                allow_showip=True,
+            ),
+            "_allow-direct-exit": False,
+            "_allow-showip": True,
+        }
+        home = generator.load_yaml(generator.HOME_TEMPLATE)
+        showip_group = next(
+            group
+            for group in home["proxy-groups"]
+            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
+        )
+
+        self.assertFalse(generator._group_matches_proxy(showip_group, proxy["name"]))
+        generator.validate_generated_against_home([proxy], [])
+
     def test_generated_chain_is_rejected_when_home_filter_changes(self) -> None:
         exit_proxy = {
             "name": generator.node_name("us", "vless", 0, "Exit"),

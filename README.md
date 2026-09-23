@@ -136,7 +136,9 @@ vps_clash_chain_exit_protocol: vless
   但不影响它参与代理链。
 - `allow_relay: true`：节点可以作为第一跳/中转节点。
 - `allow_chain_exit: true`：节点可以作为第二跳/最终出口。
-- `allow_showip: true`：节点名增加 `[ShowIP=true]`，进入对应的 ShowIP 节点组和代理链。
+- `allow_showip: true`：节点名增加 `[ShowIP=true]`。节点只有在同时允许
+  `allow_direct_exit` 时才进入 ShowIP 直出组；即使禁止单节点直出，只要允许作为链路出口并满足组链条件，
+  仍可进入 ShowIP 代理链组。
 - `allow_download: true`：节点名增加 `[Download=true]`，可进入下载专用节点组。
 
 默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`，
@@ -172,7 +174,8 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 普通 Core/Exit、ShowIP 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
 
 ShowIP 是出口节点的附加能力标记，不是独立出口角色。节点仍然是普通 Exit 或
-HomeIP；`[ShowIP=true]` 只让对应基础节点或代理链进入 ShowIP 策略组。
+HomeIP；`[ShowIP=true]` 让节点可参与对应的 ShowIP 策略组。基础节点是否进入 ShowIP
+直出组仍由 `allow_direct_exit` 决定；禁止单节点直出的节点仍可作为代理链落地节点进入 ShowIP 链组。
 
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
@@ -316,7 +319,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 - `DirectExit` 组筛选基础节点，并排除 `PrxChain` 和 `[Direct=false]`；
 - `Chain` 组只筛选 `PrxChain-*`；
-- `ShowIP` 组筛选 `[ShowIP=true]`；
+- ShowIP 直出组筛选 `[ShowIP=true]`，并继续排除 `[Direct=false]`；ShowIP 链组筛选带 ShowIP 标记的代理链；
 - 下载组只要求节点带 `[Download=true]`，另外排除名称中包含 `PrxChain` 的代理链；
   `HomeIP`、`ShowIP` 和 `[Direct=false]` 节点只要带有该下载标记也会进入 Download。
 
