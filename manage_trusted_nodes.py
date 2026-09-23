@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safely add or replace entries in the private trusted-nodes.yaml file."""
+"""View, merge, remove and restore private trusted inventory with safe writes."""
 
 from __future__ import annotations
 
@@ -394,14 +394,212 @@ def remove_trusted_nodes_file(
     return _remove_once(target, normalized_id, normalized_protocol, apply=False)
 
 
+def list_nodes(target: Path) -> list[dict[str, Any]]:
+    """Display only inventory metadata, never connection parameters."""
+    nodes = _load_document(target, required=False)["nodes"]
+    _validate_nodes(nodes, path=target)
+    normalized = generator.normalize_trusted_nodes(copy.deepcopy(nodes), {}, target)
+    for index, (node, proxy) in enumerate(zip(nodes, normalized), 1):
+        node_id, protocol = _node_key(node, path=target, index=index - 1)
+        capabilities = [label for key, label in (
+            ('_allow-relay', 'Relay'), ('_allow-chain-exit', 'Chain'),
+            ('_allow-direct-exit', 'Direct'), ('_allow-showip', 'ShowIP'),
+            ('_allow-download', 'Download'),
+        ) if proxy[key]]
+        if proxy['_exit-type'] == 'homeip':
+            capabilities.append('HomeIP')
+        print(f"{index}. {node_id!r} | {generator.normalize_region(node['region']).upper()}"
+              f" | {protocol} | {', '.join(capabilities) or '无出口能力'}")
+    if not nodes:
+        print("当前没有节点。")
+    return nodes
+
+
+def preview_changes(existing: dict, updated: dict, target: Path) -> None:
+    """Report identities and changed fields, never field values or nested keys."""
+    before = {_node_key(n, path=target, index=i): n for i, n in enumerate(existing['nodes'])}
+    after = {_node_key(n, path=target, index=i): n for i, n in enumerate(updated['nodes'])}
+    for key in dict.fromkeys([*before, *after]):
+        label = f"ID={key[0]!r}，协议={key[1]}"
+        if key not in before:
+            print(f"  新增：{label}")
+        elif key not in after:
+            print(f"  删除：{label}")
+        elif not _same_yaml_value(before[key], after[key]):
+            fields = []
+            for field in dict.fromkeys([*before[key], *after[key]]):
+                if field not in before[key] or field not in after[key] or not _same_yaml_value(before[key][field], after[key][field]):
+                    if field == 'proxy':
+                        left, right = before[key]['proxy'], after[key]['proxy']
+                        fields.extend(f"proxy.{name}" for name in dict.fromkeys([*left, *right])
+                                      if name not in left or name not in right or not _same_yaml_value(left[name], right[name]))
+                    else:
+                        fields.append(str(field))
+            print(f"  更新：{label}；字段=" + ', '.join(repr(field) for field in fields))
+    metadata_before = {k: v for k, v in existing.items() if k != 'nodes'}
+    metadata_after = {k: v for k, v in updated.items() if k != 'nodes'}
+    if not _same_yaml_value(metadata_before, metadata_after):
+        print("  inventory 顶层附加字段发生变化（不显示内容）。")
+
+
+def choose_file(directory: Path, target: Path, *, backups: bool = False) -> Path | None:
+    if directory.exists() and not directory.is_dir():
+        raise TrustedNodesError(f"文件目录无效：{directory}")
+    candidates = []
+    for path in directory.iterdir() if directory.exists() else ():
+        matches = (path.name.startswith(target.name + '.bak-') if backups
+                   else path.suffix.lower() in {'.yaml', '.yml'})
+        if not matches or path.is_symlink() or not path.is_file():
+            continue
+        if path.resolve() == target.resolve() or (target.exists() and path.samefile(target)):
+            continue
+        candidates.append(path)
+    candidates.sort(key=lambda p: p.name, reverse=backups)
+    print(f"{'备份' if backups else '导入'}目录：{directory}")
+    for index, path in enumerate(candidates, 1):
+        stamp = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+        print(f"{index}. {path.name!r}  修改时间：{stamp}")
+    if backups and not candidates:
+        print("没有可用备份。")
+        return None
+    prompt = ("选择备份编号（0/回车取消）：" if backups else
+              "选择文件编号，或输入源 YAML 路径（0/回车取消）：")
+    value = input(prompt).strip()
+    if value in {'', '0'}:
+        return None
+    if value.isascii() and value.isdigit():
+        index = int(value) - 1
+        if 0 <= index < len(candidates):
+            return candidates[index]
+        raise TrustedNodesError("文件编号无效")
+    if backups:
+        raise TrustedNodesError("备份编号无效")
+    return Path(value).expanduser()
+
+
+def interactive_restore(target: Path) -> None:
+    source = choose_file(target.parent, target, backups=True)
+    if source is None:
+        return
+    restored = _load_document(source, required=True)
+    _validate_nodes(restored['nodes'], path=source)
+    with _exclusive_lock(target):
+        existing = _load_document(target, required=False)
+        _validate_nodes(existing['nodes'], path=target)
+        if source.resolve() == target.resolve() or (target.exists() and source.samefile(target)):
+            raise TrustedNodesError("备份和目标不能是同一个文件")
+        print(f"恢复预览：将用备份完整替换 inventory，当前={len(existing['nodes'])}，"
+              f"恢复后={len(restored['nodes'])}")
+        preview_changes(existing, restored, target)
+        if _same_yaml_value(existing, restored):
+            print("无需修改。")
+            return
+        if input("确认恢复？[y/N]：").strip().lower() not in {'y', 'yes'}:
+            print("已取消。")
+            return
+        # The loaded document is the exact snapshot reviewed above.
+        backup = _backup_path(target) if target.exists() else None
+        _atomic_write_yaml(target, restored)
+        print("已恢复。" + ("恢复前的 inventory 已备份。" if backup else ""))
+
+
+def interactive_menu(target: Path, import_dir: Path | None = None) -> int:
+    import_dir = import_dir or target.parent / 'imports'
+    print(f"当前 inventory：{target}")
+    try:
+        while True:
+            print("\n1. 查看节点\n2. 按编号删除节点\n3. 从 YAML 批量导入\n4. 恢复备份\n0. 退出")
+            choice = input("请选择：").strip()
+            if choice == '0':
+                return 0
+            try:
+                if choice == '1':
+                    list_nodes(target)
+                elif choice == '2':
+                    if not target.exists():
+                        list_nodes(target)
+                        continue
+                    # Keep the displayed selection and its application under one lock.
+                    with _exclusive_lock(target):
+                        nodes = list_nodes(target)
+                        if not nodes:
+                            continue
+                        selected = input("删除第几个节点？（0/回车取消）：").strip()
+                        if selected in {'', '0'}:
+                            continue
+                        if not selected.isascii() or not selected.isdigit() or not 1 <= int(selected) <= len(nodes):
+                            print("编号无效。")
+                            continue
+                        index = int(selected) - 1
+                        node_id, protocol = _node_key(nodes[index], path=target, index=index)
+                        siblings = [node for i, node in enumerate(nodes)
+                                    if _node_key(node, path=target, index=i)[0] == node_id]
+                        if len(siblings) > 1:
+                            scope = input("1. 仅所选协议  2. 同 ID 全部协议（回车取消）：").strip()
+                            if scope not in {'1', '2'}:
+                                continue
+                            if scope == '2':
+                                protocol = None
+                        result = _remove_once(target, node_id, protocol, apply=False)
+                        print(f"预览：删除 ID={node_id!r}，协议={protocol or '全部'}，"
+                              f"删除={result.removed}，保留={result.preserved}")
+                        if input("确认删除？[y/N]：").strip().lower() not in {'y', 'yes'}:
+                            print("已取消。")
+                            continue
+                        _remove_once(target, node_id, protocol, apply=True)
+                        print("已删除并创建私有备份。")
+                elif choice == '3':
+                    source = choose_file(import_dir, target)
+                    if source is None:
+                        continue
+                    merge_trusted_nodes_file(target, source)
+                    # Freeze the reviewed source in a private temporary directory.
+                    incoming = _load_document(source, required=True)
+                    with tempfile.TemporaryDirectory(prefix='trusted-import-') as directory:
+                        snapshot = Path(directory) / 'source.yaml'
+                        _atomic_write_yaml(snapshot, incoming)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        with _exclusive_lock(target):
+                            preview = _merge_once(target, snapshot, apply=False)
+                            print(f"预览：新增={preview.added}，更新={preview.updated}，"
+                                  f"不变={preview.unchanged}，原有={preview.preserved}")
+                            existing = _load_document(target, required=False)
+                            merged, *_ = _merge_documents(existing, incoming, target=target, source=snapshot)
+                            preview_changes(existing, merged, target)
+                            if not preview.changed:
+                                print("无需修改。")
+                                continue
+                            if input("确认应用？[y/N]：").strip().lower() not in {'y', 'yes'}:
+                                print("已取消。")
+                                continue
+                            result = _merge_once(target, snapshot, apply=True)
+                            print("已应用。" + ("已创建私有备份。" if result.backup else ""))
+                elif choice == '4':
+                    interactive_restore(target)
+                else:
+                    print("请选择 0–4。")
+            except (OSError, TrustedNodesError) as exc:
+                print(f"操作失败：{exc}", file=os.sys.stderr)
+    except (EOFError, KeyboardInterrupt):
+        print("\n已退出。")
+        return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="安全维护私有 trusted-nodes.yaml")
-    subparsers = parser.add_subparsers(dest="action", required=True)
+    parser.add_argument('--target', type=Path, help='目标 inventory；默认沿用节点生成器的路径')
+    parser.add_argument('--import-dir', type=Path, help='导入文件目录；默认目标目录下的 imports')
+    subparsers = parser.add_subparsers(dest="action")
+    for name, help_text in [('list', '查看节点概要'), ('interactive', '打开交互菜单')]:
+        command = subparsers.add_parser(name, help=help_text)
+        command.add_argument('--target', type=Path, default=argparse.SUPPRESS)
+        if name == 'interactive':
+            command.add_argument('--import-dir', type=Path, default=argparse.SUPPRESS)
     merge = subparsers.add_parser(
         "merge",
-        help="预览或应用节点追加/按 id 更新",
+        help="预览或应用节点追加/按 id + 协议更新",
     )
-    merge.add_argument("--target", required=True, type=Path, help="目标 trusted-nodes.yaml")
+    merge.add_argument("--target", type=Path, default=argparse.SUPPRESS, help="目标 trusted-nodes.yaml")
     merge.add_argument(
         "--source",
         required=True,
@@ -418,7 +616,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="按稳定 id 删除全部协议，或用 --protocol 只删除一个协议",
     )
     remove.add_argument(
-        "--target", required=True, type=Path, help="目标 trusted-nodes.yaml"
+        "--target", type=Path, default=argparse.SUPPRESS, help="目标 trusted-nodes.yaml"
     )
     remove.add_argument("--id", required=True, help="要退役的稳定节点 id")
     remove.add_argument(
@@ -431,12 +629,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="实际写入；省略时只预览，不创建备份或修改目标",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.target is None:
+        args.target = generator.default_trusted_nodes_file(
+            generator.default_airport_dir(generator.default_hosts_dir())
+        )
+    args.target = args.target.expanduser()
+    args.import_dir = (args.import_dir or Path(os.environ.get('CLASH_TRUSTED_IMPORT_DIR')
+                                             or args.target.parent / 'imports')).expanduser()
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.action in (None, 'interactive'):
+            return interactive_menu(args.target, args.import_dir)
+        if args.action == 'list':
+            list_nodes(args.target)
+            return 0
         if args.action == "merge":
             result = merge_trusted_nodes_file(
                 args.target,

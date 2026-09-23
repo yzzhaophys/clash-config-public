@@ -8,6 +8,9 @@
 - `home-stash.yaml`：由 `home.yaml` 生成的 Stash 配置骨架；不包含节点、订阅或代理链。
 - `generate_raw_nodes.py`：读取私有节点配置，生成基础节点和可选的代理链。
 - `generate_stash_config.py`：将公开的 `home.yaml` 转换为 Stash 配置骨架。
+- `manage_trusted_nodes.py`：查看、导入、删除私有 trusted 节点，以及恢复清单备份。
+- `node_io.py` / `node_conversion.py`：共享 YAML 校验与服务端参数转换。
+- `tests/`：配置、节点转换和文件写入安全的回归测试。
 
 生成器负责生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
 
@@ -15,10 +18,12 @@
 
 - Python 3.10+
 - PyYAML：`python3 -m pip install PyYAML`
+- 节点管理脚本使用 `fcntl` 文件锁，在 Linux、macOS 或 WSL 中运行。
 
 ## 快速使用
 
-默认运行会进入交互模式：
+以下命令从仓库目录执行；两个节点脚本均可用 `./脚本名.py` 或 `python3 脚本名.py` 运行。
+生成器无参数运行时进入交互模式：
 
 ```bash
 ./generate_raw_nodes.py
@@ -60,7 +65,7 @@ python3 generate_stash_config.py
 排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
 转换前还会检查代理组引用、循环和规则目标；`DirectExit` 的转换根据筛选契约识别
 Download 组，因此调整组名前缀不会让 Stash 输出静默失效。
-源筛选发生变化时脚本会报错，要求重新审核转换。Stash 延迟测试地址和超时应在将来加入的
+源筛选发生变化时脚本会报错，要求重新审核转换。接入私有节点时，Stash 延迟测试地址和超时应在
 节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
 关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
 源配置中的手动 `PASS` 选项未出现在 Stash 文档的内置出口列表中，转换时将其移除；
@@ -265,33 +270,59 @@ VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，�
 嵌套参数的 `false` → `0` 或整数 → 浮点数也算更新。
 目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
 源文件与目标文件不能指向同一个文件，包括硬链接别名。
-以下命令从本仓库根目录执行：
+日常维护运行：
 
 ```bash
-chmod 600 /path/to/nat-node.yaml
-python3 manage_trusted_nodes.py merge \
-  --target ~/.config/clash/airport/trusted-nodes.yaml \
-  --source /path/to/nat-node.yaml
-python3 manage_trusted_nodes.py merge \
-  --target ~/.config/clash/airport/trusted-nodes.yaml \
-  --source /path/to/nat-node.yaml \
-  --apply
+./manage_trusted_nodes.py
 ```
 
-NAT 主机退役时按稳定 `id` 先预览、再删除；省略 `--protocol` 会删除该物理节点登记的全部协议，
-指定 `--protocol vless|hysteria2|socks5` 时只删除一个协议：
+菜单顶部显示实际管理的 inventory 路径。`--target` 可省略：优先使用
+`CLASH_TRUSTED_NODES_FILE`，否则沿用生成器的机场目录（包括 `CLASH_AIRPORT_DIR`）
+下的 `trusted-nodes.yaml`；显式 `--target` 优先。
+
+| 选项 | 操作 |
+| --- | --- |
+| `1` 查看节点 | 显示编号、稳定 ID、地区、协议和能力，不显示地址或凭据 |
+| `2` 删除节点 | 按编号选择；同 ID 有多个协议时，选择所选协议或全部协议 |
+| `3` 导入节点 | 按编号选源 YAML，也可直接输入路径；预览新增、更新节点及变化字段 |
+| `4` 恢复备份 | 按编号选择备份，预览新增、删除和更新，再完整恢复文档 |
+| `0` 退出 | 退出菜单；各操作也可回车取消 |
+
+写入前输入 `y` 确认。新增、更新通过完整的 `nodes:` YAML 导入，文件名不限，例如
+`landing-jp-node.yaml`。相同 ID + 协议会用源条目完整替换，源文件中没有提到的节点保留；
+不能选择目标文件自身，也不接受普通订阅的 `proxies:` 格式。
+
+选项 `3` 默认列出目标 inventory 同目录下 `imports/` 中的 `.yaml`、`.yml` 文件，
+不递归扫描。可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 指定已有的私有目录；
+显式参数优先。目录不会自动创建或搬移文件；目录为空时仍可输入源路径。
+符号链接和目标文件别名不列为候选，导入仍检查源文件权限，节点 YAML 应设置为 `0600`。
+预览只显示 ID、协议和变化字段名（如 `proxy.password`、`proxy.ws-opts`），
+不显示字段值或嵌套字典键。导入使用私有临时快照，退出后自动清理。
+
+选项 `4` 列出目标同目录的 `文件名.bak-*` 备份及修改时间（UTC）。
+恢复前会另存当前 inventory；目标不存在时直接恢复。备份必须通过权限、严格 YAML
+和节点校验，原备份不会修改。删除、导入和恢复在确认及写入期间持有目标锁。
+操作只修改 inventory，不会自动生成节点或重新加载客户端。
 
 ```bash
-python3 manage_trusted_nodes.py remove \
-  --target ~/.config/clash/airport/trusted-nodes.yaml \
-  --id provider-us-01
-python3 manage_trusted_nodes.py remove \
-  --target ~/.config/clash/airport/trusted-nodes.yaml \
-  --id provider-us-01 \
-  --apply
+# 指定其他主清单，或指定存放待导入文件的目录
+./manage_trusted_nodes.py --target /path/to/trusted-nodes.yaml
+./manage_trusted_nodes.py --import-dir /path/to/private/landing-nodes
+
+# 命令行模式：list 只读，merge/remove 默认预览，追加 --apply 才写入
+./manage_trusted_nodes.py list
+chmod 600 /path/to/landing-jp-node.yaml
+./manage_trusted_nodes.py merge --source /path/to/landing-jp-node.yaml
+./manage_trusted_nodes.py merge --source /path/to/landing-jp-node.yaml --apply
+./manage_trusted_nodes.py remove --id provider-us-01
+./manage_trusted_nodes.py remove --id provider-us-01 --apply
 ```
 
-合并或删除只修改私密事实源。应用后必须使用当前已审查的选项重新运行生成器并重新加载客户端；
+命令行 `remove` 省略 `--protocol` 会删除该 ID 的全部协议；
+指定 `--protocol vless|hysteria2|socks5` 时只删除一个协议。
+所有命令均可用 `--target` 指定主清单。
+
+应用导入、删除或恢复后，使用所需选项重新运行生成器，校验候选配置后再加载客户端；
 要重写三份输出，请显式提供输出路径；带参数的交互调用不会自动补充 `--raw-output`：
 
 ```bash
@@ -378,7 +409,7 @@ Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区�
 
 加载候选配置后应分别验证：
 
-1. 查看 Download 的实际成员，确认四个 JP 节点符合名称筛选及下载能力限制；
+1. 查看 Download 的实际成员，确认各成员符合私有清单中的下载能力声明及名称筛选；
    自动组保持自动选择，检查面板/API 是否存在手动固定的 `fixed` 状态。
 2. 在隔离测试环境使当前节点失效，观察组内检测历史和 `now` 是否变化，
    再用新连接访问目标站点；旧的 TCP/下载连接不能自动迁移，应用需要重连。
@@ -432,7 +463,8 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
   该推导会记入审计。用户名、密码的首尾空格原样保留，换行和非法类型会被拒绝。
 - 添加 `--audit` 可查看转换、仅服务端使用和推导的字段记录，不输出凭据值。
   审计字段不会进入生成的 Clash 配置。
-- 显式指定 `--trusted-nodes-file` 时，该文件必须存在；路径错误会在生成前停止，
+- 生成器通过 `--trusted-nodes-file` 或 `CLASH_TRUSTED_NODES_FILE` 显式指定文件时，
+  该文件必须存在；路径错误会在生成前停止，
   避免把缺失的 trusted 节点误当作空列表而覆盖现有输出。
 - Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
   不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部跳过时 Loon 文件为空。
@@ -468,15 +500,19 @@ VLESS UUID 与密码一样保留首尾空格，不通过裁剪来修正输入；
 保留 YAML 值不代表客户端支持该扩展字段或数值。
 Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非法时跳过整条节点
 并报告原因，不将数字等强制转换成字符串。
-通过命令行或 `CLASH_TRUSTED_NODES_FILE` 显式指定的 inventory 不存在时均会报错，
-不会静默退回其他事实源。
 
 ## 维护与验证
 
-生成器的规则以本 README 和测试为准。修改命名、能力开关、代理链或输出格式后运行：
+配置和脚本的行为以本 README 和测试为准。修改配置、节点生成或管理流程后运行：
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py
 git diff --check
 ```
+
+具备私有输入和 Mihomo 时，在自动清理的私有临时目录生成候选配置，使用已安装内核的
+`-t` 校验；测试配置、缓存与生产目录隔离。单元测试验证代码行为，内核校验验证配置可加载；
+两者均不能代替真实连通、DNS 分流、故障切换或 Stash 实机测试。
+Mihomo 对 DNS policy 引用的 `classical` 规则集会提示只匹配其中的域名规则，
+加载成功不代表这些规则集的 IP 条目也参与 DNS 匹配。
