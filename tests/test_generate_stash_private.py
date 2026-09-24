@@ -165,6 +165,31 @@ class PrivateStashTests(unittest.TestCase):
             group = next(g for g in config["proxy-groups"] if g["name"] == UK_LINE)
             self.assertEqual(group["proxies"], ["REJECT"])
 
+    def test_writer_expands_repeated_alpn_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            nodes = root / "nodes.yaml"
+            nodes.write_text(
+                "proxies:\n"
+                "- {name: 'VPS-[US.Core]-VLESS-00-test', type: vless, "
+                "server: example.invalid, port: 443, uuid: sample, alpn: &alpn [h2, http/1.1]}\n"
+                "- {name: 'VPS-[US.Core]-VLESS-01-test', type: vless, "
+                "server: example.invalid, port: 443, uuid: sample, alpn: *alpn}\n",
+                encoding="utf-8",
+            )
+            output = root / "stash.yaml"
+            generate_stash_private.write_private_config(
+                ROOT / "home-stash.yaml", nodes, ROOT / "home.yaml", output,
+            )
+            rendered = output.read_text(encoding="utf-8")
+            self.assertEqual(rendered.count("alpn:\n"), 2)
+            self.assertNotIn("alpn: *", rendered)
+            config = load_yaml(output)
+            self.assertEqual(
+                [node["alpn"] for node in config["proxies"]],
+                [["h2", "http/1.1"], ["h2", "http/1.1"]],
+            )
+
     def test_duplicate_yaml_and_output_aliases_leave_old_file_unchanged(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

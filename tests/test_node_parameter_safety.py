@@ -508,7 +508,7 @@ class LoonTests(unittest.TestCase):
                       {'reality-opts': {'public-key': 123}},
                       {'reality-opts': {'public-key': 'key', 'short-id': 123}}):
             with self.subTest(extra=extra), tempfile.TemporaryDirectory() as tmp:
-                count, skipped = g.write_loon([base | extra], Path(tmp) / 'loon.conf')
+                count, chain_count, skipped = g.write_loon([base | extra], Path(tmp) / 'loon.conf')
                 self.assertEqual(count, 0)
                 self.assertEqual(len(skipped), 1)
 

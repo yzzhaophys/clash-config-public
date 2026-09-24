@@ -85,7 +85,10 @@ class TrustedLaunchTests(unittest.TestCase):
                 if any(tag in group['name'] for tag in ('ShowIP', 'Download', 'Route')):
                     self.assertFalse(includes(group, chain['name']), group['name'])
             self.assertEqual(len(load_yaml(root / 'raw.yaml')['proxies']), 2)
-            self.assertEqual(len((root / 'loon.conf').read_text().splitlines()), 1)
+            loon_text = (root / 'loon.conf').read_text()
+            self.assertTrue(loon_text.startswith('[Proxy]\n'))
+            self.assertIn('[Proxy Chain]\n', loon_text)
+            self.assertIn('chain.jp.homeip.vless.via.hk.vless = hk.vless, jp.homeip.vless', loon_text)
             for filename in ('template.yaml', 'raw.yaml', 'loon.conf'):
                 self.assertEqual((root / filename).stat().st_mode & 0o777, 0o600)
 
@@ -99,14 +102,15 @@ class TrustedLaunchTests(unittest.TestCase):
             g.secure_write(target, applied.backup.read_text())
             self.assertEqual(target.read_bytes(), original)
 
-    def test_loon_cannot_export_chain_only_node_even_when_protocol_supported(self):
+    def test_loon_exports_node_even_when_direct_exit_is_disabled(self):
         node = g.normalize_trusted_nodes([fixture('jp-home', 'JP', landing=True)], {}, Path('fixture'))[0]
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'loon.conf'
-            count, skipped = g.write_loon([node], output)
-            self.assertEqual(count, 0)
-            self.assertIn('禁止直出', skipped[0])
-            self.assertEqual(output.read_text(), '')
+            count, chain_count, skipped = g.write_loon([node], output)
+            self.assertEqual(count, 1)
+            self.assertEqual(chain_count, 0)
+            self.assertEqual(skipped, [])
+            self.assertIn('jp.homeip.vless = VLESS,', output.read_text())
 
 
 if __name__ == '__main__':

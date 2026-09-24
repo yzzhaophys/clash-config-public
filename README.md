@@ -11,7 +11,7 @@
 | `home-stash.yaml` | `generate_stash_config.py` 合并上述两个输入生成的 Stash 骨架；没有节点，也没有可在 Stash 运行时筛选节点的表达式 | 公开，提交；不能单独作为最终配置使用 |
 | `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置及 Stash 私有生成器使用 | 含凭据，忽略、不提交 |
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
-| `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点格式；不能表达的整条节点会被跳过 | 含凭据，忽略、不提交 |
+| `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点及选中的代理链；不能表达的节点或链会被跳过 | 含凭据，忽略、不提交 |
 | `home-stash.private.yaml` | `generate_stash_private.py` 将骨架、静态节点和 `home.yaml` 的筛选条件合并后生成；空组固定为 `REJECT` | 含凭据，忽略、不提交；这是导入 Stash 的文件 |
 | `trusted-nodes.yaml` | `manage_trusted_nodes.py` 管理的私有 trusted inventory；也是节点生成器的输入，不是客户端配置 | 含凭据，忽略、不提交 |
 
@@ -111,7 +111,8 @@ python3 generate_stash_private.py
 空子组，没有可用出口时也封闭为 `REJECT`。Stash 3.4.1 已实测这种 `select`
 组可显示 `REJECT`；公开骨架中的空自动组不能提供同样保证，参见
 [Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
-私有生成器不接受动态 `proxy-providers`，节点变化后须重新生成并导入。
+私有生成器不接受动态 `proxy-providers`，输出时会展开重复 YAML 值（如 `alpn`），
+不使用 `*id001` 锚点引用；节点变化后须重新生成并导入。
 
 ### Stash 转换边界
 
@@ -501,12 +502,20 @@ Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本�
 
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
-- `loon-nodes.conf`：选中的基础节点的 Loon 格式，不含 Clash 专用代理链。
+- `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链。
+  节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
+  `jp.homeip.socks5`，非 HomeIP、允许作链出口且禁止直出的 Exit 节点如 `us.landing.socks5`；
+  同类节点按序号区分。代理链会引用这些别名。
 
 显式 `--plain` 时主输出默认为 `nodes.yaml`；`--template`、`--merge`、`--chains` 或
 `--routes` 时主输出默认为 `clash-vps.generated.yaml`。显式指定的输出路径不能相同。
 除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前转换 VLESS、Hysteria2、
-Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交互模式还可以排除基础节点、选择代理链
+Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon 代理链沿用 Clash
+本次选择的结果：`--chains none` / `--plain` 不输出链，`--routes` 仅输出选定方向的链，
+交互选择仅输出选中的链；仅支持 VLESS 作为入口。链两端都必须成功导出到 `[Proxy]`，
+否则整条链跳过并报告原因。`[Proxy]` 包含所有本次选中且 Loon 可表达的基础节点，
+包括标记 `[Direct=false]` 的代理链节点；Loon 的基础节点列表本身不能禁止用户手动选择它直连。
+链格式为 `名称 = 入口, 出口`。交互模式还可以排除基础节点、选择代理链
 方向或逐条选择代理链；被排除节点的相关代理链不会生成。
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
@@ -540,9 +549,8 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。交�
   该文件必须存在；路径错误会在生成前停止，
   避免把缺失的 trusted 节点误当作空列表而覆盖现有输出。
 - Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
-  不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部跳过时 Loon 文件为空。
-  Loon 基础节点文件不生成代理链，因此也跳过 `allow-direct-exit: false` 的节点，
-  避免导出后丢失禁止直出的限制。链出口应使用包含代理链和相应筛选规则的 Mihomo 配置。
+  不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部节点跳过时 `[Proxy]`
+  仅保留段标题。代理链沿用本次 Clash 选择的结果，仅过滤不支持的入口或端点。
 
 生成器不会为缺失地区创建占位节点，地区策略组只会匹配实际生成的节点。
 

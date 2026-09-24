@@ -1665,8 +1665,6 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
     converter = converters.get(protocol)
     if converter is None:
         raise ValueError(f"Loon 不支持节点协议 {protocol or '<empty>'}")
-    if not yaml_bool(proxy.get('_allow-direct-exit'), 'allow-direct-exit', True):
-        raise ValueError('Loon 基础节点输出不支持禁止直出的代理链节点')
     common = {'name', 'type', 'server', 'port', 'udp'}
     supported = {
         'vless': {'uuid', 'flow', 'tls', 'network', 'ws-opts', 'http-opts',
@@ -1736,30 +1734,75 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
 
 
 def loon_node_alias(proxy: dict[str, Any], counts: dict[str, int]) -> str:
-    meta = node_meta(str(proxy.get("name", "")))
+    name = str(proxy.get("name", ""))
+    meta = node_meta(name)
     region = (meta.get("region") if meta else None) or "XX"
     protocol = str(proxy.get("type", "node")).strip().lower()
     protocol = {"hysteria2": "hy2"}.get(protocol, protocol or "node")
-    base = f"{region.lower()}.{protocol}"
+    attribute = ""
+    if meta and meta["role"] == "HomeIP":
+        attribute = ".homeip"
+    elif (meta and meta["role"] == "Exit"
+          and proxy.get("_allow-chain-exit") is not False
+          and (proxy.get("_allow-direct-exit") is False
+               or meta["direct"] == "false")):
+        attribute = ".landing"
+    base = f"{region.lower()}{attribute}.{protocol}"
     index = counts.get(base, 0)
     counts[base] = index + 1
     return base if index == 0 else f"{base}-{index:02d}"
 
 
-def write_loon(proxies: list[dict[str, Any]], output: Path) -> tuple[int, list[str]]:
-    """Write selected base nodes as Loon node lines."""
-    lines: list[str] = []
+def write_loon(
+    proxies: list[dict[str, Any]],
+    output: Path,
+    chains: list[tuple[dict[str, Any], dict[str, Any]]] = (),
+) -> tuple[int, int, list[str]]:
+    """Write Loon nodes and the selected, representable proxy chains."""
+    node_lines: list[str] = []
+    chain_lines: list[str] = []
     counts: dict[str, int] = {}
     skipped: list[str] = []
+    aliases: dict[str, str] = {}
+    valid_pairs = {
+        (exit_proxy["name"], dialer["name"])
+        for exit_proxy, dialer in chain_candidates(proxies)
+    }
     for proxy in proxies:
         try:
             body = loon_node_body(proxy)
         except ValueError as exc:
             skipped.append(f"{proxy.get('name', '<unnamed>')}: {exc}")
             continue
-        lines.append(f"{loon_node_alias(proxy, counts)} = {body}")
-    secure_write(output, "\n".join(lines).rstrip() + ("\n" if lines else ""))
-    return len(lines), skipped
+        alias = loon_node_alias(proxy, counts)
+        aliases[proxy["name"]] = alias
+        node_lines.append(f"{alias} = {body}")
+
+    emitted_pairs: set[tuple[str, str]] = set()
+    for exit_proxy, dialer in chains:
+        pair = (exit_proxy["name"], dialer["name"])
+        if pair in emitted_pairs:
+            continue
+        if pair not in valid_pairs:
+            skipped.append(f"代理链 {pair[0]} <- {pair[1]}: 不符合组链条件")
+            continue
+        if str(dialer.get("type", "")).lower() != "vless":
+            skipped.append(f"代理链 {pair[0]} <- {pair[1]}: Loon 入口仅支持 VLESS")
+            continue
+        if pair[0] not in aliases or pair[1] not in aliases:
+            skipped.append(f"代理链 {pair[0]} <- {pair[1]}: 出入口有节点未导出到 Loon")
+            continue
+        exit_alias, entry_alias = aliases[pair[0]], aliases[pair[1]]
+        chain_lines.append(
+            f"chain.{exit_alias}.via.{entry_alias} = {entry_alias}, {exit_alias}"
+        )
+        emitted_pairs.add(pair)
+
+    lines = ["[Proxy]", *node_lines]
+    if chain_lines:
+        lines.extend(["", "[Proxy Chain]", *chain_lines])
+    secure_write(output, "\n".join(lines) + "\n")
+    return len(node_lines), len(chain_lines), skipped
 
 
 def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
@@ -2386,7 +2429,7 @@ def main(argv: list[str] | None = None) -> int:
             if loon_output:
                 label, destination = 'Loon 输出', loon_output
                 loon = stage / 'loon.conf'
-                loon_count, loon_skipped = write_loon(proxies, loon)
+                loon_count, loon_chain_count, loon_skipped = write_loon(proxies, loon, chains)
                 rendered.append((loon_output, loon.read_text(encoding='utf-8')))
         except (OSError, ValueError) as exc:
             raise SystemExit(f'无法写入{label} {destination}：{exc}') from exc
@@ -2404,9 +2447,9 @@ def main(argv: list[str] | None = None) -> int:
     if raw_output:
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
     if loon_output:
-        print(f"wrote {loon_output} ({loon_count} nodes, format=loon)")
+        print(f"wrote {loon_output} ({loon_count} nodes, {loon_chain_count} chains, format=loon)")
         if loon_skipped:
-            print(f"warning: skipped {len(loon_skipped)} node(s) unsupported by Loon:")
+            print(f"warning: skipped {len(loon_skipped)} Loon node(s)/chain(s):")
             for item in loon_skipped:
                 print(f"  - {item}")
     else:

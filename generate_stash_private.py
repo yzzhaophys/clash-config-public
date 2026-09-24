@@ -32,6 +32,13 @@ AUTO_FIELDS = {
 AUTO_TYPES = {"url-test", "fallback", "load-balance"}
 
 
+class ExpandedSafeDumper(yaml.SafeDumper):
+    """Write repeated values explicitly for clients that display YAML aliases."""
+
+    def ignore_aliases(self, data: Any) -> bool:
+        return True
+
+
 def _groups_by_name(groups: Any, node_names: set[str]) -> dict[str, dict[str, Any]]:
     if not isinstance(groups, list):
         raise ValueError("最终配置的 proxy-groups 必须是列表")
@@ -290,9 +297,12 @@ def write_private_config(shell_path: Path, nodes_path: Path, home_path: Path, ou
     try:
         rendered = (
             "# Private Stash profile. Contains credentials; do not commit.\n"
-            + yaml.safe_dump(config, allow_unicode=True, sort_keys=False, width=120)
+            + yaml.dump(
+                config, Dumper=ExpandedSafeDumper,
+                allow_unicode=True, sort_keys=False, width=120,
+            )
         )
-    except yaml.YAMLError:
+    except (yaml.YAMLError, RecursionError):
         raise ValueError("无法序列化私有 Stash 配置") from None
 
     fd, temporary_name = tempfile.mkstemp(prefix=f".{output.name}.", suffix=".tmp", dir=output.parent)

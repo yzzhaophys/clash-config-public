@@ -8,7 +8,7 @@
   负责私有 trusted inventory 管理。共享 YAML 读取在 `node_io.py`，
   服务端到客户端的参数映射在 `node_conversion.py`。
 - `generate_raw_nodes.py` 输出含基础节点与可选代理链的 `clash-vps.generated.yaml`，
-  还可输出仅含基础节点的 `nodes.yaml` 和 Loon 格式的 `loon-nodes.conf`。
+  还可输出仅含基础节点的 `nodes.yaml` 和 Loon 格式节点及选中代理链的 `loon-nodes.conf`。
   三者含凭据，均被 `.gitignore` 忽略；文件职责与更新命令见 README。
 - `home.yaml` 是规则、筛选和 DNS 的基础；`stash-dns-policy.yaml` 独立保存 Stash
   专用 DNS policy。`generate_stash_config.py` 合并两者，生成公开的无节点骨架
@@ -36,6 +36,12 @@
   不把非法类型转成字符串，不把换行悄悄替换成空格。
 - Loon 不能表达某个客户端字段时跳过整条节点并报告原因，不能输出缺参数版本；
   已认证 SOCKS5 可导出，并保留 Loon 能表达的 TLS、SNI、证书校验和 UDP 参数。
+  Loon `[Proxy Chain]` 只使用本次 Clash 生成时选中的链，入口须为 VLESS，
+  且两端必须已导出到 `[Proxy]`；不满足条件的链跳过并报告原因。
+  `[Direct=false]` 不影响 Loon 基础节点导出；Loon 的基础节点列表仍可能被
+  用户手动选择直连，文档必须说明该限制。
+  Loon 节点别名保留普通节点的 `地区.协议`，HomeIP 用 `地区.homeip.协议`，
+  非 HomeIP、允许作链出口且禁止直出的 Exit 节点用 `地区.landing.协议`；代理链引用实际别名。
 - 不生成缺失地区的占位或补位节点，也不通过复制节点、修改地区标签来填充空策略组。
 - ShowIP 是出口节点的附加能力，不是独立出口角色。同地区普通 Core / Exit、ShowIP
   和 HomeIP 均可组链，但必须同时满足落地允许 chain-exit、入口允许 relay、链路协议
@@ -51,6 +57,7 @@
 - 不要手改 `home-stash.yaml`；私有生成器必须核对骨架与两个公开输入一致，
   再按 `home.yaml` 的筛选条件确定静态节点。空组固定为只含 `REJECT` 的
   `select` 组，不接收会使组成员自行变化的动态 `proxy-providers`。
+  私有配置导出时展开重复 YAML 值，不输出自动生成的锚点引用。
   重新生成后仍需由用户在 Stash 中导入；本地文件变化不会更新已导入的配置。
 - Stash 专用 DNS policy 及注释只维护在 `stash-dns-policy.yaml`，不得与
   `home.yaml` 的 DNS policy 重名。保留 `home.yaml` 作为基础；无法等价迁移的

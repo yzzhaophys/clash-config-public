@@ -991,12 +991,79 @@ class GeneratorTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "nodes.conf"
-            count, skipped = generator.write_loon([proxy], output)
+            count, chain_count, skipped = generator.write_loon([proxy], output)
             content = output.read_text()
 
         self.assertEqual(count, 1)
         self.assertEqual(skipped, [])
         self.assertIn('socks5,nat.example,1080,nat-user,"nat-password"', content)
+
+    def test_loon_exports_only_selected_chains_with_vless_entry(self) -> None:
+        entry = {
+            "name": generator.node_name("jp", "vless", 0, "Core"),
+            "type": "vless", "server": "entry.example", "port": 443,
+            "uuid": "entry-uuid", "_allow-relay": True,
+            "_physical-node-id": "entry",
+        }
+        hy2_entry = {
+            "name": generator.node_name("sg", "hysteria2", 0, "Core"),
+            "type": "hysteria2", "server": "hy2.example", "port": 443,
+            "password": "hy2-password", "_allow-relay": True,
+            "_physical-node-id": "hy2-entry",
+        }
+        unselected_entry = {
+            "name": generator.node_name("hk", "vless", 0, "Core"),
+            "type": "vless", "server": "unselected.example", "port": 443,
+            "uuid": "unselected-uuid", "_allow-relay": True,
+            "_physical-node-id": "unselected-entry",
+        }
+        socks5_exit = {
+            "name": generator.node_name(
+                "us", "socks5", 0, "Exit", allow_direct_exit=False,
+            ),
+            "type": "socks5", "server": "exit.example", "port": 1080,
+            "username": "socks-user", "password": "socks-password",
+            "_allow-chain-exit": True, "_allow-direct-exit": False,
+            "_physical-node-id": "exit",
+        }
+        proxies = [entry, hy2_entry, unselected_entry, socks5_exit]
+        selected = [(socks5_exit, entry), (socks5_exit, hy2_entry)]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "loon.conf"
+            node_count, chain_count, skipped = generator.write_loon(proxies, output, selected)
+            content = output.read_text()
+            self.assertEqual(node_count, 4)
+            self.assertEqual(chain_count, 1)
+            self.assertIn("[Proxy]\n", content)
+            self.assertIn("us.landing.socks5 = socks5,exit.example,1080", content)
+            self.assertIn("[Proxy Chain]\nchain.us.landing.socks5.via.jp.vless = jp.vless, us.landing.socks5\n", content)
+            self.assertNotIn("chain.us.landing.socks5.via.hk.vless", content)
+            self.assertIn("入口仅支持 VLESS", skipped[0])
+            _, no_chain_count, _ = generator.write_loon(proxies, output, [])
+            self.assertEqual(no_chain_count, 0)
+            self.assertNotIn("[Proxy Chain]", output.read_text())
+            self.assertIn("us.landing.socks5 =", output.read_text())
+
+    def test_loon_alias_distinguishes_homeip_landing_and_regular_nodes(self) -> None:
+        counts: dict[str, int] = {}
+        cases = (
+            (generator.node_name("us", "vless", 0, "Core"), "vless", "us.vless"),
+            (generator.node_name("us", "vless", 0, "HomeIP"), "vless", "us.homeip.vless"),
+            (generator.node_name("us", "hysteria2", 0, "HomeIP"), "hysteria2", "us.homeip.hy2"),
+            (generator.node_name("jp", "socks5", 0, "HomeIP"), "socks5", "jp.homeip.socks5"),
+            (generator.node_name("us", "socks5", 0, "Exit", allow_direct_exit=False), "socks5", "us.landing.socks5"),
+            (generator.node_name("us", "socks5", 1, "Exit"), "socks5", "us.socks5"),
+            (generator.node_name("us", "vless", 1, "Core", allow_direct_exit=False), "vless", "us.vless-01"),
+        )
+        for name, protocol, expected in cases:
+            self.assertEqual(generator.loon_node_alias(
+                {"name": name, "type": protocol}, counts,
+            ), expected)
+        disabled_exit = {
+            "name": generator.node_name("us", "socks5", 2, "Exit", allow_direct_exit=False),
+            "type": "socks5", "_allow-chain-exit": False,
+        }
+        self.assertEqual(generator.loon_node_alias(disabled_exit, counts), "us.socks5-01")
 
     def test_loon_socks5_requires_authentication(self) -> None:
         with self.assertRaisesRegex(ValueError, "SOCKS5.*username"):
@@ -1035,7 +1102,7 @@ class GeneratorTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "nodes.conf"
-            count, skipped = generator.write_loon([proxy], output)
+            count, chain_count, skipped = generator.write_loon([proxy], output)
 
         self.assertEqual(count, 0)
         self.assertEqual(len(skipped), 1)
