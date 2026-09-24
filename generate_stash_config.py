@@ -10,7 +10,6 @@ import os
 import re
 import stat
 import tempfile
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +21,7 @@ from node_io import load_yaml
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_SOURCE = SCRIPT_DIR / "home.yaml"
 DEFAULT_OUTPUT = SCRIPT_DIR / "home-stash.yaml"
+DEFAULT_FIXED_POLICY = SCRIPT_DIR / "stash-dns-policy.yaml"
 
 # These are the public, client-side sections that are useful to Stash.  Ports,
 # TUN, controller, geodata and process-sniffing settings belong to the host
@@ -47,7 +47,7 @@ DNS_FIELDS = (
 # relied upon by this Stash profile.
 GROUP_FIELDS_TO_DROP = {
     "url", "expected-status", "timeout", "max-failed-times", "tolerance",
-    "empty-fallback", "hidden", "exclude-filter",
+    "empty-fallback", "hidden", "exclude-filter", "include-all", "filter",
 }
 
 # Stash rule providers use behavior/format/url/path/interval/headers.  The
@@ -107,68 +107,8 @@ def _convert_hosts(hosts: Any) -> dict[str, Any]:
     return converted
 
 
-@lru_cache(maxsize=4)
-def _without_words(words: tuple[str, ...], single_line: bool) -> str:
-    """Compile literal substring exclusions without lookarounds (RE2-safe).
-
-    States track the longest suffix that is a proper prefix of a forbidden
-    word. Completing any word discards the transition. All remaining states
-    accept; state elimination converts this finite automaton to a regex.
-    Callers apply (?i), and only pass the audited ASCII words below.
-    """
-    words = tuple(word.lower() for word in words)
-    states = sorted({word[:i] for word in words for i in range(len(word))},
-                    key=lambda item: (len(item), item))
-    alphabet = sorted(set("".join(words)))
-    edges: dict[tuple[int, int], str] = {}
-
-    def add(left: int, right: int, regex: str) -> None:
-        previous = edges.get((left, right))
-        if previous is None:
-            edges[left, right] = regex
-        elif previous != regex:
-            edges[left, right] = f"(?:{previous}|{regex})"
-
-    start, end = len(states), len(states) + 1
-    add(start, 0, "")
-    for i, prefix in enumerate(states):
-        destinations: dict[int, list[str]] = {}
-        for char in alphabet:
-            text = prefix + char
-            if any(text.endswith(word) for word in words):
-                continue
-            target = max((state for state in states if text.endswith(state)), key=len)
-            destinations.setdefault(states.index(target), []).append(char)
-        for target, chars in destinations.items():
-            add(i, target, "[" + "".join(chars) + "]")
-        other = "".join(alphabet) + (r"\n" if single_line else "")
-        add(i, 0, f"[^{other}]")
-        add(i, end, "")
-
-    remaining = set(range(len(states)))
-    while remaining:
-        # Eliminate sparsely connected states first to keep expressions small.
-        def cost(state: int) -> tuple[int, int]:
-            incoming = [len(v) + 1 for (a, b), v in edges.items() if a != state and b == state]
-            outgoing = [len(v) + 1 for (a, b), v in edges.items() if a == state and b != state]
-            return sum(incoming) * len(outgoing) + sum(outgoing) * len(incoming), state
-
-        # The empty-prefix state is the shared reset hub; eliminate it last.
-        state = min(remaining - {0} or remaining, key=cost)
-        incoming = [(a, value) for (a, b), value in edges.items() if b == state and a != state]
-        outgoing = [(b, value) for (a, b), value in edges.items() if a == state and b != state]
-        loop = edges.get((state, state))
-        repeat = f"(?:{loop})*" if loop else ""
-        for left, before in incoming:
-            for right, after in outgoing:
-                add(left, right, before + repeat + after)
-        edges = {key: value for key, value in edges.items() if state not in key}
-        remaining.remove(state)
-    return "(?:" + edges[start, end] + ")"
-
-
-def _convert_group_filter(group: dict[str, Any]) -> str:
-    """Express the current DirectExit exclusions in Stash's documented filter."""
+def _validate_group_filter_contract(group: dict[str, Any]) -> None:
+    """Keep the audited source selectors; private rendering resolves them."""
 
     name = group.get("name")
     if not isinstance(name, str):
@@ -184,28 +124,21 @@ def _convert_group_filter(group: dict[str, Any]) -> str:
         # prefix.  The public template is free to rename the group icon.
         original = source_filter
         excluded = source_exclude
-        safe_part = _without_words(("PrxChain",), True)
-        result = rf"(?i)^VPS-{safe_part}\[Download=true\]{safe_part}$"
     else:
         match = re.search(r"\.DirectExit-\[([A-Z]{2})(\.HomeIP|\.ShowIP)?\]$", name)
         if match is None:
             raise ValueError(f"无法转换代理组排除筛选: {name}")
         region, role = match.groups()
-        suffix = _without_words(("PrxChain", "Direct=false"), role == ".ShowIP")
         if role == ".HomeIP":
             original = rf"(?i)^VPS-\[{region}\.HomeIP\]-"
-            result = original + suffix + "$"
         elif role == ".ShowIP":
             original = rf"(?i)^VPS-\[{region}\.(?:Core|Exit|HomeIP)\]-.*\[ShowIP=true\]$"
-            result = rf"(?i)^VPS-\[{region}\.(?:Core|Exit|HomeIP)\]-{suffix}\[ShowIP=true\]$"
         else:
             original = rf"(?i)^VPS-\[{region}\.(?:Core|Exit)\]-"
-            result = original + suffix + "$"
         excluded = r"(?i)(?:PrxChain|Direct=false)"
 
     if group.get("filter") != original or group.get("exclude-filter") != excluded:
         raise ValueError(f"代理组筛选规则已变化，需要重新审核 Stash 转换: {name}")
-    return result
 
 
 def _validate_proxy_groups(
@@ -353,7 +286,24 @@ def _convert_nameserver_policy(policy: Any) -> dict[str, Any]:
     return result
 
 
-def convert_config(source: dict[str, Any]) -> dict[str, Any]:
+def _load_fixed_policy(path: Path) -> dict[str, Any]:
+    document = load_yaml(path)
+    if not isinstance(document, dict) or set(document) != {"nameserver-policy"}:
+        raise ValueError("Stash 固定 DNS 文件只能包含 nameserver-policy 映射")
+    policy = document["nameserver-policy"]
+    if not isinstance(policy, dict):
+        raise ValueError("Stash 固定 nameserver-policy 必须是映射")
+    for key, value in policy.items():
+        if not isinstance(key, str) or not key or key == "+.*" or key.lower().startswith("rule-set:"):
+            raise ValueError("Stash 固定 DNS 规则键无效")
+        servers = value if isinstance(value, list) else [value]
+        if not servers or any(not isinstance(server, str) or not server.strip() for server in servers):
+            raise ValueError("Stash 固定 DNS 服务器必须是非空字符串或列表")
+    return policy
+
+
+def convert_config(source: dict[str, Any], *,
+                   fixed_policy_path: Path = DEFAULT_FIXED_POLICY) -> dict[str, Any]:
     """Convert a loaded public Clash/Mihomo template to a Stash template.
 
     Nodes and proxy providers are deliberately not copied.  Proxy-group
@@ -389,6 +339,11 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("DNS 兜底服务器必须是非空字符串")
         output["dns"]["nameserver"] = servers
 
+    fixed_policy = _load_fixed_policy(fixed_policy_path)
+    if fixed_policy.keys() & policy.keys():
+        raise ValueError("Stash 固定 DNS 规则与 home.yaml 重复")
+    output["dns"]["nameserver-policy"] = {**fixed_policy, **policy}
+
     # Omit node/provider sections. This converter is for the public template,
     # not a general credential scrubber for arbitrary private configurations.
     output["proxies"] = []
@@ -416,8 +371,15 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
             # including nested groups.  Let the contained automatic groups
             # keep their own schedules without duplicate recursion.
             converted["interval"] = -1
-        if "exclude-filter" in group:
-            converted["filter"] = _convert_group_filter(group)
+        if any(field in group for field in ("include-all", "filter", "exclude-filter")):
+            if (group.get("include-all") is not True
+                    or not isinstance(group.get("filter"), str)
+                    or group.get("empty-fallback") != "REJECT"):
+                raise ValueError("未审查的自动节点筛选组，无法生成静态 Stash 骨架")
+            if "exclude-filter" in group:
+                _validate_group_filter_contract(group)
+            elif ".Chain-[" not in group["name"]:
+                raise ValueError("未审查的自动节点筛选组，无法生成静态 Stash 骨架")
         if "empty-fallback" in group:
             if group["empty-fallback"] != "REJECT":
                 raise ValueError("Stash 转换只支持 empty-fallback: REJECT")
@@ -457,19 +419,35 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
-def render_config(config: dict[str, Any]) -> str:
+def render_config(config: dict[str, Any], *,
+                  fixed_policy_path: Path = DEFAULT_FIXED_POLICY) -> str:
     header = (
         "# Generated from home.yaml for Stash.\n"
         "# Nodes, proxy providers and generated proxy chains are intentionally omitted.\n"
         "# Add private nodes before enabling this profile; empty automatic groups follow Stash's DIRECT behavior.\n"
     )
-    return header + yaml.safe_dump(
-        config,
+    fixed_policy = _load_fixed_policy(fixed_policy_path)
+    base = copy.deepcopy(config)
+    policy = base["dns"]["nameserver-policy"]
+    for key in fixed_policy:
+        if key not in policy or policy[key] != fixed_policy[key]:
+            raise ValueError("Stash 固定 DNS 规则与待渲染配置不一致")
+        del policy[key]
+    rendered = header + yaml.safe_dump(
+        base,
         allow_unicode=True,
         default_flow_style=False,
         sort_keys=False,
         width=120,
     )
+    raw = fixed_policy_path.read_text(encoding="utf-8")
+    heading, separator, body = raw.partition("\n")
+    if heading != "nameserver-policy:" or not separator or not body.endswith("\n"):
+        raise ValueError("Stash 固定 DNS 文件格式无效")
+    marker = "  nameserver-policy:\n"
+    if rendered.count(marker) != 1:
+        raise ValueError("生成的 Stash DNS 结构无效")
+    return rendered.replace(marker, marker + body, 1)
 
 
 def _check_output_path(source: Path, destination: Path) -> None:
@@ -487,10 +465,12 @@ def _check_output_path(source: Path, destination: Path) -> None:
         raise ValueError(f"输出目录不存在: {destination.parent}")
 
 
-def write_config(source_path: Path, output_path: Path) -> None:
+def write_config(source_path: Path, output_path: Path, *,
+                 fixed_policy_path: Path = DEFAULT_FIXED_POLICY) -> None:
     _check_output_path(source_path, output_path)
     source = load_yaml(source_path)
-    rendered = render_config(convert_config(source))
+    config = convert_config(source, fixed_policy_path=fixed_policy_path)
+    rendered = render_config(config, fixed_policy_path=fixed_policy_path)
 
     fd, temporary_name = tempfile.mkstemp(
         prefix=f".{output_path.name}.",
@@ -506,7 +486,8 @@ def write_config(source_path: Path, output_path: Path) -> None:
             os.fsync(handle.fileno())
         # Validate before replacing an existing output.  The strict loader
         # rejects duplicate keys while still accepting legal YAML anchors.
-        load_yaml(temporary_path)
+        if load_yaml(temporary_path) != config:
+            raise ValueError("生成的 Stash DNS 规则与固定输入不一致")
         os.replace(temporary_path, output_path)
     finally:
         try:

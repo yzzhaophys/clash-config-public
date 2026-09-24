@@ -7,9 +7,18 @@
 - `generate_raw_nodes.py` 负责节点及代理链输出；`manage_trusted_nodes.py`
   负责私有 trusted inventory 管理。共享 YAML 读取在 `node_io.py`，
   服务端到客户端的参数映射在 `node_conversion.py`。
+- `home.yaml` 是策略组、节点筛选和分流的基础；`stash-dns-policy.yaml` 独立保存
+  Stash 专用的完整 GeositeCN DNS 规则段及注释。`generate_stash_config.py` 合并
+  两者，生成公开的 `home-stash.yaml` 中间文件；`generate_stash_private.py` 再结合
+  `clash-vps.generated.yaml` 的静态私有节点和 `home.yaml` 的筛选条件，生成
+  `home-stash.private.yaml`。后者含凭据、被 Git 忽略，才是导入 Stash 的文件。
 - 保留用户已有改动。修改脚本不代表获准覆盖、重载 Clash Verge 生效配置，
-  也不代表获准提交或推送；这些操作须有用户明确授权。
+  或替换 Stash 已导入的配置，也不代表获准提交或推送；这些操作须有用户明确授权。
 - 修改 `home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
+- 清理工作区时只删除明确可重新生成的缓存或临时文件，例如 `__pycache__/`。
+  不要把被 Git 忽略的 `clash-vps.generated.yaml`、`home-stash.private.yaml`、
+  `nodes.yaml`、`loon-nodes.conf` 或 trusted inventory 当作垃圾删除；
+  `home-stash.yaml` 虽然可重新生成，仍是私有 Stash 生成流程的公开中间文件。
 
 ## 参数与分流约束
 
@@ -28,6 +37,27 @@
   匹配且物理节点不同；`allow_direct_exit` 不参与代理链资格判断。
 - 修改名称、能力标记或组链规则时，必须同时测试 `home.yaml` 的实际筛选表达式。
 
+## Stash 生成顺序
+
+- 改动 `home.yaml` 或 `stash-dns-policy.yaml` 后，先运行
+  `python3 generate_stash_config.py`，再运行
+  `python3 generate_stash_private.py`；不要手动维护生成的 `home-stash.yaml`。
+- 只改动 `clash-vps.generated.yaml` 的静态节点时，只需重新运行
+  `python3 generate_stash_private.py`。若改动的是私有原始节点资料，先运行
+  `generate_raw_nodes.py` 更新节点文件，再生成私有 Stash 配置。
+- 公开骨架没有节点和运行时筛选表达式，不能作为最终配置导入；私有生成器先核对
+  骨架与当前 `home.yaml` 及固定 DNS 输入一致，再按 `home.yaml` 计算静态组成员，
+  空组固定为只含 `REJECT` 的 `select` 组。
+  节点清单变化后必须重新生成；本地生成不等于 Stash 客户端自动更新，导入由用户操作。
+- `stash-dns-policy.yaml` 是 Stash 专用固定 DNS 规则的公开输入；重生成时保留其条目
+  和注释，规则不得与 `home.yaml` 的 DNS policy 重名。不要将这段规则搬入
+  `home.yaml`，也不要仅在生成的 `home-stash.yaml` 中编辑它。
+- 保留 `home.yaml` 作为基础，不为了迁就 Stash 改写其筛选或 DNS 语义。
+  Stash 字段无法等价表达时在转换脚本和文档中明确说明；筛选契约变化应报错并审核。
+- 私有 Stash 输出必须核对节点协议字段：Hysteria2 将 Mihomo 的 `password`
+  映射为 Stash 的 `auth`，VLESS 将 `servername` 映射为 `sni`；保留原值，
+  不改写节点输入，字段冲突、缺失认证或经策略组形成的代理链循环应报错。
+
 ## 文件写入
 
 - 两个脚本统一使用严格 YAML 加载器，拒绝显式重复键；支持合法锚点和
@@ -43,7 +73,7 @@
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py generate_stash_private.py
 git diff --check
 ```
 

@@ -5,9 +5,12 @@
 ## 文件
 
 - `home.yaml`：主配置模板。它负责策略组和分流规则，`proxies` 列表保持为空。
-- `home-stash.yaml`：由 `home.yaml` 生成的 Stash 配置骨架；不包含节点、订阅或代理链。
+- `stash-dns-policy.yaml`：Stash 专用的固定 DNS policy 输入；保存完整的 GeositeCN 规则段及注释，不由 `home.yaml` 生成。
+- `home-stash.yaml`：由 `home.yaml` 生成的公开 Stash 中间文件；不包含节点、订阅或代理链，不能单独使用。
+- `home-stash.private.yaml`：加入静态私有节点并固定空组为 `REJECT` 后的最终文件；导入 Stash 使用，不得提交。
 - `generate_raw_nodes.py`：读取私有节点配置，生成基础节点和可选的代理链。
-- `generate_stash_config.py`：将公开的 `home.yaml` 转换为 Stash 配置骨架。
+- `generate_stash_config.py`：合并 `home.yaml` 和固定 DNS 文件，生成 Stash 配置骨架。
+- `generate_stash_private.py`：合并静态私有节点，并将无节点的 Stash 组固定为 `REJECT`。
 - `manage_trusted_nodes.py`：查看、导入、删除私有 trusted 节点，以及恢复清单备份。
 - `node_io.py` / `node_conversion.py`：共享 YAML 校验与服务端参数转换。
 - `tests/`：配置、节点转换和文件写入安全的回归测试。
@@ -56,17 +59,40 @@
 python3 generate_stash_config.py
 ```
 
+`stash-dns-policy.yaml` 保存仅供 Stash 使用的固定 `nameserver-policy` 条目，
+独立于 `home.yaml`。生成器会先检查这些条目与 `home.yaml` 不重名，再将其连同
+原有注释写入 `home-stash.yaml`；需要调整这段规则时编辑固定文件，之后重新生成
+公开骨架和私有配置。直接修改生成的 `home-stash.yaml` 会在下次生成时被覆盖。
+
 该文件只保留 Stash 的策略组、规则集和分流结构；节点、代理提供者和生成的代理链
-必须在私有环境中另行加入。源配置的 `empty-fallback: REJECT` 没有 Stash 对应字段，
+必须在私有环境中另行加入。公开骨架不含运行时节点筛选表达式，不能单独导入后使用；
+节点成员由下面的私有生成步骤确定。源配置的 `empty-fallback: REJECT` 没有 Stash 对应字段，
 转换时会省略。Stash 文档规定空策略组按 `DIRECT` 处理；用户在 Stash 3.4.1 实测，
 即使给空自动组写入 `proxies: [REJECT]`，候选列表仍不显示 `REJECT` 并落到 `DIRECT`，
 因此生成文件不再用这个无效候选伪装成已保留该回退。
 参见 [Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
-`DirectExit` 组把原先的 `filter` + `exclude-filter` 合并成 Stash 文档支持的
-单个 `filter`：通过有限状态机将排除词转换为不含前瞻的普通正则，保留描述中的
-排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
-转换前还会检查代理组引用、循环和规则目标；`DirectExit` 的转换根据筛选契约识别
-Download 组，因此调整组名前缀不会让 Stash 输出静默失效。
+如果节点已由 `generate_raw_nodes.py` 输出到私有的 `clash-vps.generated.yaml`，生成可导入的
+私有 Stash 配置：
+
+```bash
+python3 generate_stash_private.py
+```
+
+如果 `home.yaml` 已更新，先重新运行 `generate_stash_config.py`；私有生成器会拒绝
+与当前 `home.yaml` 不一致的公开骨架，避免沿用旧的 DNS 或规则。
+输出为被 Git 忽略的 `home-stash.private.yaml`，包含节点凭据，文件权限为 `0600`。
+脚本按 `home.yaml` 的筛选与排除条件计算当前静态节点：有节点时保留原自动组类型，
+并直接写入按顺序筛出的节点名单；无节点时改为只含
+`REJECT` 的 `select` 组；上层自动线路如果没有可用子组也会改为 `REJECT`，有可用
+子组时会移除已封闭的空子组。Stash 3.4.1 中已有 `select` 组能显示 `REJECT`；新生成
+的完整配置仍应在 Stash 上确认实际出口。每次节点清单变化后都要重新生成并导入。
+这个静态方案不接收动态 `proxy-providers`，因为订阅更新后组是否为空可能变化；
+私有节点变更后必须重新生成并导入，否则组成员仍是旧快照。
+合并私有节点时只对 Stash 所需的字段名做协议映射：Hysteria2 的 `password` 写为
+`auth`，VLESS 的 `servername` 写为 `sni`；原始 Mihomo 节点文件不变。
+认证或 SNI 字段冲突会报错，代理链经策略组回指自身也会报错。
+公开骨架不再生成 `DirectExit` 的超长正则。转换前仍检查源筛选契约、代理组引用、
+循环和规则目标；Download 组根据筛选契约识别，调整组名前缀不会静默改变成员。
 源筛选发生变化时脚本会报错，要求重新审核转换。接入私有节点时，Stash 延迟测试地址和超时应在
 节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
 关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
@@ -89,6 +115,32 @@ Stash 的通配 DNS policy 优先于 geosite，因此 `+.*` 被迁移到默认 `
 Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试导入、DNS、空组和故障切换。
 `📡.<DNS>--ChinaDNS` 保持源模板的 `REJECT` 首选；客户端已有保存的策略选择不会
 自动重置，更新后应检查该组的实际选择。
+
+### Stash 配置更新顺序
+
+`home.yaml` 是策略组、筛选和分流基础；七千多行 Stash 专用 DNS 规则由
+`stash-dns-policy.yaml` 独立维护。`home-stash.yaml` 是两者合并生成的中间文件，
+不要手动编辑。最终只将 `home-stash.private.yaml` 导入 Stash。
+
+| 变更 | 重新生成 |
+| --- | --- |
+| 修改 `home.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
+| 修改 `stash-dns-policy.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
+| 直接修改私有节点文件 `clash-vps.generated.yaml` | 运行 `python3 generate_stash_private.py` |
+| 修改生成节点所用的私有原始资料 | 先运行 `generate_raw_nodes.py` 更新节点文件，再运行 `python3 generate_stash_private.py` |
+
+每次生成后都需要重新导入最终的私有文件，Stash 中已导入的配置不会自动同步工作区文件。
+修改节点名称或筛选契约时，脚本可能要求重新审核转换；不要绕过报错或直接修改生成文件。
+运行几天观察时，重点查看空组是否只显示 `REJECT`、常用国内外网站的连接记录和 DNS
+查询记录，以及节点失效后的实际切换；配置加载或单元测试不能代替这些运行结果。
+
+### 本地文件清理
+
+`__pycache__/` 和 `tests/__pycache__/` 是可重新生成的 Python 缓存，可以清理。
+`clash-vps.generated.yaml`、`home-stash.private.yaml`、`nodes.yaml`、`loon-nodes.conf`
+以及 `trusted-nodes.yaml` 属于被 Git 忽略的私有输入或导出产物；不要把它们当作
+垃圾删除，也不要提交。公开的 `stash-dns-policy.yaml` 是固定 DNS 输入，
+`home-stash.yaml` 是生成私有 Stash 配置所需的中间文件，两者都应保留。
 
 默认目录和环境变量：
 
@@ -400,7 +452,7 @@ HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Li
 下载业务仍走 `⬇️.Route-[Max.Traffic]`；它优先使用 Download 节点池，Download 全部故障时明确
 回退到 `♾️.Route-[Final.Fallback]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
 `home.yaml` 的 `empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备；
-Stash 输出无法保留这一空组回退，空组会按 Stash 行为落到 `DIRECT`。
+公开的 Stash 骨架无法保留这一空组回退，需使用上面的私有静态生成步骤将空组固定为 `REJECT`。
 缺失地区不会生成占位节点。地区 `fallback` 只有在
 备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
 

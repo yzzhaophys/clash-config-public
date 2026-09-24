@@ -1,9 +1,7 @@
 import unittest
 import os
-import re
 import tempfile
 import copy
-import random
 import stat
 from unittest.mock import patch
 from pathlib import Path
@@ -25,6 +23,30 @@ class StashConfigTest(unittest.TestCase):
 
     def test_generated_file_matches_current_source(self):
         self.assertEqual(self.config, generate_stash_config.convert_config(self.source))
+
+    def test_stash_only_dns_policy_survives_regeneration(self):
+        fixed = load_yaml(ROOT / "stash-dns-policy.yaml")["nameserver-policy"]
+        policy = self.config["dns"]["nameserver-policy"]
+        self.assertTrue(fixed)
+        self.assertTrue(set(fixed).isdisjoint(self.source["dns"]["nameserver-policy"]))
+        self.assertTrue(all(policy[key] == value for key, value in fixed.items()))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "stash.yaml"
+            generate_stash_config.write_config(ROOT / "home.yaml", output)
+            self.assertEqual(load_yaml(output), self.config)
+            self.assertIn("GeositeCN 规则", output.read_text(encoding="utf-8"))
+
+    def test_stash_only_dns_policy_rejects_overlap(self):
+        with tempfile.TemporaryDirectory() as directory:
+            policy_path = Path(directory) / "fixed.yaml"
+            policy_path.write_text(
+                "nameserver-policy:\n  'geosite:cn': 'https://dns.alidns.com/dns-query'\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "重复"):
+                generate_stash_config.convert_config(
+                    self.source, fixed_policy_path=policy_path
+                )
 
     def test_domestic_dns_routes_default_to_reject_in_both_templates(self):
         target = "📡.<DNS>--ChinaDNS"
@@ -127,7 +149,7 @@ class StashConfigTest(unittest.TestCase):
         self.assertEqual(
             {key for group in self.config["proxy-groups"] for key in group}
             & {"url", "expected-status", "timeout", "max-failed-times", "tolerance",
-               "empty-fallback", "hidden", "exclude-filter"},
+               "empty-fallback", "hidden", "exclude-filter", "include-all", "filter"},
             set(),
         )
 
@@ -141,10 +163,7 @@ class StashConfigTest(unittest.TestCase):
             source_group = next(
                 group for group in self.source["proxy-groups"] if group["name"] == name
             )
-            if (
-                self.groups[name].get("include-all")
-                and "REJECT" not in source_group.get("proxies", [])
-            ):
+            if "REJECT" not in source_group.get("proxies", []):
                 self.assertNotIn("REJECT", self.groups[name].get("proxies", []), name)
 
         for group in self.config["proxy-groups"]:
@@ -157,59 +176,10 @@ class StashConfigTest(unittest.TestCase):
             for reference in group.get("proxies", []):
                 self.assertIn(reference, valid_targets, (group["name"], reference))
 
-    def test_direct_exit_filters_match_source_for_capability_markers(self):
-        candidates = (
-            "VPS-[JP.Core]-VLESS-00-(日本核心节点)-[Download=true]",
-            "VPS-[JP.Core]-VLESS-00-(日本核心节点)-[Direct=false]-[Download=true]",
-            "VPS-[JP.Core]-VLESS-00-(日本核心节点)-[Download=true]-[ShowIP=true]",
-            "VPS-[JP.HomeIP]-H2-00-(日本住宅节点)-[ShowIP=true]",
-            "VPS-[US.Exit]-VLESS-00-(美国机场出口)-[Airport=example]",
-            "VPS-[US.Exit]-VLESS-01-(美国出口节点)-[Direct=false]",
-            "PrxChain-[JP]-VLESS-00--<<-US.Exit.VLESS.00-(代理链)",
-            "VPS-[JP.Exit]-VLESS-00-(PrxChain)-[Download=true]",
-            "VPS-[JP.Exit]-VLESS-00-(example)-[Download=true]-[PrxChain=true]",
-            "VPS-[JP.Exit]-VLESS-00-(example)-[Airport=Direct=false]",
-            "VPS-[JP.Exit]-VLESS-00-(example)-[Custom=true]",
-            "VPS-[JP.Exit]-",
-            "VPS-[ZZ.Other]-[Custom=true]-[Download=true]",
-            "vps-[jp.exit]-pRxChAiN-[Download=true]",
-            "VPS-[JP.HomeIP]-Direct=false-[ShowIP=true]",
-        )
-        source_groups = {group["name"]: group for group in self.source["proxy-groups"]}
-        converted_groups = self.groups
-        for name, source_group in source_groups.items():
-            if "exclude-filter" not in source_group:
-                continue
-            converted = converted_groups[name]
-            for candidate in candidates:
-                expected = bool(
-                    re.search(source_group["filter"], candidate)
-                    and not re.search(source_group["exclude-filter"], candidate)
-                )
-                actual = bool(re.search(converted["filter"], candidate))
-                self.assertEqual(actual, expected, (name, candidate))
-
-    def test_exclusion_automaton_against_literal_search(self):
-        rng = random.Random(913)
-        for words in [("PrxChain", "Direct=false"), ("PrxChain", "HomeIP", "ShowIP", "Direct=false")]:
-            for single_line in (True, False):
-                pattern = generate_stash_config._without_words(words, single_line)
-                self.assertNotIn("(?=", pattern)
-                self.assertNotIn("(?!", pattern)
-                regex = re.compile(pattern, re.I)
-                candidates = ["", "中文-[Custom=true]", "PrxPrxChain", "ShowHomeIP", "\n"]
-                for word in words:
-                    for i in range(len(word) + 1):
-                        candidates.extend([word[:i], word[:i] + word, word[:i] + "-" + word[i:]])
-                for _ in range(1000):
-                    parts = [rng.choice(words + ("abc", "中文", "-", "\n", "[Custom=true]"))
-                             for _ in range(rng.randrange(1, 6))]
-                    text = "".join(part[:rng.randrange(len(part) + 1)] for part in parts)
-                    candidates.append(text.swapcase())
-                for text in candidates:
-                    expected = not any(word.lower() in text.lower() for word in words)
-                    expected &= not (single_line and "\n" in text)
-                    self.assertEqual(regex.fullmatch(text) is not None, expected, repr(text))
+    def test_public_stash_groups_have_no_runtime_node_regex(self):
+        self.assertTrue(any("exclude-filter" in group for group in self.source["proxy-groups"]))
+        self.assertFalse(any("filter" in group or "include-all" in group
+                             for group in self.config["proxy-groups"]))
 
     def test_source_rules_order_and_group_graph_preserved(self):
         self.assertEqual(list(self.groups), [g["name"] for g in self.source["proxy-groups"]])
@@ -242,7 +212,7 @@ class StashConfigTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generate_stash_config.convert_config(source)
 
-    def test_filter_conversion_uses_download_contract_after_prefix_rename(self):
+    def test_download_filter_contract_allows_prefix_rename(self):
         source_group = next(
             group
             for group in self.source["proxy-groups"]
@@ -250,13 +220,7 @@ class StashConfigTest(unittest.TestCase):
         )
         renamed = copy.deepcopy(source_group)
         renamed["name"] = "🧪.DirectExit-[Download]"
-        converted = generate_stash_config._convert_group_filter(renamed)
-        self.assertIsNotNone(
-            re.search(converted, "VPS-[US.HomeIP]-VLESS-00-(住宅)-[Download=true]")
-        )
-        self.assertIsNone(
-            re.search(converted, "VPS-[US.HomeIP]-PrxChain-[Download=true]")
-        )
+        generate_stash_config._validate_group_filter_contract(renamed)
 
     def test_group_reference_validation_rejects_stale_name_after_rename(self):
         source = copy.deepcopy(self.source)
