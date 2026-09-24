@@ -87,68 +87,50 @@ Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` �
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 输出文件，或关闭 Loon 输出。
 
-生成 Stash 配置骨架：
+### 生成 Stash 配置
+
+先生成公开骨架：
 
 ```bash
 python3 generate_stash_config.py
 ```
 
-`stash-dns-policy.yaml` 保存仅供 Stash 使用的固定 `nameserver-policy` 条目，
-独立于 `home.yaml`。生成器会先检查这些条目与 `home.yaml` 不重名，再将其连同
-原有注释写入 `home-stash.yaml`；需要调整这段规则时编辑固定文件，之后重新生成
-公开骨架和私有配置。直接修改生成的 `home-stash.yaml` 会在下次生成时被覆盖。
+`stash-dns-policy.yaml` 独立保存七千多行 Stash 专用 `nameserver-policy` 及注释。
+生成器检查它与 `home.yaml` 的条目不重名，再生成 `home-stash.yaml`。
+骨架没有节点和运行时节点筛选，不能作为最终配置导入；不要直接编辑这个生成文件。
 
-该文件只保留 Stash 的策略组、规则集和分流结构；节点、代理提供者和生成的代理链
-必须在私有环境中另行加入。公开骨架不含运行时节点筛选表达式，不能单独导入后使用；
-节点成员由下面的私有生成步骤确定。源配置的 `empty-fallback: REJECT` 没有 Stash 对应字段，
-转换时会省略。Stash 文档规定空策略组按 `DIRECT` 处理；用户在 Stash 3.4.1 实测，
-即使给空自动组写入 `proxies: [REJECT]`，候选列表仍不显示 `REJECT` 并落到 `DIRECT`，
-因此生成文件不再用这个无效候选伪装成已保留该回退。
-参见 [Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
-如果节点已由 `generate_raw_nodes.py` 输出到私有的 `clash-vps.generated.yaml`，生成可导入的
-私有 Stash 配置：
+已有私有的 `clash-vps.generated.yaml` 后，生成供 Stash 导入的完整配置：
 
 ```bash
 python3 generate_stash_private.py
 ```
 
-如果 `home.yaml` 已更新，先重新运行 `generate_stash_config.py`；私有生成器会拒绝
-与当前 `home.yaml` 不一致的公开骨架，避免沿用旧的 DNS 或规则。
-输出为被 Git 忽略的 `home-stash.private.yaml`，包含节点凭据，文件权限为 `0600`。
-脚本按 `home.yaml` 的筛选与排除条件计算当前静态节点：有节点时保留原自动组类型，
-并直接写入按顺序筛出的节点名单；无节点时改为只含
-`REJECT` 的 `select` 组；上层自动线路如果没有可用子组也会改为 `REJECT`，有可用
-子组时会移除已封闭的空子组。Stash 3.4.1 中已有 `select` 组能显示 `REJECT`；新生成
-的完整配置仍应在 Stash 上确认实际出口。每次节点清单变化后都要重新生成并导入。
-这个静态方案不接收动态 `proxy-providers`，因为订阅更新后组是否为空可能变化；
-私有节点变更后必须重新生成并导入，否则组成员仍是旧快照。
-合并私有节点时只对 Stash 所需的字段名做协议映射：Hysteria2 的 `password` 写为
-`auth`，VLESS 的 `servername` 写为 `sni`；原始 Mihomo 节点文件不变。
-认证或 SNI 字段冲突会报错，代理链经策略组回指自身也会报错。
-公开骨架不再生成 `DirectExit` 的超长正则。转换前仍检查源筛选契约、代理组引用、
-循环和规则目标；Download 组根据筛选契约识别，调整组名前缀不会静默改变成员。
-源筛选发生变化时脚本会报错，要求重新审核转换。接入私有节点时，Stash 延迟测试地址和超时应在
-节点上配置 `benchmark-url`、`benchmark-timeout`。`select` 组设置 `interval: -1`
-关闭默认的递归周期测速，自动组保留原模板的 30/45/90 秒间隔和 `lazy: true` 设置。
-源配置中的手动 `PASS` 选项未出现在 Stash 文档的内置出口列表中，转换时将其移除；
-`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
-DNS 中仅保留 Stash 可表达的精确域名、通配域名和 `geosite:` policy，并保留
-`proxy-server-nameserver` 用于独立解析代理节点域名（要求 Stash iOS/tvOS 3.6+、
-macOS 4.3+，旧版本不能依赖该字段防止解析递归）；模板里的
-Clash Meta `rule-set:` DNS policy 和 DNS URL 代理组后缀会被移除，普通 `RULE-SET`
-分流规则不受影响，但这不代表原 DNS 策略完全等价：被移除的 DNS policy 不再单独选 DNS，
-DNS 请求也不再使用 URL 后缀指定的代理组，而是依赖 `follow-rule` 和普通路由规则。
-Stash 对同一 DNS policy 中的多个服务器采用并发查询，列表顺序不是主备顺序；
-`follow-rule` 只决定 DNS 查询连接如何匹配代理规则，不保证解析结果与网站连接使用相同出口。
-Stash 的通配 DNS policy 优先于 geosite，因此 `+.*` 被迁移到默认 `nameserver`，
-避免遮蔽 geosite 策略，并保留其 DNS 服务器顺序。参见
-[Stash DNS 文档](https://stash.wiki/en/features/dns-server)。
-输出通过同目录临时文件校验后原子替换，权限保留 `0600`；替换失败时旧文件不变。
-当前只接受源配置中的 `empty-fallback: REJECT` 并在 Stash 输出中省略；其他值明确报错。
-自动化测试覆盖源配置对比、筛选反例和写入失败；Mihomo 辅助加载检查不等于
-Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试导入、DNS、空组和故障切换。
-`📡.<DNS>--ChinaDNS` 保持源模板的 `REJECT` 首选；客户端已有保存的策略选择不会
-自动重置，更新后应检查该组的实际选择。
+输出 `home-stash.private.yaml` 含凭据、被 Git 忽略，权限为 `0600`。私有生成器会拒绝
+与当前 `home.yaml` 或固定 DNS 输入不一致的旧骨架，并按 `home.yaml` 的筛选条件生成
+静态组成员。空节点池改为只含 `REJECT` 的 `select` 组；上层自动组会移除已封闭的
+空子组，没有可用出口时也封闭为 `REJECT`。Stash 3.4.1 已实测这种 `select`
+组可显示 `REJECT`；公开骨架中的空自动组不能提供同样保证，参见
+[Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
+私有生成器不接受动态 `proxy-providers`，节点变化后须重新生成并导入。
+
+### Stash 转换边界
+
+- 节点字段只做必要映射：Hysteria2 的 `password` → `auth`，VLESS 的
+  `servername` → `sni`，其余客户端字段和值保留；认证冲突、代理链循环和筛选契约
+  变化会报错。`DirectExit` 的成员在生成时计算，不把超长筛选正则交给 Stash。
+- 源配置的 `empty-fallback: REJECT` 在公开骨架中省略，由私有静态组封闭空组。
+  `PASS` 手选项被移除；`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
+- Stash 专用 DNS policy 由独立文件合并；Clash Meta 的 `rule-set:` DNS policy
+  和 DNS URL 的代理组后缀不能等价迁移。`+.*` 转为默认 `nameserver`，避免
+  通配规则遮蔽 `geosite:`。`follow-rule` 控制 DNS 请求的路由，不保证 DNS 结果
+  与网站连接使用同一出口。[Stash DNS 文档](https://stash.wiki/features/dns-server)
+- 当前骨架保留 `proxy-server-nameserver`，但独立解析功能要求 Stash iOS/tvOS
+  3.6+ 或 macOS 4.3+；在 iOS 3.4.1 上不能依赖它防止代理服务器域名解析递归。
+  Mihomo 的规则集下载 `proxy` 字段也会在 Stash 转换时移除，因此远端规则集不再
+  有源配置指定的下载代理；下载失败需要单独检查，不代表代理节点失效。
+- 单个节点的 Stash 测速地址和超时用 `benchmark-url`、`benchmark-timeout` 设置。
+  `select` 组设置 `interval: -1`，自动组保留原模板的间隔和 `lazy` 设置。
+  HTTP 测速成功不代表 UDP 可用；配置加载和本地字段比对也不能证明实际连通。
 
 ### Stash 配置更新顺序
 
