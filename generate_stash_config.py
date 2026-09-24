@@ -421,16 +421,10 @@ def convert_config(source: dict[str, Any]) -> dict[str, Any]:
         if "empty-fallback" in group:
             if group["empty-fallback"] != "REJECT":
                 raise ValueError("Stash 转换只支持 empty-fallback: REJECT")
-            # Stash treats a truly empty group as DIRECT.  The source used
-            # empty-fallback: REJECT, so retain that safety property with an
-            # explicit built-in candidate that Stash understands.
-            proxies = list(converted.get("proxies") or [])
-            if "REJECT" not in proxies:
-                proxies.append("REJECT")
-            converted["proxies"] = proxies
-            if "filter" in converted:
-                # Also retain the guard if Stash filters explicit candidates.
-                converted["filter"] += "|^REJECT$"
+            # Stash has no documented empty-fallback equivalent.  Adding a
+            # REJECT candidate here did not make it appear in empty automatic
+            # groups at runtime (Stash 3.4.1 treated them as DIRECT), so omit
+            # the source-only field without claiming the fallback was kept.
         output_groups.append(converted)
     output_group_map = _validate_proxy_groups(
         output_groups,
@@ -467,7 +461,7 @@ def render_config(config: dict[str, Any]) -> str:
     header = (
         "# Generated from home.yaml for Stash.\n"
         "# Nodes, proxy providers and generated proxy chains are intentionally omitted.\n"
-        "# Add private nodes before enabling this profile; empty automatic groups are guarded by REJECT.\n"
+        "# Add private nodes before enabling this profile; empty automatic groups follow Stash's DIRECT behavior.\n"
     )
     return header + yaml.safe_dump(
         config,

@@ -57,9 +57,11 @@ python3 generate_stash_config.py
 ```
 
 该文件只保留 Stash 的策略组、规则集和分流结构；节点、代理提供者和生成的代理链
-必须在私有环境中另行加入。使用 `empty-fallback: REJECT` 的自动组会转换为显式的
-`REJECT` 候选，且筛选表达式会保留该候选，避免空组被 Stash 当作直连；空组行为仍须
-在 Stash 上验证。
+必须在私有环境中另行加入。源配置的 `empty-fallback: REJECT` 没有 Stash 对应字段，
+转换时会省略。Stash 文档规定空策略组按 `DIRECT` 处理；用户在 Stash 3.4.1 实测，
+即使给空自动组写入 `proxies: [REJECT]`，候选列表仍不显示 `REJECT` 并落到 `DIRECT`，
+因此生成文件不再用这个无效候选伪装成已保留该回退。
+参见 [Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
 `DirectExit` 组把原先的 `filter` + `exclude-filter` 合并成 Stash 文档支持的
 单个 `filter`：通过有限状态机将排除词转换为不含前瞻的普通正则，保留描述中的
 排除词匹配，同时允许源配置接受的未知标签。生成表达式较长，不建议手动修改；
@@ -82,7 +84,7 @@ Stash 的通配 DNS policy 优先于 geosite，因此 `+.*` 被迁移到默认 `
 避免遮蔽 geosite 策略，并保留其 DNS 服务器顺序。参见
 [Stash DNS 文档](https://stash.wiki/en/features/dns-server)。
 输出通过同目录临时文件校验后原子替换，权限保留 `0600`；替换失败时旧文件不变。
-当前只转换 HTTP rule-provider 和 `empty-fallback: REJECT`，遇到其他值明确报错。
+当前只接受源配置中的 `empty-fallback: REJECT` 并在 Stash 输出中省略；其他值明确报错。
 自动化测试覆盖源配置对比、筛选反例和写入失败；Mihomo 辅助加载检查不等于
 Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试导入、DNS、空组和故障切换。
 `📡.<DNS>--ChinaDNS` 保持源模板的 `REJECT` 首选；客户端已有保存的策略选择不会
@@ -397,7 +399,8 @@ HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Li
 整体失效时自动改选 Low.Latency 或 DIRECT，需要手动选择；Download 内部仍自主换节点。
 下载业务仍走 `⬇️.Route-[Max.Traffic]`；它优先使用 Download 节点池，Download 全部故障时明确
 回退到 `♾️.Route-[Final.Fallback]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
-`empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备。
+`home.yaml` 的 `empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备；
+Stash 输出无法保留这一空组回退，空组会按 Stash 行为落到 `DIRECT`。
 缺失地区不会生成占位节点。地区 `fallback` 只有在
 备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
 

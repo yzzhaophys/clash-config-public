@@ -76,11 +76,6 @@ class StashConfigTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     generate_stash_config.convert_config(source)
 
-    def test_reject_guard_survives_group_filter(self):
-        for group in self.config["proxy-groups"]:
-            if "REJECT" in group.get("proxies", []) and "filter" in group:
-                self.assertIsNotNone(re.search(group["filter"], "REJECT"), group["name"])
-
     def test_top_level_and_dns_fields_are_stash_profile_fields(self):
         self.assertEqual(
             set(self.config),
@@ -122,7 +117,7 @@ class StashConfigTest(unittest.TestCase):
             self.source["dns"]["proxy-server-nameserver"],
         )
 
-    def test_proxy_groups_keep_structure_and_guard_empty_auto_groups(self):
+    def test_proxy_groups_keep_structure_and_omit_unavailable_empty_fallback(self):
         valid_targets = set(self.groups) | BUILTINS
         self.assertEqual(len(self.groups), len(self.config["proxy-groups"]))
         self.assertEqual(
@@ -142,7 +137,15 @@ class StashConfigTest(unittest.TestCase):
             if "empty-fallback" in group
         }
         for name in source_empty_groups:
-            self.assertIn("REJECT", self.groups[name].get("proxies", []))
+            self.assertNotIn("empty-fallback", self.groups[name])
+            source_group = next(
+                group for group in self.source["proxy-groups"] if group["name"] == name
+            )
+            if (
+                self.groups[name].get("include-all")
+                and "REJECT" not in source_group.get("proxies", [])
+            ):
+                self.assertNotIn("REJECT", self.groups[name].get("proxies", []), name)
 
         for group in self.config["proxy-groups"]:
             self.assertNotIn("PASS", group.get("proxies", []), group["name"])
