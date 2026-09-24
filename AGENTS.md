@@ -7,11 +7,17 @@
 - `generate_raw_nodes.py` 负责节点及代理链输出；`manage_trusted_nodes.py`
   负责私有 trusted inventory 管理。共享 YAML 读取在 `node_io.py`，
   服务端到客户端的参数映射在 `node_conversion.py`。
+- `generate_raw_nodes.py` 的主模板输出是含基础节点与可选代理链的
+  `clash-vps.generated.yaml`；`nodes.yaml` 只含基础节点，`loon-nodes.conf`
+  是 Loon 格式。三者含凭据，均被 `.gitignore` 忽略。`tests/` 分别覆盖节点生成、
+  trusted 管理、参数安全、`home.yaml` 策略组及两步 Stash 生成；完整对应关系见 README。
 - `home.yaml` 是策略组、节点筛选和分流的基础；`stash-dns-policy.yaml` 独立保存
   Stash 专用的完整 GeositeCN DNS 规则段及注释。`generate_stash_config.py` 合并
   两者，生成公开的 `home-stash.yaml` 中间文件；`generate_stash_private.py` 再结合
   `clash-vps.generated.yaml` 的静态私有节点和 `home.yaml` 的筛选条件，生成
   `home-stash.private.yaml`。后者含凭据、被 Git 忽略，才是导入 Stash 的文件。
+- Clash Verge 使用 `home.yaml` 与节点生成器输出的 `proxies` 片段；本仓库脚本不会
+  自动合并或重载生效配置。Loon 使用独立输出的 `loon-nodes.conf`。
 - 保留用户已有改动。修改脚本不代表获准覆盖、重载 Clash Verge 生效配置，
   或替换 Stash 已导入的配置，也不代表获准提交或推送；这些操作须有用户明确授权。
 - 修改 `home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
@@ -39,6 +45,14 @@
 
 ## Stash 生成顺序
 
+- 文件依赖必须清楚：`home.yaml` 是规则和筛选源，`stash-dns-policy.yaml` 是独立的
+  Stash DNS 输入；两者生成无节点的 `home-stash.yaml`。私有节点输入先由
+  `generate_raw_nodes.py` 生成 `clash-vps.generated.yaml`（基础节点及可选代理链），
+  然后 `generate_stash_private.py` 结合该节点文件、公开骨架和 `home.yaml` 的筛选
+  生成唯一供 Stash 导入的 `home-stash.private.yaml`。
+- `nodes.yaml` 是纯基础节点输出，`loon-nodes.conf` 是独立的 Loon 节点输出；
+  两者都不是 Stash 私有生成器的默认输入。`manage_trusted_nodes.py` 只管理
+  `trusted-nodes.yaml`，更改 inventory 后须重新生成节点输出及 Stash private。
 - 改动 `home.yaml` 或 `stash-dns-policy.yaml` 后，先运行
   `python3 generate_stash_config.py`，再运行
   `python3 generate_stash_private.py`；不要手动维护生成的 `home-stash.yaml`。

@@ -2,20 +2,54 @@
 
 可复用的 Mihomo/Clash Verge Rev 配置模板，以及用于生成自建节点和代理链的脚本。
 
-## 文件
+## 文件职责
 
-- `home.yaml`：主配置模板。它负责策略组和分流规则，`proxies` 列表保持为空。
-- `stash-dns-policy.yaml`：Stash 专用的固定 DNS policy 输入；保存完整的 GeositeCN 规则段及注释，不由 `home.yaml` 生成。
-- `home-stash.yaml`：由 `home.yaml` 生成的公开 Stash 中间文件；不包含节点、订阅或代理链，不能单独使用。
-- `home-stash.private.yaml`：加入静态私有节点并固定空组为 `REJECT` 后的最终文件；导入 Stash 使用，不得提交。
-- `generate_raw_nodes.py`：读取私有节点配置，生成基础节点和可选的代理链。
-- `generate_stash_config.py`：合并 `home.yaml` 和固定 DNS 文件，生成 Stash 配置骨架。
-- `generate_stash_private.py`：合并静态私有节点，并将无节点的 Stash 组固定为 `REJECT`。
-- `manage_trusted_nodes.py`：查看、导入、删除私有 trusted 节点，以及恢复清单备份。
-- `node_io.py` / `node_conversion.py`：共享 YAML 校验与服务端参数转换。
-- `tests/`：配置、节点转换和文件写入安全的回归测试。
+| 文件 | 来源与作用 | 是否含凭据、是否提交 |
+| --- | --- | --- |
+| `home.yaml` | 手工维护的 Mihomo/Clash Verge 主模板；定义 DNS、策略组、节点筛选和分流，`proxies` 为空 | 公开，提交 |
+| `stash-dns-policy.yaml` | 手工维护的 Stash 专用 DNS policy；保存新增的整段规则及注释，独立于 `home.yaml` | 公开，提交 |
+| `home-stash.yaml` | `generate_stash_config.py` 合并上述两个输入生成的 Stash 骨架；没有节点，也没有可在 Stash 运行时筛选节点的表达式 | 公开，提交；不能单独作为最终配置使用 |
+| `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置及 Stash 私有生成器使用 | 含凭据，忽略、不提交 |
+| `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
+| `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点格式；不能表达的整条节点会被跳过 | 含凭据，忽略、不提交 |
+| `home-stash.private.yaml` | `generate_stash_private.py` 将骨架、静态节点和 `home.yaml` 的筛选条件合并后生成；空组固定为 `REJECT` | 含凭据，忽略、不提交；这是导入 Stash 的文件 |
+| `trusted-nodes.yaml` | `manage_trusted_nodes.py` 管理的私有 trusted inventory；也是节点生成器的输入，不是客户端配置 | 含凭据，忽略、不提交 |
 
-生成器负责生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
+| 脚本或目录 | 职责 |
+| --- | --- |
+| `generate_raw_nodes.py` | 读取自建 VPS、trusted inventory 和交互确认的机场节点，生成上述三种节点输出；模板模式还按 `home.yaml` 校验筛选 |
+| `manage_trusted_nodes.py` | 查看、预览或应用 trusted inventory 的导入、删除、恢复；只改清单，不自动重新生成客户端文件 |
+| `generate_stash_config.py` | 转换 `home.yaml`，合并 `stash-dns-policy.yaml`，生成 `home-stash.yaml` |
+| `generate_stash_private.py` | 读取 `home-stash.yaml`、`clash-vps.generated.yaml`、`home.yaml`，生成 `home-stash.private.yaml`；拒绝过期骨架 |
+| `node_io.py` | 脚本共用的严格 YAML 读取，拒绝显式重复键 |
+| `node_conversion.py` | 服务端 Xray/Hysteria 参数到客户端节点字段的转换与审计辅助函数 |
+| `tests/test_generate_raw_nodes.py`、`tests/test_manage_trusted_nodes.py` | 节点生成及 trusted inventory 管理回归测试 |
+| `tests/test_node_parameter_safety.py`、`tests/test_trusted_launch.py` | 参数保留、文件安全、trusted 节点导入及输出测试 |
+| `tests/test_proxy_group_policy.py` | `home.yaml` 策略组与筛选关系测试 |
+| `tests/test_stash_config.py`、`tests/test_generate_stash_private.py` | Stash 骨架、固定 DNS 合并及私有配置生成测试 |
+| `.gitignore` | 阻止私有输入、含凭据生成文件和缓存进入 Git |
+| `AGENTS.md` | 仓库协作、安全和交付约束 |
+
+私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`、机场目录中的
+`subscription.yaml` / `selected-nodes.yaml`，以及 trusted inventory。生成器负责
+生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
+
+## 配置生产流程
+
+```text
+私有 VPS / trusted / 机场输入 ──generate_raw_nodes.py──► clash-vps.generated.yaml
+                                                  ├──► nodes.yaml（可选纯节点输出）
+                                                  └──► loon-nodes.conf（可选 Loon 输出）
+
+home.yaml + stash-dns-policy.yaml ──generate_stash_config.py──► home-stash.yaml
+home-stash.yaml + clash-vps.generated.yaml + home.yaml
+                              ──generate_stash_private.py──► home-stash.private.yaml
+```
+
+Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` 片段；这里的脚本
+不会自动合并或重载正在运行的 Clash Verge 配置。Stash 只导入最后生成的
+`home-stash.private.yaml`，其节点成员是生成时的静态快照；节点或任一上游模板改变后，
+按下文的更新顺序重新生成并导入。Loon 使用单独生成的 `loon-nodes.conf`。
 
 ## 要求
 
@@ -127,7 +161,8 @@ Stash 实际运行。接入私有节点后仍需在目标 Stash 版本上测试�
 | 修改 `home.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
 | 修改 `stash-dns-policy.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
 | 直接修改私有节点文件 `clash-vps.generated.yaml` | 运行 `python3 generate_stash_private.py` |
-| 修改生成节点所用的私有原始资料 | 先运行 `generate_raw_nodes.py` 更新节点文件，再运行 `python3 generate_stash_private.py` |
+| 通过 `manage_trusted_nodes.py` 修改 trusted inventory | 先运行 `generate_raw_nodes.py` 更新节点输出，再运行 `python3 generate_stash_private.py` |
+| 修改其他生成节点所用的私有原始资料 | 先运行 `generate_raw_nodes.py` 更新节点文件，再运行 `python3 generate_stash_private.py` |
 
 每次生成后都需要重新导入最终的私有文件，Stash 中已导入的配置不会自动同步工作区文件。
 修改节点名称或筛选契约时，脚本可能要求重新审核转换；不要绕过报错或直接修改生成文件。
@@ -592,7 +627,7 @@ Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非�
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py generate_stash_private.py
 git diff --check
 ```
 
