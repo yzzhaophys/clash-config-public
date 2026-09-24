@@ -77,9 +77,9 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                     self.assertNotIn("tolerance", group)
 
     def test_download_route_has_explicit_final_fallback(self):
-        maximum = self.groups["⬇️.Line-[Relay.VPS]-Max.Traffic"]
+        maximum = self.groups["⬇️.Route-[Max.Traffic]"]
         download = self.groups["⬇️🔰.DirectExit-[Download]"]
-        self.assertEqual(maximum["proxies"], [download["name"], "♾️.Line-[Final]"])
+        self.assertEqual(maximum["proxies"], [download["name"], "♾️.Route-[Final.Fallback]"])
         self.assertEqual(download["type"], "url-test")
         self.assertFalse(download.get("proxies"))
         self.assertFalse(download.get("use"))
@@ -106,13 +106,24 @@ class ProxyGroupPolicyTests(unittest.TestCase):
         self.assertFalse(included("PrxChain-[JP]-example-[Download=true]"))
         self.assertFalse(included("VPS-[JP.Exit]-VLESS-00-(PrxChain)-[Download=true]"))
 
+    def test_preferred_routes_keep_same_region_ordinary_fallback(self):
+        for region, flag in {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬"}.items():
+            for role, icon in (("HomeIP", "🏠"), ("ShowIP", "📍")):
+                name = f"{icon}.Route-[{region}.{role}.Preferred]"
+                with self.subTest(route=name):
+                    self.assertEqual(
+                        self.groups[name]["proxies"],
+                        [f"{flag}.Line-[{region}.{role}]", f"{flag}.Line-[{region}]"],
+                    )
+        self.assertIn("♾️.Route-[Final.Fallback]", self.groups)
+
     def test_cdn_keeps_manual_choices_without_an_extra_failover_layer(self):
         business = self.groups["☁️.<Global>--CDN"]
         self.assertEqual(business["type"], "select")
         self.assertNotIn("☁️.Line-[CDN]", self.groups)
         self.assertEqual(business["proxies"][:2], [
-            "⬇️.Line-[Relay.VPS]-Max.Traffic",
-            "⚡.Line-[Relay.VPS]-Low.Latency",
+            "⬇️.Route-[Max.Traffic]",
+            "⚡.Route-[Low.Latency]",
         ])
         self.assertIn("DIRECT", business["proxies"])
 

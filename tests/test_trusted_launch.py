@@ -82,7 +82,7 @@ class TrustedLaunchTests(unittest.TestCase):
                                 and includes(gp, chain['name']) for gp in groups))
             for group in groups:
                 self.assertFalse(includes(group, base['name']), group['name'])
-                if any(tag in group['name'] for tag in ('ShowIP', 'Download', 'Relay.VPS')):
+                if any(tag in group['name'] for tag in ('ShowIP', 'Download', 'Route')):
                     self.assertFalse(includes(group, chain['name']), group['name'])
             self.assertEqual(len(load_yaml(root / 'raw.yaml')['proxies']), 2)
             self.assertEqual(len((root / 'loon.conf').read_text().splitlines()), 1)

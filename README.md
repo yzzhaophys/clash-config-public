@@ -367,18 +367,18 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 | 层级 | 策略 | 检测安排与边界 |
 | --- | --- | --- |
 | 业务入口 | `select` | 手动选择线路；无额外周期检测 |
-| Max.Traffic | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Line-[Final]` |
+| `⬇️.Route-[Max.Traffic]` | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Route-[Final.Fallback]` |
 | Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
 | 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
 | 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒；US / JP / SG 代理链优先、同地区直出备用，其余地区直出优先、代理链备用 |
 | 内层 HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
-| 跨地区、Final、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
+| 地区 Route、Final.Fallback、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
 | CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
-| Americas / Oceania / Europe | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Line-[Final]` 作为跨地区备用 |
+| Americas / Oceania / Europe Route | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Route-[Final.Fallback]` 作为跨地区备用 |
 | CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
 
-业务组引用的 `🌏🇺🇸.Line-[US.HomeIP]`、`🌏🇺🇸.Line-[US.ShowIP]` 等外层 Line
-每 90 秒检查一次，先使用对应的内层用途线路；内层线路没有可用候选时再回退到同地区普通
+业务组通过 `🏠.Route-[US.HomeIP.Preferred]`、`📍.Route-[US.ShowIP.Preferred]` 等上层
+Route 入口选择用途；每 90 秒检查一次，先使用对应的内层地区 Line，失效时回退到同地区普通
 Line。内层 HomeIP / ShowIP 线路仍只在各自的 Chain 和 DirectExit 组之间切换。
 
 所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
@@ -391,11 +391,12 @@ HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Li
 检测周期也不是故障恢复时限：探测耗时、多层状态更新、实际流量与探测流量的差异
 都会影响恢复。底层检测更频繁，会增加后台探测开销。
 
-`☁️.<Global>--CDN` 的首选项为 Max.Traffic，保留 Low.Latency、DIRECT 等手动选项。
+`☁️.<Global>--CDN` 的首选项为 `⬇️.Route-[Max.Traffic]`，保留
+`⚡.Route-[Low.Latency]`、DIRECT 等手动选项。
 配置启用了 `store-selected`，已有选择可能优先于列表首项。CDN 不会在 Download
 整体失效时自动改选 Low.Latency 或 DIRECT，需要手动选择；Download 内部仍自主换节点。
-下载业务仍走 Max.Traffic；它优先使用 Download 节点池，Download 全部故障时明确
-回退到 `♾️.Line-[Final]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
+下载业务仍走 `⬇️.Route-[Max.Traffic]`；它优先使用 Download 节点池，Download 全部故障时明确
+回退到 `♾️.Route-[Final.Fallback]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
 `empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备。
 缺失地区不会生成占位节点。地区 `fallback` 只有在
 备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
@@ -404,8 +405,8 @@ HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Li
 linux.do、其他站点或 UDP 正常，也不衡量下载带宽。上层探测一个子组时，检验的
 是子组当时选中的路径，不能替代底层节点池的独立检测；不能承诺嵌套后瞬时恢复。
 底层保留独立检测配置，实际调度受 `lazy: true` 影响。单子项 `select` 入口不再重复定时探测。Americas / Oceania /
-Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区候选失效后才尝试
-`♾️.Line-[Final]`；它关注可用性，不按延迟重新排序。
+Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本地区候选失效后才尝试
+`♾️.Route-[Final.Fallback]`；它关注可用性，不按延迟重新排序。
 
 加载候选配置后应分别验证：
 
@@ -413,7 +414,7 @@ Europe 的 `fallback` 会按列表顺序使用本地区线路，全部本地区�
    自动组保持自动选择，检查面板/API 是否存在手动固定的 `fixed` 状态。
 2. 在隔离测试环境使当前节点失效，观察组内检测历史和 `now` 是否变化，
    再用新连接访问目标站点；旧的 TCP/下载连接不能自动迁移，应用需要重连。
-3. 测试 Download 全部失效时，Max.Traffic 是否按 Download → `♾️.Line-[Final]` 回退，
+3. 测试 Download 全部失效时，Max.Traffic 是否按 Download → `♾️.Route-[Final.Fallback]` 回退，
    CDN 是否保持手选；有实际备用节点时，测试代理链故障后同用途直出是否接替。
 4. 如果手动测速后仍不切换，确认测的是整个自动组而非仅一个节点或外层入口，
    核对自动组测试 URL 对应的结果、候选节点健康状态和 `fixed`。
@@ -500,6 +501,35 @@ VLESS UUID 与密码一样保留首尾空格，不通过裁剪来修正输入；
 保留 YAML 值不代表客户端支持该扩展字段或数值。
 Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非法时跳过整条节点
 并报告原因，不将数字等强制转换成字符串。
+
+## DNS 与迁移条件
+
+`home.yaml` 是面向 Mihomo / Clash Verge Rev 的空节点模板。迁移到新设备时，需加入
+私有生成节点，并保留地区、角色和能力名称标记；普通订阅的原始节点名未必能命中这里的
+节点池。首次启动还需要下载规则集和 GeoIP/GeoSite 数据，不能依赖旧设备已有的缓存。
+
+- `respect-rules: true` 控制普通 DNS 上游连接的路由；DNS URL 中的 `#策略组`
+  显式指定该查询的出口。节点域名由 `proxy-server-nameserver` 单独解析。
+- `default-nameserver` 和 `proxy-server-nameserver` 当前都使用 `223.5.5.5`、
+  `119.29.29.29`。跨境、受限网络或 IPv6-only 环境迁移时，需先验证这些 IPv4 DNS
+  的可达性；独立解析链路不能保证解析服务器在所有网络都可用。
+- `direct-nameserver` 当前使用阿里和 Google DoH，默认不继承全局 `respect-rules`；
+  未设置的 `direct-nameserver-follow-policy` 默认为 `false`，DIRECT 出口域名解析
+  不应被理解为始终沿用业务 `nameserver-policy`。参见
+  [Mihomo DNS 文档](https://wiki.metacubex.one/config/dns/)和
+  [内核 DNS 配置解析](https://github.com/MetaCubeX/mihomo/blob/Meta/config/config.go)。
+- `redir-host` 下 `fake-ip-filter` 不负责选择 DNS 上游。DNS 监听端口 `1053`
+  可以配合 TUN 劫持 53 端口工作；当前监听 `0.0.0.0`，迁移时应按本机或局域网用途
+  检查监听范围。TUN 的实际权限、路由、系统 DNS 和客户端覆写需在目标设备检查。
+- `ChinaDNS` 的首选项为 `REJECT`，是已有的分流选择，不代表独立的节点解析和
+  DNS 引导查询也被禁止；不能由此宣称没有任何直连 DNS 查询。
+- Stash 使用转换后的骨架，并单独加入私有节点；移除 DNS policy 和 URL 代理组后缀
+  会改变解析行为，具体差异见前面的 Stash 说明。Loon 输出仅覆盖可表达的基础节点。
+- 配置可以部署到 Windows 上的 Mihomo 客户端；节点管理脚本依赖 `fcntl`，需在
+  Linux、macOS 或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
+
+当前 `rule-providers` 仍直接引用上游 URL。独立快照仓库的自动同步不会自动修改这里的
+规则来源；若要使用快照，需另行接入对应的地址或本地文件，并处理私有仓库的访问权限。
 
 ## 维护与验证
 
