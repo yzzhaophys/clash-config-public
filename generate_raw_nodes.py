@@ -1753,10 +1753,68 @@ def loon_node_alias(proxy: dict[str, Any], counts: dict[str, int]) -> str:
     return base if index == 0 else f"{base}-{index:02d}"
 
 
+def loon_proxy_groups(
+    aliases: dict[str, str],
+    chain_aliases: dict[str, str],
+    home_template: Path = HOME_TEMPLATE,
+) -> list[str]:
+    """Render the four home group layers using only exported Loon members."""
+    source = load_home_proxy_groups(home_template)
+    layers = ("DirectExit", "Chain", "Line", "Route")
+    selected = {
+        name: group for name, group in source.items()
+        if any(f".{layer}-[" in name for layer in layers)
+    }
+    members: dict[str, list[str]] = {}
+
+    def available(name: str) -> bool:
+        if name in members:
+            return bool(members[name])
+        group = selected[name]
+        if ".DirectExit-[" in name and "filter" in group:
+            candidates = [alias for original, alias in aliases.items()
+                          if _group_matches_proxy(group, original)]
+        elif ".Chain-[" in name and "filter" in group:
+            candidates = [alias for original, alias in chain_aliases.items()
+                          if _group_matches_proxy(group, original)]
+        else:
+            candidates = [candidate for candidate in group["proxies"]
+                          if candidate in {"DIRECT", "REJECT"}
+                          or (candidate in selected and available(candidate))]
+        # The home graph is already checked for cycles by load_home_proxy_groups.
+        members[name] = list(dict.fromkeys(candidates))
+        return bool(members[name])
+
+    for name in selected:
+        available(name)
+
+    lines: list[str] = []
+    for layer in layers:
+        for name, group in selected.items():
+            if f".{layer}-[" not in name or not members.get(name):
+                continue
+            kind = group["type"]
+            if kind not in {"select", "url-test", "fallback"}:
+                raise ValueError(f"Loon 不支持策略组类型 {kind}: {name}")
+            options = [kind, *members[name]]
+            if kind != "select":
+                if "url" in group:
+                    options.append(f"url = {group['url']}")
+                if "interval" in group:
+                    options.append(f"interval = {group['interval']}")
+                if kind == "url-test" and "tolerance" in group:
+                    options.append(f"tolerance = {group['tolerance']}")
+                if kind == "fallback" and "timeout" in group:
+                    options.append(f"max-timeout = {group['timeout']}")
+            lines.append(f"{name} = {', '.join(map(str, options))}")
+    return lines
+
+
 def write_loon(
     proxies: list[dict[str, Any]],
     output: Path,
     chains: list[tuple[dict[str, Any], dict[str, Any]]] = (),
+    home_template: Path = HOME_TEMPLATE,
 ) -> tuple[int, int, list[str]]:
     """Write Loon nodes and the selected, representable proxy chains."""
     node_lines: list[str] = []
@@ -1764,6 +1822,7 @@ def write_loon(
     counts: dict[str, int] = {}
     skipped: list[str] = []
     aliases: dict[str, str] = {}
+    chain_aliases: dict[str, str] = {}
     valid_pairs = {
         (exit_proxy["name"], dialer["name"])
         for exit_proxy, dialer in chain_candidates(proxies)
@@ -1793,14 +1852,17 @@ def write_loon(
             skipped.append(f"代理链 {pair[0]} <- {pair[1]}: 出入口有节点未导出到 Loon")
             continue
         exit_alias, entry_alias = aliases[pair[0]], aliases[pair[1]]
-        chain_lines.append(
-            f"chain.{exit_alias}.via.{entry_alias} = {entry_alias}, {exit_alias}"
-        )
+        alias = f"chain.{exit_alias}.via.{entry_alias}"
+        chain_lines.append(f"{alias} = {entry_alias}, {exit_alias}")
+        chain_aliases[chain_name(exit_proxy, dialer)] = alias
         emitted_pairs.add(pair)
 
     lines = ["[Proxy]", *node_lines]
     if chain_lines:
         lines.extend(["", "[Proxy Chain]", *chain_lines])
+    group_lines = loon_proxy_groups(aliases, chain_aliases, home_template)
+    if group_lines:
+        lines.extend(["", "[Proxy Group]", *group_lines])
     secure_write(output, "\n".join(lines) + "\n")
     return len(node_lines), len(chain_lines), skipped
 
@@ -2429,7 +2491,9 @@ def main(argv: list[str] | None = None) -> int:
             if loon_output:
                 label, destination = 'Loon 输出', loon_output
                 loon = stage / 'loon.conf'
-                loon_count, loon_chain_count, loon_skipped = write_loon(proxies, loon, chains)
+                loon_count, loon_chain_count, loon_skipped = write_loon(
+                    proxies, loon, chains, home_template
+                )
                 rendered.append((loon_output, loon.read_text(encoding='utf-8')))
         except (OSError, ValueError) as exc:
             raise SystemExit(f'无法写入{label} {destination}：{exc}') from exc

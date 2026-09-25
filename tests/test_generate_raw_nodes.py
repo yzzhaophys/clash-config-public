@@ -1037,12 +1037,21 @@ class GeneratorTests(unittest.TestCase):
             self.assertIn("[Proxy]\n", content)
             self.assertIn("us.landing.socks5 = socks5,exit.example,1080", content)
             self.assertIn("[Proxy Chain]\nchain.us.landing.socks5.via.jp.vless = jp.vless, us.landing.socks5\n", content)
+            self.assertIn("[Proxy Group]\n", content)
+            self.assertIn("🇯🇵🔰.DirectExit-[JP] = url-test, jp.vless,", content)
+            self.assertIn("🇺🇸🔗.Chain-[US] = url-test, chain.us.landing.socks5.via.jp.vless,", content)
+            self.assertIn("🇺🇸.Line-[US] = fallback, 🇺🇸🔗.Chain-[US],", content)
+            self.assertIn("♾️.Route-[Final.Fallback] = fallback, 🇭🇰.Line-[HK], 🇯🇵.Line-[JP],", content)
+            self.assertNotIn("🇺🇸🔰.DirectExit-[US] =", content)
+            self.assertNotIn("🇬🇧🔗.Chain-[UK] =", content)
             self.assertNotIn("chain.us.landing.socks5.via.hk.vless", content)
             self.assertIn("入口仅支持 VLESS", skipped[0])
             _, no_chain_count, _ = generator.write_loon(proxies, output, [])
             self.assertEqual(no_chain_count, 0)
             self.assertNotIn("[Proxy Chain]", output.read_text())
             self.assertIn("us.landing.socks5 =", output.read_text())
+            self.assertNotIn("🇺🇸🔗.Chain-[US] =", output.read_text())
+            self.assertNotIn("🇺🇸.Line-[US] =", output.read_text())
 
     def test_loon_alias_distinguishes_homeip_landing_and_regular_nodes(self) -> None:
         counts: dict[str, int] = {}

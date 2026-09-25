@@ -10,6 +10,9 @@
 - `generate_raw_nodes.py` 输出含基础节点与可选代理链的 `clash-vps.generated.yaml`，
   还可输出仅含基础节点的 `nodes.yaml` 和 Loon 格式节点及选中代理链的 `loon-nodes.conf`。
   三者含凭据，均被 `.gitignore` 忽略；文件职责与更新命令见 README。
+- Loon 的 `[Proxy Group]` 沿用 `home.yaml` 的 DirectExit、Chain、Line、Route
+  组名和层次，仅引用实际导出的节点、代理链与非空下级组；本地 `[Proxy]`
+  节点由生成器筛选，不用 `[Remote Filter]`。
 - `home.yaml` 是规则、筛选和 DNS 的基础；`stash-dns-policy.yaml` 独立保存 Stash
   专用 DNS policy。`generate_stash_config.py` 合并两者，生成公开的无节点骨架
   `home-stash.yaml`；`generate_stash_private.py` 再结合骨架、

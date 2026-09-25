@@ -502,7 +502,8 @@ Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本�
 
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
-- `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链。
+- `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链，
+  `[Proxy Group]` 按 `home.yaml` 的原名生成 DirectExit、Chain、Line、Route 四层策略组。
   节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
   `jp.homeip.socks5`，非 HomeIP、允许作链出口且禁止直出的 Exit 节点如 `us.landing.socks5`；
   同类节点按序号区分。代理链会引用这些别名。
@@ -517,6 +518,11 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon
 包括标记 `[Direct=false]` 的代理链节点；Loon 的基础节点列表本身不能禁止用户手动选择它直连。
 链格式为 `名称 = 入口, 出口`。交互模式还可以排除基础节点、选择代理链
 方向或逐条选择代理链；被排除节点的相关代理链不会生成。
+Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 Chain 成员由
+`home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
+`[Remote Filter]` 用于远程订阅节点，不能筛选这里 `[Proxy]` 中的本地节点。
+组名和组间先后顺序沿用 `home.yaml`；测速参数仅输出 Loon 支持的对应项。
+生成文件的语法和嵌套自动组行为仍需在 Loon 客户端中确认。
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Download`、`ShowIP`、`Chain` 筛选表达式。
