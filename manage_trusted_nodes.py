@@ -631,9 +631,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     args = parser.parse_args(argv)
     if args.target is None:
-        args.target = generator.default_trusted_nodes_file(
-            generator.default_airport_dir(generator.default_hosts_dir())
-        )
+        args.target = generator.default_trusted_nodes_file()
     args.target = args.target.expanduser()
     args.import_dir = (args.import_dir or Path(os.environ.get('CLASH_TRUSTED_IMPORT_DIR')
                                              or args.target.parent / 'imports')).expanduser()

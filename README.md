@@ -1,4 +1,4 @@
-# Clash Verge Rev home configuration
+# Clash Verge Rev / Loon 配置与节点生成
 
 可复用的 Mihomo/Clash Verge Rev 配置模板，以及用于生成自建节点和代理链的脚本。
 
@@ -7,49 +7,45 @@
 | 文件 | 来源与作用 | 是否含凭据、是否提交 |
 | --- | --- | --- |
 | `home.yaml` | 手工维护的 Mihomo/Clash Verge 主模板；定义 DNS、策略组、节点筛选和分流，`proxies` 为空 | 公开，提交 |
-| `stash-dns-policy.yaml` | 手工维护的 Stash 专用 DNS policy；保存新增的整段规则及注释，独立于 `home.yaml` | 公开，提交 |
-| `home-stash.yaml` | `generate_stash_config.py` 合并上述两个输入生成的 Stash 骨架；没有节点，也没有可在 Stash 运行时筛选节点的表达式 | 公开，提交；不能单独作为最终配置使用 |
-| `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置及 Stash 私有生成器使用 | 含凭据，忽略、不提交 |
+| `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置使用 | 含凭据，忽略、不提交 |
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
-| `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点及选中的代理链；不能表达的节点或链会被跳过 | 含凭据，忽略、不提交 |
-| `home-stash.private.yaml` | `generate_stash_private.py` 将骨架、静态节点和 `home.yaml` 的筛选条件合并后生成；空组固定为 `REJECT` | 含凭据，忽略、不提交；这是导入 Stash 的文件 |
+| `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点、选中的代理链及 Route / Line / Chain / DirectExit 四层基础组；不含完整规则 | 含凭据，忽略、不提交 |
+| `Loon-home.template.lcf` | 私有完整 Loon 模板；保留业务手选组、规则、DNS、MitM 域名等固定内容，以六处标记接收动态节点、代理链和四层基础组；不内嵌 CA | 私有，忽略、不提交 |
+| `Loon-home.generated.lcf` | 可选的完整 Loon 生成配置；由私有模板与本次节点、代理链和基础组合成，不覆盖手工维护的 `Loon-home.lcf` | 含凭据，忽略、不提交 |
+| `Loon-home.lcf`（可选） | 原手工维护的完整配置；生成器不读取也不自动覆盖，可作历史参考 | 含凭据，忽略、不提交 |
+| `Loon-home.generated.test*.lcf`（可选） | 从 Loon App 导出的验收配置，可能包含设备 CA；用于本地对比，不是生成器输入 | 含凭据和证书，忽略、不提交 |
 | `trusted-nodes.yaml` | `manage_trusted_nodes.py` 管理的私有 trusted inventory；也是节点生成器的输入，不是客户端配置 | 含凭据，忽略、不提交 |
 
 | 脚本或目录 | 职责 |
 | --- | --- |
-| `generate_raw_nodes.py` | 读取自建 VPS、trusted inventory 和交互确认的机场节点，生成上述三种节点输出；模板模式还按 `home.yaml` 校验筛选 |
+| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `home.yaml` 校验筛选 |
 | `manage_trusted_nodes.py` | 查看、预览或应用 trusted inventory 的导入、删除、恢复；只改清单，不自动重新生成客户端文件 |
-| `generate_stash_config.py` | 转换 `home.yaml`，合并 `stash-dns-policy.yaml`，生成 `home-stash.yaml` |
-| `generate_stash_private.py` | 读取 `home-stash.yaml`、`clash-vps.generated.yaml`、`home.yaml`，生成 `home-stash.private.yaml`；拒绝过期骨架 |
 | `node_io.py` | 脚本共用的严格 YAML 读取，拒绝显式重复键 |
 | `node_conversion.py` | 服务端 Xray/Hysteria 参数到客户端节点字段的转换与审计辅助函数 |
 | `tests/test_generate_raw_nodes.py`、`tests/test_manage_trusted_nodes.py` | 节点生成及 trusted inventory 管理回归测试 |
 | `tests/test_node_parameter_safety.py`、`tests/test_trusted_launch.py` | 参数保留、文件安全、trusted 节点导入及输出测试 |
 | `tests/test_proxy_group_policy.py` | `home.yaml` 策略组与筛选关系测试 |
-| `tests/test_stash_config.py`、`tests/test_generate_stash_private.py` | Stash 骨架、固定 DNS 合并及私有配置生成测试 |
 | `.gitignore` | 阻止私有输入、含凭据生成文件和缓存进入 Git |
 | `AGENTS.md` | 仓库协作、安全和交付约束 |
 
-私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`、机场目录中的
-`subscription.yaml` / `selected-nodes.yaml`，以及 trusted inventory。生成器负责
+私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`，以及 trusted inventory。生成器负责
 生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
 
 ## 配置生产流程
 
 ```text
-私有 VPS / trusted / 机场输入 ──generate_raw_nodes.py──► clash-vps.generated.yaml
-                                                  ├──► nodes.yaml（可选纯节点输出）
-                                                  └──► loon-nodes.conf（可选 Loon 输出）
-
-home.yaml + stash-dns-policy.yaml ──generate_stash_config.py──► home-stash.yaml
-home-stash.yaml + clash-vps.generated.yaml + home.yaml
-                              ──generate_stash_private.py──► home-stash.private.yaml
+manage_trusted_nodes.py → ~/.config/clash/trusted-nodes.yaml
+                                    ↓
+自建 VPS + trusted inventory → generate_raw_nodes.py
+                              ├─ clash-vps.generated.yaml：基础节点与选中的代理链
+                              ├─ nodes.yaml：纯基础节点
+                              └─ loon-nodes.conf：节点、代理链及四层基础组
+私有 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
 ```
 
 Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` 片段；这里的脚本
-不会自动合并或重载正在运行的 Clash Verge 配置。Stash 只导入最后生成的
-`home-stash.private.yaml`，其节点成员是生成时的静态快照；节点或任一上游模板改变后，
-按下文的更新顺序重新生成并导入。Loon 使用单独生成的 `loon-nodes.conf`。
+不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
+`loon-nodes.conf`，或显式指定私有模板生成带固定规则的完整配置。
 
 ## 要求
 
@@ -71,7 +67,6 @@ Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` �
 ```bash
 ./generate_raw_nodes.py \
   --hosts-dir /path/to/private/hosts \
-  --airport-dir /path/to/private/airport \
   --trusted-nodes-file /path/to/private/trusted-nodes.yaml \
   --interactive
 ```
@@ -85,86 +80,22 @@ Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` �
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
 - `--home-template PATH`：指定模板模式校验所用的 `home.yaml`；生成器会校验组引用和实际节点/代理链筛选。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
-- `--loon-output PATH` / `--no-loon`：指定 Loon 输出文件，或关闭 Loon 输出。
-
-### 生成 Stash 配置
-
-先生成公开骨架：
-
-```bash
-python3 generate_stash_config.py
-```
-
-`stash-dns-policy.yaml` 独立保存七千多行 Stash 专用 `nameserver-policy` 及注释。
-生成器检查它与 `home.yaml` 的条目不重名，再生成 `home-stash.yaml`。
-骨架没有节点和运行时节点筛选，不能作为最终配置导入；不要直接编辑这个生成文件。
-
-已有私有的 `clash-vps.generated.yaml` 后，生成供 Stash 导入的完整配置：
-
-```bash
-python3 generate_stash_private.py
-```
-
-输出 `home-stash.private.yaml` 含凭据、被 Git 忽略，权限为 `0600`。私有生成器会拒绝
-与当前 `home.yaml` 或固定 DNS 输入不一致的旧骨架，并按 `home.yaml` 的筛选条件生成
-静态组成员。空节点池改为只含 `REJECT` 的 `select` 组；上层自动组会移除已封闭的
-空子组，没有可用出口时也封闭为 `REJECT`。Stash 3.4.1 已实测这种 `select`
-组可显示 `REJECT`；公开骨架中的空自动组不能提供同样保证，参见
-[Stash 策略组文档](https://stash.wiki/proxy-protocols/proxy-groups)。
-私有生成器不接受动态 `proxy-providers`，输出时会展开重复 YAML 值（如 `alpn`），
-不使用 `*id001` 锚点引用；节点变化后须重新生成并导入。
-
-### Stash 转换边界
-
-- 节点字段只做必要映射：Hysteria2 的 `password` → `auth`，VLESS 的
-  `servername` → `sni`，其余客户端字段和值保留；认证冲突、代理链循环和筛选契约
-  变化会报错。`DirectExit` 的成员在生成时计算，不把超长筛选正则交给 Stash。
-- 源配置的 `empty-fallback: REJECT` 在公开骨架中省略，由私有静态组封闭空组。
-  `PASS` 手选项被移除；`DIRECT`、`REJECT`、`REJECT-DROP` 保留。
-- Stash 专用 DNS policy 由独立文件合并；Clash Meta 的 `rule-set:` DNS policy
-  和 DNS URL 的代理组后缀不能等价迁移。`+.*` 转为默认 `nameserver`，避免
-  通配规则遮蔽 `geosite:`。`follow-rule` 控制 DNS 请求的路由，不保证 DNS 结果
-  与网站连接使用同一出口。[Stash DNS 文档](https://stash.wiki/features/dns-server)
-- 当前骨架保留 `proxy-server-nameserver`，但独立解析功能要求 Stash iOS/tvOS
-  3.6+ 或 macOS 4.3+；在 iOS 3.4.1 上不能依赖它防止代理服务器域名解析递归。
-  Mihomo 的规则集下载 `proxy` 字段也会在 Stash 转换时移除，因此远端规则集不再
-  有源配置指定的下载代理；下载失败需要单独检查，不代表代理节点失效。
-- 单个节点的 Stash 测速地址和超时用 `benchmark-url`、`benchmark-timeout` 设置。
-  `select` 组设置 `interval: -1`，自动组保留原模板的间隔和 `lazy` 设置。
-  HTTP 测速成功不代表 UDP 可用；配置加载和本地字段比对也不能证明实际连通。
-
-### Stash 配置更新顺序
-
-`home.yaml` 是策略组、筛选和分流基础；七千多行 Stash 专用 DNS 规则由
-`stash-dns-policy.yaml` 独立维护。`home-stash.yaml` 是两者合并生成的中间文件，
-不要手动编辑。最终只将 `home-stash.private.yaml` 导入 Stash。
-
-| 变更 | 重新生成 |
-| --- | --- |
-| 修改 `home.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
-| 修改 `stash-dns-policy.yaml` | 依次运行 `python3 generate_stash_config.py`、`python3 generate_stash_private.py` |
-| 直接修改私有节点文件 `clash-vps.generated.yaml` | 运行 `python3 generate_stash_private.py` |
-| 通过 `manage_trusted_nodes.py` 修改 trusted inventory | 先运行 `generate_raw_nodes.py` 更新节点输出，再运行 `python3 generate_stash_private.py` |
-| 修改其他生成节点所用的私有原始资料 | 先运行 `generate_raw_nodes.py` 更新节点文件，再运行 `python3 generate_stash_private.py` |
-
-每次生成后都需要重新导入最终的私有文件，Stash 中已导入的配置不会自动同步工作区文件。
-修改节点名称或筛选契约时，脚本可能要求重新审核转换；不要绕过报错或直接修改生成文件。
-运行几天观察时，重点查看空组是否只显示 `REJECT`、常用国内外网站的连接记录和 DNS
-查询记录，以及节点失效后的实际切换；配置加载或单元测试不能代替这些运行结果。
+- `--loon-output PATH` / `--no-loon`：指定 Loon 片段输出文件，或关闭片段输出；不影响单独指定的完整配置输出。
+- `--loon-full-output PATH`：额外生成完整 Loon 配置。
+- `--loon-full-template PATH`：指定私有完整配置模板，默认 `Loon-home.template.lcf`。
 
 ### 本地文件清理
 
 `__pycache__/` 和 `tests/__pycache__/` 是可重新生成的 Python 缓存，可以清理。
-`clash-vps.generated.yaml`、`home-stash.private.yaml`、`nodes.yaml`、`loon-nodes.conf`
-以及 `trusted-nodes.yaml` 属于被 Git 忽略的私有输入或导出产物；不要把它们当作
-垃圾删除，也不要提交。公开的 `stash-dns-policy.yaml` 是固定 DNS 输入，
-`home-stash.yaml` 是生成私有 Stash 配置所需的中间文件，两者都应保留。
+`clash-vps.generated.yaml`、`nodes.yaml`、`loon-nodes.conf`
+以及私有 Loon 模板、完整配置、设备导出文件和 `trusted-nodes.yaml`
+属于被 Git 忽略的私有输入或导出产物；不要把它们当作
+垃圾删除，也不要提交。
 
 默认目录和环境变量：
 
 - 自建节点：`~/.config/infra/hosts`，可用 `CLASH_HOSTS_DIR` 覆盖。
-- 机场/可信节点：`~/.config/clash/airport`，可用 `CLASH_AIRPORT_DIR` 覆盖。
-- 可信节点文件：`trusted-nodes.yaml`，可用 `CLASH_TRUSTED_NODES_FILE` 覆盖。
+- 可信节点文件：可用 `CLASH_TRUSTED_NODES_FILE` 或 `--trusted-nodes-file` 指定；默认 `~/.config/clash/trusted-nodes.yaml`。
 - Ansible 角色配置：相邻 `infra/ansible/host_vars`，可用
   `CLASH_ANSIBLE_HOST_VARS_DIR` 或 `--ansible-host-vars-dir` 覆盖。
 
@@ -174,18 +105,16 @@ python3 generate_stash_private.py
 作为该主机唯一来源（即使其中 `proxies: []` 也不会回退到服务端配置）。
 `VPS_CLASH_ORDER` 可用于稳定多个主机的排序和节点编号，必须是整数。
 
-## 三种节点来源
+## 两种节点来源
 
 | 来源 | 私有输入 | 导入时机 | 命名与标记 | 默认链路能力 |
 | --- | --- | --- | --- | --- |
 | 自建 VPS | `vps-*/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `vps-*/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
 | Trusted（未纳入主机管理的自建/客户端节点） | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | `VPS-[US.Core|Exit|HomeIP]-...`；交互时显示来源文件 | 按 `exit-type` 和 `allow-*` 字段决定，默认仅允许直出 |
-| 机场订阅 | `subscription.yaml` 和可选的 `selected-nodes.yaml` | 仅交互模式中确认导入 | `(...机场出口)-[Airport=...]` | 仅允许直出，不可 Relay，不可作为 Chain 落地 |
 
-三种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted
-→ 机场订阅”的顺序分配编号。因此已有一个美国 H2 自建节点时，后续的美国
+两种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted”的顺序分配编号。因此已有一个美国 H2 自建节点时，后续的美国
 Trusted H2 节点会使用 `H2-01`。物理节点身份分别由 VPS 目录名、
-Trusted 的稳定 `id`/原始节点名和机场原始节点名确定，用于防止同一
+Trusted 的稳定 `id`/原始节点名确定，用于防止同一
 物理节点自连。
 
 ## 节点与代理链规则
@@ -257,19 +186,12 @@ HomeIP；`[ShowIP=true]` 让节点可参与对应的 ShowIP 策略组。基础�
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
 
-### 机场和可信节点
-
-机场订阅目录中的 `subscription.yaml` 需要在交互运行时选择节点，选择结果可保存到
-`selected-nodes.yaml`。节点名称末尾需要有两位地区代码（例如 `... US`）；导入后的
-机场节点固定为：允许单节点直出、不允许中转、不允许作为代理链落地，也不会被标记为
-`HomeIP` 或 `ShowIP`。订阅中匹配到的 `dns.nameserver-policy` 仅报告数量，不打印或导出
-策略内容，也不会自动改写 `home.yaml`。需要时在私有订阅中核对所选节点域名对应的策略，
-再手动合入主配置；包含私有域名或认证信息的策略不得提交到公开模板。
+### 可信节点
 
 可信节点必须放在私有 `trusted-nodes.yaml` 的 `nodes` 列表中。每个节点都需要
 显式指定稳定 `id`、实际两位国家代码和 `proxy`；`exit-type` 和能力由文件中的
 字段控制，默认只允许单节点直出。Trusted 是未纳入主机管理的自建/客户端节点，
-不是机场订阅节点；`allow-showip: true` 可用于已经核实实际公网出口地区的节点，
+`allow-showip: true` 可用于已经核实实际公网出口地区的节点，
 并与自建 VPS 使用相同的 ShowIP 标记和筛选。
 生成名称与自建 VPS 保持一致，
 使用 `VPS-[地区.角色]-协议-编号-(地区节点)` 格式，
@@ -349,8 +271,10 @@ VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，�
 ```
 
 菜单顶部显示实际管理的 inventory 路径。`--target` 可省略：优先使用
-`CLASH_TRUSTED_NODES_FILE`，否则沿用生成器的机场目录（包括 `CLASH_AIRPORT_DIR`）
-下的 `trusted-nodes.yaml`；显式 `--target` 优先。
+`CLASH_TRUSTED_NODES_FILE`；显式 `--target` 优先。两个脚本使用相同的默认路径：
+inventory 为 `~/.config/clash/trusted-nodes.yaml`，与自建 VPS 目录无关。
+管理器的默认导入目录为同目录下的 `imports/`；可用 `--import-dir` 或
+`CLASH_TRUSTED_IMPORT_DIR` 指定其他目录。需要其他 inventory 位置时显式指定可信节点文件。
 
 | 选项 | 操作 |
 | --- | --- |
@@ -376,6 +300,11 @@ VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，�
 和节点校验，原备份不会修改。删除、导入和恢复在确认及写入期间持有目标锁。
 操作只修改 inventory，不会自动生成节点或重新加载客户端。
 
+已有节点按 `id + proxy.type` 更新时保留位置；删除后重新导入会追加到末尾，
+可能改变同地区、同协议的节点编号。通过 Route / Line 等组使用时，重新生成会同步
+更新组成员和代理链引用，筛选归属不受编号变化影响；具体节点的已保存选择或
+自动组候选顺序可能变化。稳定 `id` 是 inventory 身份，生成名称不是持久身份。
+
 ```bash
 # 指定其他主清单，或指定存放待导入文件的目录
 ./manage_trusted_nodes.py --target /path/to/trusted-nodes.yaml
@@ -399,7 +328,7 @@ chmod 600 /path/to/landing-jp-node.yaml
 
 ```bash
 ./generate_raw_nodes.py \
-  --trusted-nodes-file ~/.config/clash/airport/trusted-nodes.yaml \
+  --trusted-nodes-file ~/.config/clash/trusted-nodes.yaml \
   --output clash-vps.generated.yaml \
   --raw-output nodes.yaml \
   --loon-output loon-nodes.conf \
@@ -470,7 +399,6 @@ HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Li
 下载业务仍走 `⬇️.Route-[Max.Traffic]`；它优先使用 Download 节点池，Download 全部故障时明确
 回退到 `♾️.Route-[Final.Fallback]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
 `home.yaml` 的 `empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备；
-公开的 Stash 骨架无法保留这一空组回退，需使用上面的私有静态生成步骤将空组固定为 `REJECT`。
 缺失地区不会生成占位节点。地区 `fallback` 只有在
 备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
 
@@ -503,7 +431,7 @@ Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本�
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
 - `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链，
-  `[Proxy Group]` 按 `home.yaml` 的原名生成 DirectExit、Chain、Line、Route 四层策略组。
+  `[Proxy Group]` 按 `home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
   节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
   `jp.homeip.socks5`，非 HomeIP、允许作链出口且禁止直出的 Exit 节点如 `us.landing.socks5`；
   同类节点按序号区分。代理链会引用这些别名。
@@ -516,13 +444,40 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon
 交互选择仅输出选中的链；仅支持 VLESS 作为入口。链两端都必须成功导出到 `[Proxy]`，
 否则整条链跳过并报告原因。`[Proxy]` 包含所有本次选中且 Loon 可表达的基础节点，
 包括标记 `[Direct=false]` 的代理链节点；Loon 的基础节点列表本身不能禁止用户手动选择它直连。
-链格式为 `名称 = 入口, 出口`。交互模式还可以排除基础节点、选择代理链
-方向或逐条选择代理链；被排除节点的相关代理链不会生成。
+链格式为 `名称 = 入口,出口`，节点、代理链和策略组成员均使用紧凑逗号分隔。
+交互模式还可以排除基础节点、选择代理链方向或逐条选择代理链；
+被排除节点的相关代理链不会生成。
 Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 Chain 成员由
 `home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
 `[Remote Filter]` 用于远程订阅节点，不能筛选这里 `[Proxy]` 中的本地节点。
 组名和组间先后顺序沿用 `home.yaml`；测速参数仅输出 Loon 支持的对应项。
-生成文件的语法和嵌套自动组行为仍需在 Loon 客户端中确认。
+现有节点集合的配置已完成 Loon 导入及导出对比；新节点、自动组切换和实际连通仍需在客户端确认。
+
+完整 Loon 配置使用私有 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
+分别填入 Proxy、Proxy Chain 和 Route、Line、Chain、DirectExit 四层基础组。
+业务手选组、远端规则、DNS、MitM 域名等其他行原样保留。模板不包含
+`ca-p12` 和 `ca-passphrase`；每台设备导入后须在 Loon 中生成 CA，
+再在系统中安装并信任该证书，才能使用 MitM。节点变化后可运行：
+
+```bash
+./generate_raw_nodes.py --chains all \
+  --output clash-vps.generated.yaml \
+  --loon-output loon-nodes.conf \
+  --loon-full-output Loon-home.generated.lcf
+```
+
+也可用 `--loon-full-template PATH` 指定另一份私有模板。交互模式会在节点与代理链选择后询问
+是否生成完整 Loon 配置，默认不生成；选“是”写入 `Loon-home.generated.lcf`。
+非交互模式需显式指定 `--loon-full-output`。上述命令写入独立文件，
+不覆盖手工维护的 `Loon-home.lcf`。
+若新节点集合使固定手选组引用的 Route 不再存在，生成器会报错，旧输出保持不变。
+完整配置还检查节点、链及组的名称冲突和策略组循环；定义中的等号两侧可带或不带空格。
+规则引用校验覆盖远端规则的 `policy` 和本地 `FINAL`，不等同于 Loon 全部语法校验。
+修改固定规则或业务组时，应修改私有模板，再重新生成完整配置。
+日常更新流程：修改自建输入或 trusted inventory 后重新运行生成器；
+修改 Loon 固定设置、业务组或规则时先改私有模板，再生成完整配置并导入 App。
+手工编辑生成文件不会回写模板，下一次生成会覆盖这些编辑。
+模板按私有文件管理，完整输出包含节点凭据；两者不得提交或粘贴到公开文档。
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Download`、`ShowIP`、`Chain` 筛选表达式。
@@ -581,8 +536,6 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 服务端转换对已映射的字符串、字符串列表、布尔及非负整数参数检查类型，显式空值
 不会被当成缺失值补默认；合法的空字符串、空列表、`false` 和 `0` 原样保留。
 VLESS UUID 与密码一样保留首尾空格，不通过裁剪来修正输入；实际可用性仍需内核及连通性验证。
-机场导入也检查 VMess UUID、Trojan 密码和 Shadowsocks 密码及 cipher；缺失、空值、
-非法类型或换行会跳过整条节点并报告字段名，合法凭据的首尾空格保留。
 普通输出与模板输出均保留嵌套扩展字段的浮点类型，包括科学计数法和非有限值；
 保留 YAML 值不代表客户端支持该扩展字段或数值。
 Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非法时跳过整条节点
@@ -609,8 +562,7 @@ Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非�
   检查监听范围。TUN 的实际权限、路由、系统 DNS 和客户端覆写需在目标设备检查。
 - `ChinaDNS` 的首选项为 `REJECT`，是已有的分流选择，不代表独立的节点解析和
   DNS 引导查询也被禁止；不能由此宣称没有任何直连 DNS 查询。
-- Stash 使用转换后的骨架，并单独加入私有节点；移除 DNS policy 和 URL 代理组后缀
-  会改变解析行为，具体差异见前面的 Stash 说明。Loon 输出仅覆盖可表达的基础节点。
+- Loon 节点文件只覆盖可表达的基础节点及本次选中的可导出代理链；规则仍需单独维护。
 - 配置可以部署到 Windows 上的 Mihomo 客户端；节点管理脚本依赖 `fcntl`，需在
   Linux、macOS 或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
 
@@ -623,12 +575,26 @@ Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非�
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py generate_stash_private.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py
 git diff --check
 ```
 
 具备私有输入和 Mihomo 时，在自动清理的私有临时目录生成候选配置，使用已安装内核的
 `-t` 校验；测试配置、缓存与生产目录隔离。单元测试验证代码行为，内核校验验证配置可加载；
-两者均不能代替真实连通、DNS 分流、故障切换或 Stash 实机测试。
+两者均不能代替真实连通、DNS 分流或故障切换测试。
 Mihomo 对 DNS policy 引用的 `classical` 规则集会提示只匹配其中的域名规则，
 加载成功不代表这些规则集的 IP 条目也参与 DNS 匹配。
+
+### Loon 导出格式与验收
+
+完整配置以本地 Loon 导出文件的格式为参考：模板使用 `ip-mode = v4-only`，
+业务策略组候选使用紧凑逗号，远端规则使用单逗号分隔。生成器保留模板的固定内容，
+因此格式调整在私有 `Loon-home.template.lcf` 中维护。
+节点仍保留输入中的可表达参数，包括 VLESS 的 `alpn=http/1.1` 和 SOCKS5 的 `udp=false`；
+不因 Loon 导出文件省略这些字段而删除。设备导出的测试配置含节点及 CA，保持 `0600` 并忽略提交；
+不得将设备证书复制进模板。
+
+本轮验收已通过单元测试、脚本语法检查、差异检查，以及私有临时目录中的
+trusted 管理和完整生成流程；当前生成结果与 Loon 导出配置的结构、规则及策略组一致。
+ALPN / UDP 字段和设备 CA 按上述约定保留差异。未完成 Mihomo 内核加载验证及真实网络、
+自动切换验收；后续节点或规则变化后应重新验证。

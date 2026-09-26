@@ -10,23 +10,24 @@
 - `generate_raw_nodes.py` 输出含基础节点与可选代理链的 `clash-vps.generated.yaml`，
   还可输出仅含基础节点的 `nodes.yaml` 和 Loon 格式节点及选中代理链的 `loon-nodes.conf`。
   三者含凭据，均被 `.gitignore` 忽略；文件职责与更新命令见 README。
-- Loon 的 `[Proxy Group]` 沿用 `home.yaml` 的 DirectExit、Chain、Line、Route
-  组名和层次，仅引用实际导出的节点、代理链与非空下级组；本地 `[Proxy]`
-  节点由生成器筛选，不用 `[Remote Filter]`。
-- `home.yaml` 是规则、筛选和 DNS 的基础；`stash-dns-policy.yaml` 独立保存 Stash
-  专用 DNS policy。`generate_stash_config.py` 合并两者，生成公开的无节点骨架
-  `home-stash.yaml`；`generate_stash_private.py` 再结合骨架、
-  `clash-vps.generated.yaml` 和 `home.yaml`，生成唯一供 Stash 导入的
-  `home-stash.private.yaml`。后者含凭据、被 Git 忽略。
+- `Loon-home.template.lcf` 是不内嵌 CA 的私有完整配置模板；非交互模式显式指定
+  `--loon-full-output`，或交互模式选择生成时才写入完整 Loon 配置。六个生成标记分别承载
+  Proxy、Proxy Chain、Route、Line、Chain、DirectExit；固定业务组和规则不得由节点
+  生成器重写。每台设备需在 Loon 中自行生成 CA，并在系统中安装和信任；
+  模板和完整输出均须保持私有且不得提交。
+- `home.yaml` 是 Mihomo/Clash Verge 的规则、筛选和 DNS 基础；Loon 使用独立
+  输出的 `loon-nodes.conf`，其规则文件另行维护。Loon 的 `[Proxy Group]` 沿用
+  `home.yaml` 的 Route、Line、Chain、DirectExit 组名和顺序，仅引用实际导出的
+  节点、代理链与非空下级组；本地 `[Proxy]` 节点由生成器筛选，不用 `[Remote Filter]`。
 - Clash Verge 使用 `home.yaml` 与节点生成器输出的 `proxies` 片段；本仓库脚本不会
-  自动合并或重载生效配置。Loon 使用独立输出的 `loon-nodes.conf`。
+  自动合并或重载生效配置。
 - 保留用户已有改动。修改脚本不代表获准覆盖、重载 Clash Verge 生效配置，
-  或替换 Stash 已导入的配置，也不代表获准提交或推送；这些操作须有用户明确授权。
+  也不代表获准提交或推送；这些操作须有用户明确授权。
 - 修改 `home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
 - 清理工作区时只删除明确可重新生成的缓存或临时文件，例如 `__pycache__/`。
-  不要把被 Git 忽略的 `clash-vps.generated.yaml`、`home-stash.private.yaml`、
-  `nodes.yaml`、`loon-nodes.conf` 或 trusted inventory 当作垃圾删除；
-  `home-stash.yaml` 虽然可重新生成，仍是私有 Stash 生成流程的公开中间文件。
+  不要把被 Git 忽略的 `clash-vps.generated.yaml`、`nodes.yaml`、
+  `loon-nodes.conf`、私有 Loon 模板、完整配置、设备导出或 trusted inventory 当作垃圾删除。
+  `*:Zone.Identifier` 是 Windows 下载标记，可清理；设备导出配置可能包含 CA，不能据此当作缓存删除。
 
 ## 参数与分流约束
 
@@ -51,29 +52,6 @@
   匹配且物理节点不同；`allow_direct_exit` 不参与代理链资格判断。
 - 修改名称、能力标记或组链规则时，必须同时测试 `home.yaml` 的实际筛选表达式。
 
-## Stash 生成顺序
-
-- 改动 `home.yaml` 或 `stash-dns-policy.yaml` 后，依次运行
-  `python3 generate_stash_config.py` 和 `python3 generate_stash_private.py`；
-  改动 `clash-vps.generated.yaml` 后只需重新生成 private。若改动的是 trusted
-  inventory 或其他原始节点资料，先运行 `generate_raw_nodes.py` 更新节点输出。
-- 不要手改 `home-stash.yaml`；私有生成器必须核对骨架与两个公开输入一致，
-  再按 `home.yaml` 的筛选条件确定静态节点。空组固定为只含 `REJECT` 的
-  `select` 组，不接收会使组成员自行变化的动态 `proxy-providers`。
-  私有配置导出时展开重复 YAML 值，不输出自动生成的锚点引用。
-  重新生成后仍需由用户在 Stash 中导入；本地文件变化不会更新已导入的配置。
-- Stash 专用 DNS policy 及注释只维护在 `stash-dns-policy.yaml`，不得与
-  `home.yaml` 的 DNS policy 重名。保留 `home.yaml` 作为基础；无法等价迁移的
-  Stash 字段须在转换脚本和文档中说明，筛选契约变化须报错并审核。
-- Hysteria2 将 Mihomo 的 `password` 映射为 Stash 的 `auth`，VLESS 将
-  `servername` 映射为 `sni`；其余节点字段和值须保留。字段冲突、缺失认证
-  或经策略组形成的代理链循环须报错。
-- `proxy-server-nameserver` 在 Stash iOS/tvOS 3.6+ 才提供独立解析；
-  3.4.1 的配置即使包含该字段，也不能据此认定代理服务器域名不会递归解析。
-  规则集的 Mihomo `proxy` 字段在 Stash 转换时丢弃，远端资源下载错误应与
-  代理节点连通错误分别核查。曾出现的 HY2/代理链超时后来恢复，根因未确认；
-  不要把一次测速或 UDP 错误直接归因为生成脚本缺字段。
-
 ## 文件写入
 
 - 两个脚本统一使用严格 YAML 加载器，拒绝显式重复键；支持合法锚点和
@@ -89,7 +67,7 @@
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py generate_stash_config.py generate_stash_private.py
+python3 -m py_compile generate_raw_nodes.py manage_trusted_nodes.py node_io.py node_conversion.py
 git diff --check
 ```
 
@@ -101,3 +79,24 @@ git diff --check
   交付时区分单元测试、配置加载校验和真实网络测试，说明仍存在的警告及限制。
 - 提交前检查暂存清单和差异，确保没有凭据及生成产物；推送后确认远端分支与
   本地提交一致。行为变化同步维护 `README.md` 和相应测试。
+
+## 节点输入范围
+
+- `generate_raw_nodes.py` 只读取自建 VPS 和 trusted inventory；不读取机场订阅、
+  不提供订阅节点选择或订阅 DNS 策略导入。交互流程用于选择现有节点、代理链和可选完整 Loon 输出。
+- 两个管理/生成脚本共享 `default_trusted_nodes_file()`；默认 inventory 为
+  `~/.config/clash/trusted-nodes.yaml`，不再搜索历史 airport 目录。
+  新位置使用 `CLASH_TRUSTED_NODES_FILE`、生成器 `--trusted-nodes-file` 或管理器 `--target`，
+  不恢复 `CLASH_AIRPORT_DIR` / `--airport-dir`。历史私有输入文件不得作为清理对象删除。
+- Loon 完整配置的格式以设备导出为参考；私有模板使用 `v4-only`、紧凑业务组逗号、
+  单逗号远端规则。保留节点的 ALPN 和 UDP 参数，不依据 App 导出时的省略删除参数。
+  设备导出测试配置含 CA 和凭据，必须忽略提交且保持 `0600`；模板不得包含设备 CA。
+
+- trusted inventory 用稳定 `id + proxy.type` 更新时保留位置；删除后重导入追加到末尾，
+  可能改变生成编号。Route / Line 等组及代理链引用在生成时同步更新，不依赖固定编号；
+  不为维持编号复制节点或增加占位节点。
+- Loon 固定内容以私有模板为维护入口；节点及链以自建输入和 trusted inventory 为入口。
+  修改上游后重新生成并由用户导入 App；生成产物的手工编辑不会回写上游。
+
+- 完整 Loon 配置写入前检查跨节点/链/组的名称冲突、组引用及循环；等号空格变化
+  不应绕过检查。远端 `policy` 与本地 `FINAL` 引用校验不代表完整 Loon 语法验证。

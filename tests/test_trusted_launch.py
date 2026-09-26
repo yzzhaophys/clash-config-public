@@ -57,7 +57,7 @@ class TrustedLaunchTests(unittest.TestCase):
 
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(g.main([
-                    '--hosts-dir', str(root / 'hosts'), '--airport-dir', str(root / 'airport'),
+                    '--hosts-dir', str(root / 'hosts'),
                     '--ansible-host-vars-dir', str(root / 'vars'),
                     '--trusted-nodes-file', str(target), '--routes', 'JP.HomeIP<-HK',
                     '--output', str(root / 'template.yaml'), '--raw-output', str(root / 'raw.yaml'),
@@ -88,7 +88,7 @@ class TrustedLaunchTests(unittest.TestCase):
             loon_text = (root / 'loon.conf').read_text()
             self.assertTrue(loon_text.startswith('[Proxy]\n'))
             self.assertIn('[Proxy Chain]\n', loon_text)
-            self.assertIn('chain.jp.homeip.vless.via.hk.vless = hk.vless, jp.homeip.vless', loon_text)
+            self.assertIn('chain.jp.homeip.vless.via.hk.vless = hk.vless,jp.homeip.vless', loon_text)
             for filename in ('template.yaml', 'raw.yaml', 'loon.conf'):
                 self.assertEqual((root / filename).stat().st_mode & 0o777, 0o600)
 

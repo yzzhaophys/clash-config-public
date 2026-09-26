@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import ipaddress
 import json
 import os
 import re
@@ -20,8 +19,17 @@ from node_conversion import xray_options, hysteria_options
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
+LOON_FULL_OUT = SCRIPT_DIR / "Loon-home.generated.lcf"
+LOON_FULL_TEMPLATE = SCRIPT_DIR / "Loon-home.template.lcf"
 HOME_TEMPLATE = SCRIPT_DIR / "home.yaml"
-AIRPORT_REGION_ALIASES = {"GB": "UK"}
+LOON_FULL_MARKERS = {
+    "proxy": "[Proxy]",
+    "proxy-chain": "[Proxy Chain]",
+    "route": "[Proxy Group]",
+    "line": "[Proxy Group]",
+    "chain": "[Proxy Group]",
+    "direct-exit": "[Proxy Group]",
+}
 PROXY_GROUP_BUILTINS = {"DIRECT", "REJECT", "REJECT-DROP", "PASS"}
 
 REGION_CN = {
@@ -58,7 +66,6 @@ REGION_ALIASES = {
     "france": "fr",
     "canada": "ca",
 }
-AIRPORT_REGION_PRIORITY = ("HK", "TW", "SG", "JP", "US", "UK", "AU", "DE", "NL")
 DEFAULT_CORE_REGIONS = {"hk", "jp", "sg"}
 
 
@@ -335,7 +342,7 @@ def node_name(
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Airport=(?P<airport>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -524,22 +531,16 @@ def validate_generated_against_home(
                 )
 
 
-def source_marker_label(value: Any) -> str:
-    """Make a source name safe to nest inside an ASCII marker."""
-    label = re.sub(r"[\r\n]+", " ", str(value).strip())
-    return label.replace("[", "［").replace("]", "］")
-
-
 def anchor_name(name: str) -> str:
     meta = node_meta(name)
     if not meta:
         return re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
     base = f"VPS_{meta['region']}_{meta['role']}_{meta['proto']}_{meta['idx']}"
-    # Airport and trusted nodes can intentionally reuse a base
+    # Nodes from different sources can intentionally reuse a base
     # region/protocol/index. Include their source marker so YAML anchors stay
     # unique even when a future caller does not share counters.
     markers: list[str] = []
-    for field in ("source", "airport", "special", "trusted"):
+    for field in ("source", "special", "trusted"):
         value = meta.get(field)
         if not value:
             continue
@@ -565,7 +566,7 @@ def ensure_unique_anchors(proxies: list[dict[str, Any]]) -> None:
 def yaml_scalar(value: Any) -> str:
     if isinstance(value, str):
         # JSON strings are valid YAML scalars and correctly escape controls,
-        # quotes, and newlines from imported subscription data.
+        # quotes, and newlines from client inventory data.
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -784,7 +785,7 @@ def client_inventory_nodes(
 
     The inventory is authoritative for that host. It describes public client
     addresses and ports, which may differ from the service's internal listen
-    ports. Unlike airport imports, these remain self-hosted nodes and can
+    ports. These remain self-hosted nodes and can
     participate in proxy chains.
     """
     private_source = host_dir / "secrets" / "client" / "clash-nodes.yaml"
@@ -862,8 +863,7 @@ def normalize_trusted_nodes(
 ) -> list[dict[str, Any]]:
     """Normalize explicitly trusted, client-side nodes.
 
-    These entries are deliberately separate from airport imports.  A trusted
-    node may relay, become a chain landing, enter ShowIP, or be classified as
+    A trusted node may relay, become a chain landing, enter ShowIP, or be classified as
     HomeIP only when the private file says so explicitly.  Trusted entries are
     unmanaged self-hosted/client nodes, so the generator preserves their
     explicit capability declarations but does not infer them.  SOCKS5 entries
@@ -1046,25 +1046,12 @@ def default_hosts_dir() -> Path:
     return SCRIPT_DIR
 
 
-def default_airport_dir(hosts_dir: Path) -> Path:
-    """机场订阅默认独立于 hosts 和公开 Git 仓库，并兼容旧位置。"""
-    configured = os.environ.get("CLASH_AIRPORT_DIR")
-    if configured:
-        return Path(configured).expanduser()
-    for candidate in (
-        Path.home() / ".config" / "clash" / "airport",
-        Path.home() / "servers" / "proxy" / "airport",
-    ):
-        if candidate.exists():
-            return candidate
-    return hosts_dir / "airport"
-
-
-def default_trusted_nodes_file(airport_dir: Path) -> Path:
+def default_trusted_nodes_file() -> Path:
+    """Use the shared private inventory path, unless explicitly overridden."""
     configured = os.environ.get("CLASH_TRUSTED_NODES_FILE")
     if configured:
         return Path(configured).expanduser()
-    return airport_dir / "trusted-nodes.yaml"
+    return Path.home() / ".config" / "clash" / "trusted-nodes.yaml"
 
 
 def default_ansible_host_vars_dir() -> Path | None:
@@ -1130,282 +1117,6 @@ def collect_proxies(
         if hy:
             proxies.append(hy)
     return proxies
-
-
-def airport_region(name: str) -> str | None:
-    meta = node_meta(name)
-    if meta and meta.get("region"):
-        code = AIRPORT_REGION_ALIASES.get(meta["region"], meta["region"])
-        return code if code != "XX" and re.fullmatch(r"[A-Z]{2}", code) else None
-    match = re.search(r"\b([A-Za-z]{2})\s*$", name)
-    if not match:
-        return None
-    code = match.group(1).upper()
-    code = AIRPORT_REGION_ALIASES.get(code, code)
-    return code if code != "XX" else None
-
-
-def airport_policy_matches(policy_key: str, hostname: str) -> bool:
-    key = policy_key.strip().lower()
-    host = hostname.rstrip(".").lower()
-    if key.startswith(("*.", "+.")):
-        suffix = key[2:]
-        return host == suffix or host.endswith("." + suffix)
-    return key == host
-
-
-def is_ip_address(value: str) -> bool:
-    candidate = value.strip()
-    if candidate.startswith("[") and candidate.endswith("]"):
-        candidate = candidate[1:-1]
-    try:
-        ipaddress.ip_address(candidate)
-    except ValueError:
-        return False
-    return True
-
-
-def matching_airport_dns_policy(
-    subscription: dict[str, Any], selected: list[dict[str, Any]]
-) -> dict[str, Any]:
-    dns = subscription.get("dns") or {}
-    if not isinstance(dns, dict):
-        raise ValueError("机场订阅的 dns 必须是映射")
-    source_policy = dns.get("nameserver-policy") or {}
-    if not isinstance(source_policy, dict):
-        raise ValueError("机场订阅的 dns.nameserver-policy 必须是映射")
-    hostnames: set[str] = set()
-    for proxy in selected:
-        raw_server = proxy.get("server")
-        if not isinstance(raw_server, str):
-            continue
-        hostname = raw_server.strip()
-        if hostname and not is_ip_address(hostname):
-            hostnames.add(hostname)
-    return {
-        str(key): copy.deepcopy(value)
-        for key, value in source_policy.items()
-        if any(airport_policy_matches(str(key), hostname) for hostname in hostnames)
-    }
-
-
-def normalize_direct_source_nodes(
-    selected: list[dict[str, Any]],
-    counters: dict[tuple[str, str], int] | None = None,
-    *,
-    source_marker: str,
-    description_suffix: str,
-    physical_source: str,
-    source_kind: str,
-) -> list[dict[str, Any]]:
-    counters = counters if counters is not None else {}
-    normalized: list[dict[str, Any]] = []
-    for source_index, source in enumerate(selected):
-        field = f"{source_kind}节点[{source_index}]"
-        if not isinstance(source, dict):
-            raise ValueError(f"{field} 必须是映射")
-        if "dialer-proxy" in source or "<<" in source:
-            raise ValueError(
-                f"{field} 必须是独立直连节点，不能包含 dialer-proxy 或 <<"
-            )
-        original_name = str(source.get("name", "")).strip()
-        region = airport_region(original_name)
-        raw_protocol = source.get("type")
-        protocol_raw = (
-            raw_protocol.strip().lower() if isinstance(raw_protocol, str) else ""
-        )
-        protocol = "H2" if protocol_raw == "hysteria2" else protocol_raw.upper()
-        if not region or not protocol:
-            print(f"已跳过无法识别的{source_kind}节点：{original_name or '<unnamed>'}")
-            continue
-        raw_server = source.get("server")
-        if not isinstance(raw_server, str) or not raw_server.strip():
-            print(f"已跳过缺少 server 的{source_kind}节点：{original_name or '<unnamed>'}")
-            continue
-        server = raw_server.strip()
-        try:
-            port = parse_port(source.get("port"), f"{source_kind}节点 {original_name or '<unnamed>'}.port")
-        except ValueError as exc:
-            print(f"已跳过无效{source_kind}节点：{exc}")
-            continue
-        description = f"{REGION_CN.get(region.lower(), region)}{description_suffix}"
-        source_label = source_marker_label(original_name)
-        proxy = copy.deepcopy(source)
-        proxy["server"] = server
-        proxy["port"] = port
-        proxy["type"] = protocol_raw
-        try:
-            require_proxy_credentials(proxy, protocol_raw, field)
-        except ValueError as exc:
-            print(f"已跳过无效{source_kind}节点：{exc}")
-            continue
-        key = (region.lower(), protocol_raw)
-        index = counters.get(key, 0)
-        counters[key] = index + 1
-        proxy["name"] = (
-            f"VPS-[{region}.Exit]-{protocol}-{index:02d}-({description})"
-            f"-[{source_marker}={source_label}]"
-        )
-        # Direct-source nodes remain independently selectable but never
-        # participate in generated dialer-proxy chains.
-        proxy["_allow-relay"] = False
-        proxy["_allow-direct-exit"] = True
-        proxy["_allow-chain-exit"] = False
-        proxy["_allow-download"] = False
-        proxy["_exit-type"] = "general"
-        proxy["_physical-node-id"] = f"{physical_source}:{original_name}"
-        normalized.append(proxy)
-    return normalized
-
-
-def normalize_airport_nodes(
-    selected: list[dict[str, Any]],
-    counters: dict[tuple[str, str], int] | None = None,
-) -> list[dict[str, Any]]:
-    return normalize_direct_source_nodes(
-        selected,
-        counters,
-        source_marker="Airport",
-        description_suffix="机场出口",
-        physical_source="airport",
-        source_kind="机场",
-    )
-
-
-def interactive_airport_import(
-    airport_dir: Path,
-    counters: dict[tuple[str, str], int] | None = None,
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    subscription_path = airport_dir / "subscription.yaml"
-    if not subscription_path.exists():
-        return [], {}
-
-    answer = input(
-        f"是否导入机场订阅？已发现 {subscription_path} [y/N]："
-    ).strip().lower()
-    if answer not in {"y", "yes", "1", "是"}:
-        return [], {}
-
-    try:
-        subscription = load_yaml(subscription_path) or {}
-    except (OSError, yaml.YAMLError) as exc:
-        print(f"无法读取机场订阅：{exc}")
-        return [], {}
-    if not isinstance(subscription, dict):
-        print("机场订阅顶层必须是映射。")
-        return [], {}
-    source_list = subscription.get("proxies", []) or []
-    if not isinstance(source_list, list):
-        print("机场订阅中的 proxies 必须是列表。")
-        return [], {}
-    source_nodes = [
-        proxy
-        for proxy in source_list
-        if isinstance(proxy, dict) and proxy.get("name") and proxy.get("server")
-    ]
-    if not source_nodes:
-        print("机场订阅中没有可用的 proxies。")
-        return [], {}
-    print(f"机场订阅包含 {len(source_nodes)} 个节点。")
-
-    selection_path = airport_dir / "selected-nodes.yaml"
-    selected: list[dict[str, Any]] = []
-    if selection_path.exists():
-        try:
-            saved = load_yaml(selection_path) or {}
-        except (OSError, yaml.YAMLError) as exc:
-            print(f"警告：无法读取已保存的机场选择：{exc}")
-            saved_names = []
-        else:
-            if not isinstance(saved, dict):
-                print("警告：已保存的机场选择顶层必须是映射。")
-                saved_names = []
-            else:
-                raw_names = saved.get("selected-names", []) or []
-                if not isinstance(raw_names, list):
-                    print("警告：已保存的机场选择 selected-names 必须是列表。")
-                    saved_names = []
-                else:
-                    saved_names = [str(name) for name in raw_names]
-        if saved_names:
-            use_saved = input(
-                f"已保存 {len(saved_names)} 个机场节点，是否继续使用？ [Y/n]："
-            ).strip().lower()
-            if use_saved not in {"n", "no", "0", "否"}:
-                by_name = {str(proxy["name"]): proxy for proxy in source_nodes}
-                selected = [by_name[name] for name in saved_names if name in by_name]
-                missing = [name for name in saved_names if name not in by_name]
-                if missing:
-                    print(f"警告：{len(missing)} 个已保存节点在当前订阅中已不存在。")
-
-    if not selected:
-        counts: dict[str, int] = {}
-        for proxy in source_nodes:
-            region = airport_region(str(proxy["name"]))
-            if region:
-                counts[region] = counts.get(region, 0) + 1
-        priority_regions = [code for code in AIRPORT_REGION_PRIORITY if code in counts]
-        other_regions = sorted(code for code in counts if code not in priority_regions)
-        regions = priority_regions + other_regions
-        print("\n机场节点地区：")
-        for region in priority_regions:
-            print(f"  {region}（{counts[region]} 个）")
-        if other_regions:
-            print(f"  另有 {len(other_regions)} 个其他地区代码；输入 ? 查看")
-        while True:
-            raw_regions = input(
-                "请输入地区代码（如 HK,JP,US；?=查看全部；all=全部；0=取消）："
-            ).strip().upper()
-            if raw_regions in {"?", "HELP", "LIST", "查看"}:
-                print("其他地区代码：")
-                for start in range(0, len(other_regions), 12):
-                    chunk = other_regions[start : start + 12]
-                    print("  " + "  ".join(f"{code}({counts[code]})" for code in chunk))
-                continue
-            if raw_regions in {"0", "N", "NONE", "取消"}:
-                return [], {}
-            requested = set(regions) if raw_regions in {"ALL", "A", "全部"} else {
-                AIRPORT_REGION_ALIASES.get(token.strip(), token.strip())
-                for token in raw_regions.split(",")
-                if token.strip()
-            }
-            invalid = sorted(requested - set(regions))
-            if requested and not invalid:
-                break
-            print("地区输入无效" + (f"：{', '.join(invalid)}" if invalid else "。"))
-        candidates = [
-            proxy for proxy in source_nodes if airport_region(str(proxy["name"])) in requested
-        ]
-        print(f"\n候选机场节点（{len(candidates)} 个）：")
-        for index, proxy in enumerate(candidates, 1):
-            print(f"  {index:>3}. {proxy['name']}")
-        chosen = prompt_number_selection(len(candidates))
-        selected = [proxy for index, proxy in enumerate(candidates) if index in chosen]
-        if not selected:
-            print("未选择机场节点。")
-            return [], {}
-        save = input(f"是否保存这 {len(selected)} 个节点的选择？ [Y/n]：").strip().lower()
-        if save not in {"n", "no", "0", "否"}:
-            secure_write(
-                selection_path,
-                yaml.safe_dump(
-                    {
-                        "selected-names": [proxy["name"] for proxy in selected],
-                    },
-                    allow_unicode=True,
-                    sort_keys=False,
-                ),
-            )
-            print(f"已保存选择到 {selection_path}。")
-
-    dns_policy = matching_airport_dns_policy(subscription, selected)
-    normalized = normalize_airport_nodes(selected, counters)
-    print(
-        f"已导入 {len(normalized)} 个机场独立节点（不参与代理链），"
-        f"匹配 {len(dns_policy)} 条节点专用 DNS 策略（仅报告数量，不打印或导出内容）；"
-        "请在私有订阅的 dns.nameserver-policy 中核对，按需手动合入 home.yaml。"
-    )
-    return normalized, dns_policy
 
 
 def secure_write(output: Path, content: str) -> None:
@@ -1760,7 +1471,7 @@ def loon_proxy_groups(
 ) -> list[str]:
     """Render the four home group layers using only exported Loon members."""
     source = load_home_proxy_groups(home_template)
-    layers = ("DirectExit", "Chain", "Line", "Route")
+    layers = ("Route", "Line", "Chain", "DirectExit")
     selected = {
         name: group for name, group in source.items()
         if any(f".{layer}-[" in name for layer in layers)
@@ -1806,7 +1517,7 @@ def loon_proxy_groups(
                     options.append(f"tolerance = {group['tolerance']}")
                 if kind == "fallback" and "timeout" in group:
                     options.append(f"max-timeout = {group['timeout']}")
-            lines.append(f"{name} = {', '.join(map(str, options))}")
+            lines.append(f"{name} = {','.join(map(str, options))}")
     return lines
 
 
@@ -1853,7 +1564,7 @@ def write_loon(
             continue
         exit_alias, entry_alias = aliases[pair[0]], aliases[pair[1]]
         alias = f"chain.{exit_alias}.via.{entry_alias}"
-        chain_lines.append(f"{alias} = {entry_alias}, {exit_alias}")
+        chain_lines.append(f"{alias} = {entry_alias},{exit_alias}")
         chain_aliases[chain_name(exit_proxy, dialer)] = alias
         emitted_pairs.add(pair)
 
@@ -1865,6 +1576,140 @@ def write_loon(
         lines.extend(["", "[Proxy Group]", *group_lines])
     secure_write(output, "\n".join(lines) + "\n")
     return len(node_lines), len(chain_lines), skipped
+
+
+def render_full_loon_config(template: str, generated: str) -> str:
+    """Fill the private Loon template with nodes, chains and nonempty base groups."""
+    parts: dict[str, list[str]] = {key: [] for key in LOON_FULL_MARKERS}
+    section = ""
+    seen_sections: set[str] = set()
+    for line in generated.splitlines():
+        if line.startswith("[") and line.endswith("]"):
+            section = line
+            if section in seen_sections:
+                raise ValueError("Loon 节点片段包含重复章节")
+            seen_sections.add(section)
+            continue
+        if not line.strip():
+            continue
+        if section == "[Proxy]":
+            parts["proxy"].append(line)
+        elif section == "[Proxy Chain]":
+            parts["proxy-chain"].append(line)
+        elif section == "[Proxy Group]":
+            matches = [key for key, token in (
+                ("route", ".Route-["), ("line", ".Line-["),
+                ("chain", ".Chain-["), ("direct-exit", ".DirectExit-["),
+            ) if token in line.split(" = ", 1)[0]]
+            if len(matches) != 1:
+                raise ValueError("Loon 节点片段包含未知的基础策略组")
+            parts[matches[0]].append(line)
+        else:
+            raise ValueError("Loon 节点片段包含未知章节")
+    if not parts["proxy"] or "[Proxy Group]" not in seen_sections:
+        raise ValueError("Loon 节点片段缺少节点或策略组")
+
+    section = ""
+    seen_markers: set[str] = set()
+    output: list[str] = []
+    for line in template.splitlines(keepends=True):
+        raw = line.rstrip("\r\n")
+        if raw.startswith("[") and raw.endswith("]"):
+            section = raw
+        if raw.startswith("# @generate:"):
+            key = raw.removeprefix("# @generate:")
+            if key not in LOON_FULL_MARKERS or key in seen_markers:
+                raise ValueError("Loon 完整模板包含未知或重复的生成标记")
+            if section != LOON_FULL_MARKERS[key]:
+                raise ValueError("Loon 完整模板的生成标记位于错误章节")
+            seen_markers.add(key)
+            newline = "\r\n" if line.endswith("\r\n") else "\n"
+            output.extend(item + newline for item in parts[key])
+            continue
+        if section in {"[Proxy]", "[Proxy Chain]"} and raw.strip() and not raw.lstrip().startswith("#") and not (raw.startswith("[") and raw.endswith("]")):
+            raise ValueError("Loon 完整模板在动态节点章节保留了旧条目")
+        if section == "[Proxy Group]" and not raw.lstrip().startswith("#") and "=" in raw and any(
+            token in raw.split("=", 1)[0]
+            for token in (".Route-[", ".Line-[", ".Chain-[", ".DirectExit-[")
+        ):
+            raise ValueError("Loon 完整模板在动态策略组位置保留了旧条目")
+        output.append(line)
+    if seen_markers != set(LOON_FULL_MARKERS):
+        raise ValueError("Loon 完整模板缺少生成标记")
+    rendered = "".join(output)
+    validate_full_loon_references(rendered)
+    return rendered
+
+
+def validate_full_loon_references(config: str) -> None:
+    """Check names, group cycles and supported rule references before writing."""
+    section = ""
+    names: dict[str, set[str]] = {
+        "[Proxy]": set(), "[Proxy Chain]": set(), "[Proxy Group]": set(),
+    }
+    entries: list[tuple[str, str, str]] = []
+    remote_policies: list[str] = []
+    local_policies: list[str] = []
+    for line in config.splitlines():
+        line = line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line
+            continue
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if section in names and "=" in line:
+            name, value = (part.strip() for part in line.split("=", 1))
+            if not name or not value:
+                raise ValueError("Loon 完整配置包含空名称或空定义")
+            if name in {"DIRECT", "REJECT"} or any(name in values for values in names.values()):
+                raise ValueError(f"Loon 完整配置包含重复名称：{name}")
+            names[section].add(name)
+            if section == "[Proxy Chain]":
+                entries.append((section, name, value))
+            if section == "[Proxy Group]":
+                entries.append((section, name, value))
+        elif section == "[Remote Rule]":
+            match = re.search(r"(?:^|,)\s*policy\s*=\s*([^,]+)", line)
+            if match:
+                remote_policies.append(match.group(1).strip())
+        elif section == "[Rule]":
+            fields = [part.strip() for part in line.split(",")]
+            if fields and fields[0] == "FINAL" and len(fields) > 1:
+                local_policies.append(fields[1])
+    available = set().union(*names.values()) | {"DIRECT", "REJECT"}
+    group_edges: dict[str, list[str]] = {}
+    for group_section, name, value in entries:
+        fields = [part.strip() for part in value.split(",")]
+        members = fields if group_section == "[Proxy Chain]" else fields[1:]
+        if group_section == "[Proxy Group]":
+            group_edges[name] = [member for member in members if member in names["[Proxy Group]"]]
+        for member in members:
+            if group_section == "[Proxy Group]" and re.match(
+                r"^(url|interval|max-timeout|tolerance|algorithm)\s*=", member
+            ):
+                continue
+            valid_targets = names["[Proxy]"] if group_section == "[Proxy Chain]" else available
+            if member not in valid_targets:
+                raise ValueError(f"Loon 完整配置引用了不存在的策略：{member}")
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in visiting:
+            raise ValueError(f"Loon 完整配置策略组存在循环引用：{name}")
+        if name in visited:
+            return
+        visiting.add(name)
+        for member in group_edges[name]:
+            visit(member)
+        visiting.remove(name)
+        visited.add(name)
+
+    for name in group_edges:
+        visit(name)
+    for policy in remote_policies + local_policies:
+        if policy not in available:
+            raise ValueError(f"Loon 完整配置规则引用了不存在的策略：{policy}")
 
 
 def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
@@ -2004,6 +1849,19 @@ def prompt_number_selection(maximum: int) -> set[int]:
             print(f"输入无效：{exc}")
         except EOFError as exc:
             raise SystemExit("输入已结束，已取消选择") from exc
+
+
+def prompt_full_loon_output() -> bool:
+    while True:
+        try:
+            answer = input("是否额外生成完整 Loon 配置 Loon-home.generated.lcf？[y/N]：").strip().lower()
+        except EOFError as exc:
+            raise SystemExit("输入已结束，已取消选择") from exc
+        if answer in {"", "n", "no", "否"}:
+            return False
+        if answer in {"y", "yes", "是"}:
+            return True
+        print("输入无效，请输入 y 或 n。")
 
 
 def exclude_by_patterns(proxies: list[dict[str, Any]], patterns: list[str]) -> list[dict[str, Any]]:
@@ -2212,16 +2070,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="包含 vps-* 私有配置目录（默认 CLASH_HOSTS_DIR 或 ~/.config/infra/hosts）",
     )
     parser.add_argument(
-        "--airport-dir",
-        type=Path,
-        help="机场私有订阅目录（默认 CLASH_AIRPORT_DIR 或 ~/.config/clash/airport）",
-    )
-    parser.add_argument(
         "--trusted-nodes-file",
         type=Path,
         help=(
             "私有可信节点 YAML（默认 CLASH_TRUSTED_NODES_FILE 或 "
-            "<airport-dir>/trusted-nodes.yaml）"
+            "~/.config/clash/trusted-nodes.yaml）"
         ),
     )
     parser.add_argument(
@@ -2254,6 +2107,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_const",
         const=None,
         help="不生成 Loon 节点文件",
+    )
+    parser.add_argument(
+        "--loon-full-template",
+        type=Path,
+        default=LOON_FULL_TEMPLATE,
+        help="完整 Loon 配置的私有模板（默认 Loon-home.template.lcf）",
+    )
+    parser.add_argument(
+        "--loon-full-output",
+        type=Path,
+        help="额外生成完整 Loon 配置；仅指定此项时才启用",
     )
     formats = parser.add_mutually_exclusive_group()
     formats.add_argument("--plain", action="store_true", help="仅输出基础节点")
@@ -2355,10 +2219,9 @@ def validate_output_paths(
         seen[resolved] = label
 
 
-def input_paths(hosts_dir: Path, airport_dir: Path, trusted_file: Path,
+def input_paths(hosts_dir: Path, trusted_file: Path,
                 ansible_dir: Path | None) -> list[Path]:
-    paths = [trusted_file, airport_dir / 'subscription.yaml',
-             airport_dir / 'selected-nodes.yaml']
+    paths = [trusted_file]
     for host in hosts_dir.glob('vps-*'):
         if host.name == 'vps-template' or not (host / 'host.env').is_file():
             continue
@@ -2378,9 +2241,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     apply_default_invocation(args, invoked_without_args)
     hosts_dir = args.hosts_dir.expanduser().resolve()
-    airport_dir = (args.airport_dir or default_airport_dir(hosts_dir)).expanduser().resolve()
     trusted_nodes_file = (
-        args.trusted_nodes_file or default_trusted_nodes_file(airport_dir)
+        args.trusted_nodes_file or default_trusted_nodes_file()
     ).expanduser().resolve()
     explicit_trusted = args.trusted_nodes_file is not None or bool(os.environ.get('CLASH_TRUSTED_NODES_FILE'))
     if explicit_trusted and not trusted_nodes_file.is_file():
@@ -2391,13 +2253,19 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     counters: dict[tuple[str, str], int] = {}
-    protected_inputs = input_paths(hosts_dir, airport_dir, trusted_nodes_file,
+    protected_inputs = input_paths(hosts_dir, trusted_nodes_file,
                                    ansible_host_vars_dir)
     home_template = args.home_template.expanduser().resolve()
     protected_inputs.append(home_template)
+    loon_full_template = args.loon_full_template.expanduser().resolve()
+    if args.loon_full_output:
+        if not loon_full_template.is_file():
+            raise SystemExit('Loon 完整配置模板不存在或不是普通文件')
+        protected_inputs.append(loon_full_template)
     validate_output_paths([
         ('主输出', args.output), ('raw-output', args.raw_output),
         ('loon-output', args.loon_output),
+        ('loon-full-output', args.loon_full_output),
     ], protected_inputs)
     try:
         proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
@@ -2410,16 +2278,10 @@ def main(argv: list[str] | None = None) -> int:
             f"已导入 {len(trusted_nodes)} 个 trusted-nodes.yaml 节点；"
             "nodes 格式按显式能力处理。"
         )
-    if args.interactive:
-        try:
-            airport_nodes, _airport_dns_policy = interactive_airport_import(airport_dir, counters)
-        except (OSError, ValueError) as exc:
-            raise SystemExit(str(exc)) from exc
-        proxies.extend(airport_nodes)
     if not proxies:
         raise SystemExit(
             f"没有在 {hosts_dir} 或 {trusted_nodes_file} 找到节点；"
-            "请检查 vps-*/host.env、trusted-nodes.yaml 或机场订阅"
+            "请检查 vps-*/host.env 或 trusted-nodes.yaml"
         )
     if args.audit:
         for proxy in proxies:
@@ -2429,6 +2291,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.interactive:
         proxies, output_format, chains = interactive_selection(proxies)
+        if args.loon_full_output is None and prompt_full_loon_output():
+            args.loon_full_output = LOON_FULL_OUT
     else:
         before = len(proxies)
         proxies = exclude_by_patterns(proxies, args.exclude_node)
@@ -2449,15 +2313,23 @@ def main(argv: list[str] | None = None) -> int:
         else:
             chains = chain_candidates(proxies)
 
+    if args.loon_full_output:
+        if not loon_full_template.is_file():
+            raise SystemExit('Loon 完整配置模板不存在或不是普通文件')
+        if loon_full_template not in protected_inputs:
+            protected_inputs.append(loon_full_template)
+
     default_output = OUT if output_format == "plain" else SCRIPT_DIR / "clash-vps.generated.yaml"
     output = (args.output or default_output).expanduser()
     raw_output = args.raw_output.expanduser() if args.raw_output else None
     loon_output = args.loon_output.expanduser() if args.loon_output else None
+    loon_full_output = args.loon_full_output.expanduser() if args.loon_full_output else None
     validate_output_paths(
         [
             ("主输出", output),
             ("raw-output", raw_output),
             ("loon-output", loon_output),
+            ("loon-full-output", loon_full_output),
         ],
         protected_inputs,
     )
@@ -2488,17 +2360,27 @@ def main(argv: list[str] | None = None) -> int:
                 write_plain(proxies, raw)
                 load_yaml(raw)
                 rendered.append((raw_output, raw.read_text(encoding='utf-8')))
-            if loon_output:
-                label, destination = 'Loon 输出', loon_output
+            if loon_output or loon_full_output:
+                label = 'Loon 输出' if loon_output else 'Loon 完整配置'
+                destination = loon_output or loon_full_output
                 loon = stage / 'loon.conf'
                 loon_count, loon_chain_count, loon_skipped = write_loon(
                     proxies, loon, chains, home_template
                 )
-                rendered.append((loon_output, loon.read_text(encoding='utf-8')))
+                loon_text = loon.read_text(encoding='utf-8')
+                if loon_output:
+                    rendered.append((loon_output, loon_text))
+                if loon_full_output:
+                    label, destination = 'Loon 完整配置', loon_full_output
+                    full_text = render_full_loon_config(
+                        loon_full_template.read_text(encoding='utf-8'), loon_text
+                    )
+                    rendered.append((loon_full_output, full_text))
         except (OSError, ValueError) as exc:
             raise SystemExit(f'无法写入{label} {destination}：{exc}') from exc
     validate_output_paths([('主输出', output), ('raw-output', raw_output),
-                           ('loon-output', loon_output)], protected_inputs)
+                           ('loon-output', loon_output),
+                           ('loon-full-output', loon_full_output)], protected_inputs)
     for destination, content in rendered:
         try:
             secure_write(destination, content)
@@ -2512,6 +2394,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
     if loon_output:
         print(f"wrote {loon_output} ({loon_count} nodes, {loon_chain_count} chains, format=loon)")
+    if loon_full_output:
+        print(f"wrote {loon_full_output} ({loon_count} nodes, {loon_chain_count} chains, format=loon-full)")
+    if loon_output or loon_full_output:
         if loon_skipped:
             print(f"warning: skipped {len(loon_skipped)} Loon node(s)/chain(s):")
             for item in loon_skipped:

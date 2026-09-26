@@ -98,56 +98,7 @@ class GeneratorTests(unittest.TestCase):
         self.assertIn("[Direct=false]", name)
         self.assertEqual(generator.node_meta(name)["direct"], "false")
 
-    def test_airport_nodes_share_anchor_counter_with_self_hosted_nodes(self) -> None:
-        base = {
-            "name": generator.node_name("us", "vless", 0, "Exit"),
-            "type": "vless",
-            "server": "self-hosted.example",
-            "port": 443,
-            "uuid": "self-hosted-uuid",
-            "tls": True,
-        }
-        counters = {("us", "vless"): 1}
-        airport = generator.normalize_airport_nodes(
-            [
-                {
-                    "name": "Example Airport US",
-                    "type": "vless",
-                    "server": "airport.example",
-                    "port": 443,
-                    "uuid": "airport-uuid",
-                }
-            ],
-            counters,
-        )
 
-        self.assertEqual(generator.node_meta(airport[0]["name"])["idx"], "01")
-        self.assertNotIn("[ShowIP=true]", airport[0]["name"])
-        self.assertNotEqual(
-            generator.anchor_name(base["name"]),
-            generator.anchor_name(airport[0]["name"]),
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "template.yaml"
-            generator.write_template([base, airport[0]], [], output)
-            parsed = yaml.safe_load(output.read_text())
-            self.assertEqual(len(parsed["proxies"]), 2)
-
-    def test_airport_hysteria2_uses_h2_protocol_label(self) -> None:
-        airport = generator.normalize_airport_nodes(
-            [
-                {
-                    "name": "Example Airport US",
-                    "type": "hysteria2",
-                    "server": "airport.example",
-                    "port": 443,
-                    "password": "password",
-                }
-            ]
-        )
-
-        self.assertEqual(generator.node_meta(airport[0]["name"])["proto"], "H2")
-        self.assertNotIn("HYSTERIA2", airport[0]["name"])
 
     def test_trusted_nodes_are_loaded_with_explicit_capabilities(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -182,7 +133,6 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(meta["region"], "US")
         self.assertEqual(meta["role"], "Exit")
         self.assertEqual(meta["proto"], "VLESS")
-        self.assertIsNone(meta["airport"])
         self.assertIsNone(meta["trusted"])
         self.assertEqual(nodes[0]["name"], "VPS-[US.Exit]-VLESS-00-(美国出口节点)")
         self.assertFalse(nodes[0]["_allow-relay"])
@@ -485,25 +435,6 @@ class GeneratorTests(unittest.TestCase):
                 Path("trusted-nodes.yaml"),
             )
 
-    def test_direct_source_nodes_reject_non_mapping_and_chains(self) -> None:
-        options = {
-            "source_marker": "Trusted",
-            "description_suffix": "NAT机",
-            "physical_source": "trusted",
-            "source_kind": "可信 NAT",
-        }
-        with self.assertRaisesRegex(ValueError, "必须是映射"):
-            generator.normalize_direct_source_nodes(["not-a-mapping"], {}, **options)
-
-        chained = {
-            "name": "Example US",
-            "type": "vless",
-            "server": "trusted.example",
-            "port": 443,
-            "dialer-proxy": "some-upstream",
-        }
-        with self.assertRaisesRegex(ValueError, "dialer-proxy"):
-            generator.normalize_direct_source_nodes([chained], {}, **options)
 
     def test_trusted_file_rejects_false_list_values(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -612,10 +543,6 @@ class GeneratorTests(unittest.TestCase):
         )
 
     def test_direct_source_region_rejects_virtual_codes(self) -> None:
-        self.assertIsNone(
-            generator.airport_region("VPS-[EUR.Core]-VLESS-00-(欧洲核心节点)")
-        )
-        self.assertIsNone(generator.airport_region("Example XX"))
         with self.assertRaisesRegex(ValueError, "两位国家代码"):
             generator.normalize_trusted_nodes(
                 [
@@ -998,6 +925,156 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(skipped, [])
         self.assertIn('socks5,nat.example,1080,nat-user,"nat-password"', content)
 
+    def test_full_loon_template_preserves_static_sections(self) -> None:
+        template = (
+            '[General]\nproxy-test-url = https://example.invalid/test\n'
+            '[Proxy]\n# @generate:proxy\n'
+            '[Proxy Chain]\n# @generate:proxy-chain\n'
+            '[Proxy Group]\n'
+            'Service = select,🏠.Route-[US.HomeIP.Preferred],DIRECT,REJECT\n'
+            '# @generate:route\n# @generate:line\n'
+            '# @generate:chain\n# @generate:direct-exit\n'
+            '[Remote Rule]\n'
+            'https://example.invalid/service.lsr, policy=Service, tag=Service\n'
+            '[Mitm]\nca-p12 = fixture-only\n'
+        )
+        generated = (
+            '[Proxy]\nus.vless = VLESS,example.invalid,443,"fixture-uuid"\n'
+            '\n[Proxy Chain]\nchain.us.via.jp = jp.vless,us.vless\n'
+            '\n[Proxy Group]\n'
+            '🏠.Route-[US.HomeIP.Preferred] = fallback,🇺🇸.Line-[US]\n'
+            '🇺🇸.Line-[US] = fallback,🇺🇸🔗.Chain-[US]\n'
+            '🇺🇸🔗.Chain-[US] = select,chain.us.via.jp\n'
+        )
+        generated = generated.replace(
+            'us.vless = VLESS,',
+            'jp.vless = VLESS,example.invalid,443,"fixture-uuid"\n'
+            'us.vless = VLESS,',
+        )
+
+        result = generator.render_full_loon_config(template, generated)
+
+        self.assertIn('ca-p12 = fixture-only\n', result)
+        self.assertIn('Service = select,🏠.Route-[US.HomeIP.Preferred],DIRECT,REJECT\n', result)
+        self.assertIn('chain.us.via.jp = jp.vless,us.vless\n', result)
+        self.assertNotIn('# @generate:', result)
+
+    def test_full_loon_template_rejects_missing_marker_and_stale_routes(self) -> None:
+        template = (
+            '[Proxy]\n# @generate:proxy\n'
+            '[Proxy Chain]\n# @generate:proxy-chain\n'
+            '[Proxy Group]\n'
+            'Service = select,🏠.Route-[US.HomeIP.Preferred],DIRECT\n'
+            '# @generate:route\n# @generate:line\n'
+            '# @generate:chain\n# @generate:direct-exit\n'
+        )
+        generated = (
+            '[Proxy]\nnode = VLESS,example.invalid,443,"fixture-uuid"\n'
+            '\n[Proxy Group]\n🇨🇳🔰.DirectExit-[CN] = select,DIRECT\n'
+        )
+
+        with self.assertRaisesRegex(ValueError, '不存在的策略'):
+            generator.render_full_loon_config(template, generated)
+        with self.assertRaisesRegex(ValueError, '缺少生成标记'):
+            generator.render_full_loon_config(
+                template.replace('# @generate:route\n', ''), generated
+            )
+        with self.assertRaisesRegex(ValueError, '保留了旧条目'):
+            generator.render_full_loon_config(
+                template.replace('# @generate:proxy',
+                                 'old = VLESS,example.invalid,443,"fixture-uuid"\n# @generate:proxy'),
+                generated,
+            )
+
+    def test_full_loon_references_accept_spacing_and_reject_invalid_graphs(self) -> None:
+        valid = "[Proxy Group]\n A=select,DIRECT\nB = select,A\n[Remote Rule]\nhttps://example.invalid/rules, policy = B\n"
+        generator.validate_full_loon_references(valid)
+        cases = [
+            ("[Proxy Group]\nA=select,Missing\n", "不存在"),
+            ("[Proxy Group]\nA=select,B\nB=select,A\n", "循环引用"),
+            ("[Proxy Group]\nA=select,A\n", "循环引用"),
+            ("[Proxy Group]\nA=select,DIRECT\nA = select,REJECT\n", "重复名称"),
+            ("[Proxy]\nA=VLESS,example.invalid,443,fixture\n[Proxy Group]\nA=select,DIRECT\n", "重复名称"),
+            ("[Proxy Group]\nA=select,DIRECT\n[Remote Rule]\nhttps://example.invalid/rules, policy = Missing\n", "不存在"),
+        ]
+        for config, error in cases:
+            with self.subTest(error=error), self.assertRaisesRegex(ValueError, error):
+                generator.validate_full_loon_references(config)
+
+    def test_full_loon_output_rejects_template_path_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'private-template.lcf'
+            template.write_text('[Proxy]\n')
+            hardlink = root / 'hardlink.lcf'
+            hardlink.hardlink_to(template)
+            symlink = root / 'symlink.lcf'
+            symlink.symlink_to(template)
+            for output in (template, hardlink, symlink):
+                with self.subTest(output=output.name):
+                    with self.assertRaisesRegex(SystemExit, '覆盖输入文件'):
+                        generator.validate_output_paths(
+                            [('loon-full-output', output)], [template]
+                        )
+
+    def test_invalid_full_loon_template_keeps_existing_outputs(self) -> None:
+        proxy = {
+            'name': generator.node_name('us', 'vless', 0, 'Exit'),
+            'type': 'vless', 'server': 'example.invalid', 'port': 443,
+            'uuid': 'fixture-uuid',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'private-template.lcf'
+            template.write_text('[Proxy]\n# @generate:proxy\n')
+            primary = root / 'nodes.yaml'
+            full = root / 'full.lcf'
+            primary.write_text('old primary\n')
+            full.write_text('old full\n')
+            with (
+                mock.patch.object(generator, 'collect_proxies', return_value=[proxy]),
+                mock.patch.object(generator, 'load_trusted_nodes', return_value=[]),
+                self.assertRaisesRegex(SystemExit, '缺少生成标记'),
+            ):
+                generator.main([
+                    '--plain', '--no-loon', '--output', str(primary),
+                    '--loon-full-template', str(template),
+                    '--loon-full-output', str(full),
+                ])
+            self.assertEqual(primary.read_text(), 'old primary\n')
+            self.assertEqual(full.read_text(), 'old full\n')
+
+    def test_full_loon_cycle_does_not_replace_outputs(self) -> None:
+        proxy = {
+            'name': generator.node_name('us', 'vless', 0, 'Exit'),
+            'type': 'vless', 'server': 'example.invalid', 'port': 443,
+            'uuid': 'fixture-uuid',
+        }
+        template_text = (
+            '[Proxy]\n# @generate:proxy\n'
+            '[Proxy Chain]\n# @generate:proxy-chain\n'
+            '[Proxy Group]\n# @generate:route\n# @generate:line\n'
+            '# @generate:chain\n# @generate:direct-exit\n'
+            'A=select,B\nB=select,A\n'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'template.lcf'
+            template.write_text(template_text)
+            primary, full = root / 'nodes.yaml', root / 'full.lcf'
+            primary.write_text('old nodes\n')
+            full.write_text('old full\n')
+            with (
+                mock.patch.object(generator, 'collect_proxies', return_value=[proxy]),
+                mock.patch.object(generator, 'load_trusted_nodes', return_value=[]),
+                self.assertRaisesRegex(SystemExit, '循环引用'),
+            ):
+                generator.main(['--plain', '--no-loon', '--output', str(primary),
+                                '--loon-full-template', str(template),
+                                '--loon-full-output', str(full)])
+            self.assertEqual(primary.read_text(), 'old nodes\n')
+            self.assertEqual(full.read_text(), 'old full\n')
+
     def test_loon_exports_only_selected_chains_with_vless_entry(self) -> None:
         entry = {
             "name": generator.node_name("jp", "vless", 0, "Core"),
@@ -1036,12 +1113,15 @@ class GeneratorTests(unittest.TestCase):
             self.assertEqual(chain_count, 1)
             self.assertIn("[Proxy]\n", content)
             self.assertIn("us.landing.socks5 = socks5,exit.example,1080", content)
-            self.assertIn("[Proxy Chain]\nchain.us.landing.socks5.via.jp.vless = jp.vless, us.landing.socks5\n", content)
+            self.assertIn("[Proxy Chain]\nchain.us.landing.socks5.via.jp.vless = jp.vless,us.landing.socks5\n", content)
             self.assertIn("[Proxy Group]\n", content)
-            self.assertIn("🇯🇵🔰.DirectExit-[JP] = url-test, jp.vless,", content)
-            self.assertIn("🇺🇸🔗.Chain-[US] = url-test, chain.us.landing.socks5.via.jp.vless,", content)
-            self.assertIn("🇺🇸.Line-[US] = fallback, 🇺🇸🔗.Chain-[US],", content)
-            self.assertIn("♾️.Route-[Final.Fallback] = fallback, 🇭🇰.Line-[HK], 🇯🇵.Line-[JP],", content)
+            self.assertIn("🇯🇵🔰.DirectExit-[JP] = url-test,jp.vless,", content)
+            self.assertIn("🇺🇸🔗.Chain-[US] = url-test,chain.us.landing.socks5.via.jp.vless,", content)
+            self.assertIn("🇺🇸.Line-[US] = fallback,🇺🇸🔗.Chain-[US],", content)
+            self.assertIn("♾️.Route-[Final.Fallback] = fallback,🇭🇰.Line-[HK],🇯🇵.Line-[JP],", content)
+            self.assertLess(content.index("♾️.Route-[Final.Fallback] ="), content.index("🇺🇸.Line-[US] ="))
+            self.assertLess(content.index("🇺🇸.Line-[US] ="), content.index("🇺🇸🔗.Chain-[US] ="))
+            self.assertLess(content.index("🇺🇸🔗.Chain-[US] ="), content.index("🇯🇵🔰.DirectExit-[JP] ="))
             self.assertNotIn("🇺🇸🔰.DirectExit-[US] =", content)
             self.assertNotIn("🇬🇧🔗.Chain-[UK] =", content)
             self.assertNotIn("chain.us.landing.socks5.via.hk.vless", content)
@@ -1122,6 +1202,16 @@ class GeneratorTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "输入已结束"):
                 generator.prompt_number_selection(3)
 
+    def test_full_loon_interactive_prompt_defaults_off_and_accepts_yes(self) -> None:
+        with mock.patch('builtins.input', return_value=''):
+            self.assertFalse(generator.prompt_full_loon_output())
+        with mock.patch('builtins.input', side_effect=['invalid', 'yes']):
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(generator.prompt_full_loon_output())
+        with mock.patch('builtins.input', side_effect=EOFError):
+            with self.assertRaisesRegex(SystemExit, '输入已结束'):
+                generator.prompt_full_loon_output()
+
     def test_output_path_collision_is_rejected(self) -> None:
         with self.assertRaisesRegex(SystemExit, "输出路径冲突"):
             generator.validate_output_paths(
@@ -1140,13 +1230,26 @@ class GeneratorTests(unittest.TestCase):
                     with self.assertRaises(SystemExit):
                         generator.parse_args(arguments)
 
-    def test_dns_policy_does_not_treat_hex_like_domain_as_ip(self) -> None:
-        policy = generator.matching_airport_dns_policy(
-            {"dns": {"nameserver-policy": {"+.abc.de": ["dns.example"]}}},
-            [{"server": "node.abc.de"}],
-        )
 
-        self.assertEqual(policy, {"+.abc.de": ["dns.example"]})
+    def test_airport_cli_is_removed(self) -> None:
+        with mock.patch("sys.stderr", new=io.StringIO()):
+            with self.assertRaises(SystemExit):
+                generator.parse_args(["--airport-dir", "/unused"])
+        self.assertFalse(hasattr(generator, "interactive_airport_import"))
+        self.assertFalse(hasattr(generator, "normalize_airport_nodes"))
+
+    def test_trusted_default_uses_clash_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(generator.Path, "home", return_value=root), \
+                    mock.patch.dict(generator.os.environ, {"CLASH_AIRPORT_DIR": str(root / "ignored"),
+                                                           "CLASH_HOSTS_DIR": str(root / "hosts")}, clear=True):
+                legacy = root / ".config/clash/airport"
+                legacy.mkdir(parents=True)
+                self.assertEqual(generator.default_trusted_nodes_file(),
+                                 root / ".config/clash/trusted-nodes.yaml")
+            with mock.patch.dict(generator.os.environ, {"CLASH_TRUSTED_NODES_FILE": str(root / "explicit.yaml")}):
+                self.assertEqual(generator.default_trusted_nodes_file(), root / "explicit.yaml")
 
     def test_secure_write_is_private_and_atomic_on_replace_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1196,12 +1299,12 @@ class GeneratorTests(unittest.TestCase):
             with (
                 mock.patch.object(generator, "collect_proxies", return_value=[proxy]),
                 mock.patch.object(generator, "load_trusted_nodes", return_value=[]),
-                mock.patch.object(generator, "interactive_airport_import", return_value=([], {})),
                 mock.patch.object(
                     generator,
                     "interactive_selection",
                     return_value=([proxy], "template", []),
                 ),
+                mock.patch.object(generator, 'prompt_full_loon_output', return_value=False),
                 mock.patch("builtins.input", side_effect=AssertionError("unexpected prompt")),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
@@ -1212,6 +1315,77 @@ class GeneratorTests(unittest.TestCase):
             rendered = yaml.safe_load(output.read_text())
 
         self.assertEqual(rendered["proxies"], [proxy])
+
+    def test_interactive_can_generate_full_loon_without_fragment(self) -> None:
+        proxy = {
+            'name': generator.node_name('us', 'vless', 0, 'Exit'),
+            'type': 'vless', 'server': 'example.invalid', 'port': 443,
+            'uuid': 'fixture-uuid',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'private-template.lcf'
+            template.write_text('[Proxy]\n# @generate:proxy\n')
+            primary = root / 'nodes.yaml'
+            full = root / 'full.lcf'
+            with (
+                mock.patch.object(generator, 'collect_proxies', return_value=[proxy]),
+                mock.patch.object(generator, 'load_trusted_nodes', return_value=[]),
+                mock.patch.object(generator, 'interactive_selection', return_value=([proxy], 'plain', [])),
+                mock.patch.object(generator, 'prompt_full_loon_output', return_value=True),
+                mock.patch.object(generator, 'LOON_FULL_OUT', full),
+                mock.patch.object(generator, 'render_full_loon_config', return_value='[General]\nfixture = true\n'),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                generator.main([
+                    '--interactive', '--no-loon', '--output', str(primary),
+                    '--loon-full-template', str(template),
+                ])
+            self.assertTrue(primary.is_file())
+            self.assertEqual(full.read_text(), '[General]\nfixture = true\n')
+            self.assertEqual(full.stat().st_mode & 0o777, 0o600)
+
+            explicit = root / 'explicit-full.lcf'
+            with (
+                mock.patch.object(generator, 'collect_proxies', return_value=[proxy]),
+                mock.patch.object(generator, 'load_trusted_nodes', return_value=[]),
+                mock.patch.object(generator, 'interactive_selection', return_value=([proxy], 'plain', [])),
+                mock.patch.object(generator, 'prompt_full_loon_output', side_effect=AssertionError('unexpected prompt')),
+                mock.patch.object(generator, 'render_full_loon_config', return_value='[General]\nexplicit = true\n'),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                generator.main([
+                    '--interactive', '--no-loon', '--output', str(primary),
+                    '--loon-full-template', str(template),
+                    '--loon-full-output', str(explicit),
+                ])
+            self.assertEqual(explicit.read_text(), '[General]\nexplicit = true\n')
+
+    def test_interactive_full_loon_rejects_template_as_output(self) -> None:
+        proxy = {
+            'name': generator.node_name('us', 'vless', 0, 'Exit'),
+            'type': 'vless', 'server': 'example.invalid', 'port': 443,
+            'uuid': 'fixture-uuid',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template = root / 'private-template.lcf'
+            original = '[Proxy]\n# @generate:proxy\n'
+            template.write_text(original)
+            with (
+                mock.patch.object(generator, 'collect_proxies', return_value=[proxy]),
+                mock.patch.object(generator, 'load_trusted_nodes', return_value=[]),
+                mock.patch.object(generator, 'interactive_selection', return_value=([proxy], 'plain', [])),
+                mock.patch.object(generator, 'prompt_full_loon_output', return_value=True),
+                mock.patch.object(generator, 'LOON_FULL_OUT', template),
+                self.assertRaisesRegex(SystemExit, '覆盖输入文件'),
+            ):
+                generator.main([
+                    '--interactive', '--no-loon', '--output', str(root / 'nodes.yaml'),
+                    '--loon-full-template', str(template),
+                ])
+            self.assertEqual(template.read_text(), original)
+            self.assertFalse((root / 'nodes.yaml').exists())
 
 
 if __name__ == "__main__":

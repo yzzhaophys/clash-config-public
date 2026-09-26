@@ -71,8 +71,8 @@ class InteractiveTests(unittest.TestCase):
                 self.assertEqual(manager.parse_args(command).target, Path('other.yaml'))
         with mock.patch.dict(os.environ, {}, clear=True), \
                 mock.patch.object(manager.generator, 'default_hosts_dir', return_value=self.root), \
-                mock.patch.object(manager.generator, 'default_airport_dir', return_value=self.root / 'airport'):
-            self.assertEqual(manager.parse_args([]).target, self.root / 'airport/trusted-nodes.yaml')
+                mock.patch.object(manager.generator, 'default_trusted_nodes_file', return_value=self.root / 'trusted-nodes.yaml'):
+            self.assertEqual(manager.parse_args([]).target, self.root / 'trusted-nodes.yaml')
 
     def test_import_directory_default_environment_and_override(self):
         with mock.patch.dict(os.environ, {'CLASH_TRUSTED_IMPORT_DIR': str(self.root / 'env')}):

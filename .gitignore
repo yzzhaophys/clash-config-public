@@ -1,6 +1,5 @@
 nodes.yaml
 clash-vps.generated.yaml
-home-stash.private.yaml
 loon-nodes.conf
 trusted-nodes.yaml
 
@@ -16,3 +15,11 @@ keys/
 *.key
 *.pem
 id_rsa*
+
+Loon-home.lcf
+Loon-home.template.lcf
+Loon-home.generated.lcf
+
+# Private Loon device exports (nodes and device CA)
+Loon-home.generated.test*.lcf
+*:Zone.Identifier

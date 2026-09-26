@@ -52,7 +52,6 @@ class FileSafetyTests(unittest.TestCase):
         for invalid in (directory, alias, raw / 'child.yaml'):
             with self.subTest(invalid=invalid), self.assertRaisesRegex(SystemExit, '输出路径'):
                 g.main(['--plain', '--hosts-dir', str(self.root / 'hosts'),
-                        '--airport-dir', str(self.root / 'airport'),
                         '--trusted-nodes-file', str(source), '--output', str(main),
                         '--raw-output', str(raw), '--loon-output', str(invalid)])
             self.assertEqual(main.read_text(), 'OLD MAIN')
@@ -193,12 +192,13 @@ class FileSafetyTests(unittest.TestCase):
         host = self.root / 'vps-us'
         g.secure_write(host / 'host.env', 'VPS_HOST=node.example')
         g.secure_write(host / 'config/xray/one.json', '{}')
-        sources = g.input_paths(self.root, self.root / 'airport', self.root / 'trusted.yaml', self.root / 'vars')
+        sources = g.input_paths(self.root, self.root / 'trusted.yaml', self.root / 'vars')
         for suffix in ('host.env', 'secrets/client/clash-nodes.yaml', 'secrets/xray-inbounds.json',
                        'secrets/hysteria.yaml', 'config/hysteria/config.yaml', 'config/xray/one.json'):
             self.assertIn(host / suffix, sources)
         self.assertIn(self.root / 'vars/vps-us.yml', sources)
-        self.assertIn(self.root / 'airport/selected-nodes.yaml', sources)
+        self.assertIn(self.root / 'trusted.yaml', sources)
+        self.assertFalse(any(path.name in {'subscription.yaml', 'selected-nodes.yaml'} for path in sources))
 
     def test_late_render_failure_does_not_replace_any_output(self):
         source = self.write('source.yaml', yaml.safe_dump({'nodes': [trusted()]}))
@@ -233,7 +233,7 @@ class FileSafetyTests(unittest.TestCase):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
 
 
-class AirportCredentialTests(unittest.TestCase):
+class ClientCredentialTests(unittest.TestCase):
     def test_required_fields_reject_missing_null_empty_and_invalid_types(self):
         missing = object()
         for protocol, fields in [('ss', ('password', 'cipher')), ('trojan', ('password',)),
@@ -249,12 +249,6 @@ class AirportCredentialTests(unittest.TestCase):
                     with self.subTest(protocol=protocol, field=field, value=value):
                         with self.assertRaises(ValueError):
                             g.require_proxy_credentials(copy.deepcopy(node), protocol, 'fixture')
-                        log = io.StringIO()
-                        with contextlib.redirect_stdout(log):
-                            result = g.normalize_airport_nodes([node], {})
-                        self.assertEqual(result, [])
-                        self.assertIn(field, log.getvalue())
-                        self.assertNotIn('line\nbreak', log.getvalue())
 
     def test_credentials_and_nested_extensions_survive_import(self):
         for protocol, field in [('ss', 'password'), ('trojan', 'password'), ('vmess', 'uuid')]:
@@ -264,7 +258,8 @@ class AirportCredentialTests(unittest.TestCase):
             if protocol == 'ss':
                 node['cipher'] = 'aes-128-gcm'
             with self.subTest(protocol=protocol):
-                result = g.normalize_airport_nodes([node], {})[0]
+                g.require_proxy_credentials(node, protocol, "fixture")
+                result = g.clean_proxy(node)
                 self.assertEqual(result[field], node[field])
                 self.assertEqual(result['extension'], node['extension'])
 
@@ -445,7 +440,7 @@ class ConversionTests(unittest.TestCase):
                 for output in outputs:
                     g.secure_write(output, 'old output\n')
                 with mock.patch.dict(os.environ, {}, clear=True), self.assertRaises(SystemExit) as caught:
-                    g.main(['--hosts-dir', str(root / 'hosts'), '--airport-dir', str(root / 'airport'),
+                    g.main(['--hosts-dir', str(root / 'hosts'),
                             '--plain', '--output', str(outputs[0]), '--raw-output', str(outputs[1]),
                             '--loon-output', str(outputs[2])])
                 self.assertIn('clients', str(caught.exception))
