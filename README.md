@@ -6,7 +6,7 @@
 
 | 文件 | 来源与作用 | 是否含凭据、是否提交 |
 | --- | --- | --- |
-| `Clash-home.yaml` | 当前唯一维护的 Mihomo/Clash Verge 配置；定义 DNS、规则集、策略组、节点筛选和分流，`proxies` 为空 | 公开配置，不含节点凭据，提交 |
+| `home.yaml` | 当前唯一维护的 Mihomo/Clash Verge 配置；定义 DNS、规则集、策略组、节点筛选和分流，`proxies` 为空 | 公开配置，不含节点凭据，提交 |
 | `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置使用 | 含凭据，忽略、不提交 |
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
 | `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点、选中的代理链及 Route / Line / Chain / DirectExit 四层基础组；不含完整规则 | 含凭据，忽略、不提交 |
@@ -18,18 +18,18 @@
 
 | 脚本或目录 | 职责 |
 | --- | --- |
-| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `Clash-home.yaml` 校验筛选 |
+| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `home.yaml` 校验筛选 |
 | `manage_trusted_nodes.py` | 查看、预览或应用 trusted inventory 的导入、删除、恢复；只改清单，不自动重新生成客户端文件 |
 | `node_io.py` | 脚本共用的严格 YAML 读取，拒绝显式重复键 |
 | `node_conversion.py` | 服务端 Xray/Hysteria 参数到客户端节点字段的转换与审计辅助函数 |
 | `tests/test_generate_raw_nodes.py`、`tests/test_manage_trusted_nodes.py` | 节点生成及 trusted inventory 管理回归测试 |
 | `tests/test_node_parameter_safety.py`、`tests/test_trusted_launch.py` | 参数保留、文件安全、trusted 节点导入及输出测试 |
-| `tests/test_proxy_group_policy.py` | `Clash-home.yaml` 策略组与筛选关系测试 |
+| `tests/test_proxy_group_policy.py` | `home.yaml` 策略组与筛选关系测试 |
 | `.gitignore` | 阻止私有输入、含凭据生成文件和缓存进入 Git |
 | `AGENTS.md` | 仓库协作、安全和交付约束 |
 
 私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`，以及 trusted inventory。生成器负责
-生成基础节点和可选代理链；`Clash-home.yaml` 是唯一维护的 Mihomo 配置，并通过节点名称标记筛选节点。
+生成基础节点和可选代理链；`home.yaml` 是唯一维护的 Mihomo 配置，并通过节点名称标记筛选节点。
 
 ## 配置生产流程
 
@@ -43,7 +43,7 @@ manage_trusted_nodes.py → ~/.config/clash/trusted-nodes.yaml
 私有 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
 ```
 
-Clash Verge 使用 `Clash-home.yaml` 和节点生成器输出的 `proxies` 片段；生成器读取配置中的策略组
+Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；生成器读取配置中的策略组
 校验节点筛选并生成 Loon 基础组，不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
 `loon-nodes.conf`，或显式指定私有模板生成带固定规则的完整配置。
 
@@ -78,7 +78,7 @@ Clash Verge 使用 `Clash-home.yaml` 和节点生成器输出的 `proxies` 片�
 - `--chains all|none`：非交互模式下生成或跳过代理链；指定该选项时默认使用模板格式。
 - `--routes 'HK<-JP,US<-HK'`：只生成指定的“最终出口 <- 中转入口”方向，并默认使用模板格式；HomeIP 可写成 `US.HomeIP<-JP`，大小写不敏感。
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
-- `--mihomo-config PATH`：指定策略组校验和 Loon 基础组生成所用的 Mihomo 配置，默认 `Clash-home.yaml`。
+- `--mihomo-config PATH`：指定策略组校验和 Loon 基础组生成所用的 Mihomo 配置，默认 `home.yaml`。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 片段输出文件，或关闭片段输出；不影响单独指定的完整配置输出。
 - `--loon-full-output PATH`：额外生成完整 Loon 配置。
@@ -175,7 +175,7 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 两个节点不能来自同一个物理节点；
 - 普通 Core/Exit 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
 
-当前 `Clash-home.yaml` 不包含 ShowIP、Download 策略组；节点生成器和两种节点输入也不再定义
+当前 `home.yaml` 不包含 ShowIP、Download 策略组；节点生成器和两种节点输入也不再定义
 这两种能力或生成相应的名称标记。
 
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
@@ -335,7 +335,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 ### 策略组筛选与故障切换
 
-`Clash-home.yaml` 是唯一维护的 Mihomo 配置，生成器会读取它的 `proxy-groups`，
+`home.yaml` 是唯一维护的 Mihomo 配置，生成器会读取它的 `proxy-groups`，
 校验节点名称与实际筛选表达式，并用同一组定义输出 Loon 基础组：
 
 - `DirectExit-[地区]` 匹配对应地区的 Core / Exit；US、JP、SG 另有
@@ -374,7 +374,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
 - `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链，
-  `[Proxy Group]` 按 `Clash-home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
+  `[Proxy Group]` 按 `home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
   节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
   `jp.homeip.socks5`，非 HomeIP、允许作链出口且禁止直出的 Exit 节点如 `us.landing.socks5`；
   同类节点按序号区分。代理链会引用这些别名。
@@ -391,9 +391,9 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon
 交互模式还可以排除基础节点、选择代理链方向或逐条选择代理链；
 被排除节点的相关代理链不会生成。
 Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 Chain 成员由
-`Clash-home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
+`home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
 `[Remote Filter]` 用于远程订阅节点，不能筛选这里 `[Proxy]` 中的本地节点。
-组名和组间先后顺序沿用 `Clash-home.yaml`；测速参数仅输出 Loon 支持的对应项。
+组名和组间先后顺序沿用 `home.yaml`；测速参数仅输出 Loon 支持的对应项。
 现有节点集合的配置已完成 Loon 导入及导出对比；新节点、自动组切换和实际连通仍需在客户端确认。
 
 完整 Loon 配置使用私有 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
@@ -422,7 +422,7 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 手工编辑生成文件不会回写模板，下一次生成会覆盖这些编辑。
 模板按私有文件管理，完整输出包含节点凭据；两者不得提交或粘贴到公开文档。
 
-模板模式会在写入私有输出前读取 `Clash-home.yaml`，检查策略组引用没有断链，并用实际生成的
+模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Chain` 筛选表达式。
 筛选不一致时会在替换任何输出前失败；`--plain` 只生成基础节点，因此跳过这项模板校验。
 
@@ -467,7 +467,7 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 不要提交 `vps-*`、`host.env`、私钥、Xray/Hysteria 配置、`nodes.yaml`、
 `loon-nodes.conf` 或 `clash-vps.generated.yaml`。凭据一旦泄露，应立即轮换。
 
-`Clash-home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
+`home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
 `rules` 或 `rule-providers`。
 
 两个脚本通过 `node_io.py` 统一读取 YAML：显式重复键会报错，合法的锚点和
@@ -486,13 +486,13 @@ Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非�
 
 ## DNS 与迁移条件
 
-`Clash-home.yaml` 是当前唯一维护的完整 Mihomo / Clash Verge Rev 配置，包含 DNS、规则集、
+`home.yaml` 是当前唯一维护的完整 Mihomo / Clash Verge Rev 配置，包含 DNS、规则集、
 策略组和分流规则；节点生成器不导入 DNS 或规则设置，也不会自动合并或重载生效配置。
 迁移到新设备时按这份配置检查 TUN、DNS、代理提供者和规则集的可达性，再按客户端流程
 加入节点生成器输出。节点池依靠地区、角色和 `[Direct=false]` 等名称标记筛选；普通订阅的
 原始节点名未必能匹配。首次启动还需下载配置引用的规则集及 GeoIP / GeoSite 数据。
 
-DNS 上游、解析策略和规则集映射以 `Clash-home.yaml` 当前内容为准；迁移到跨境、受限网络
+DNS 上游、解析策略和规则集映射以 `home.yaml` 当前内容为准；迁移到跨境、受限网络
 或 IPv6-only 环境时，应在目标设备验证各解析上游、TUN 路由和系统 DNS。不要沿用旧配置的
 服务器地址或解析行为假设。加载配置成功不代表 DNS 分流或真实网络连通已通过测试。
 

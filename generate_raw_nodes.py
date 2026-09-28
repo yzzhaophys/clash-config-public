@@ -21,7 +21,7 @@ OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
 LOON_FULL_OUT = SCRIPT_DIR / "Loon-home.generated.lcf"
 LOON_FULL_TEMPLATE = SCRIPT_DIR / "Loon-home.template.lcf"
-MIHOMO_CONFIG = SCRIPT_DIR / "Clash-home.yaml"
+MIHOMO_CONFIG = SCRIPT_DIR / "home.yaml"
 LOON_FULL_MARKERS = {
     "proxy": "[Proxy]",
     "proxy-chain": "[Proxy Chain]",

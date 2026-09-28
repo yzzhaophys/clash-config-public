@@ -184,7 +184,7 @@ class GeneratorTests(unittest.TestCase):
             "_physical-node-id": "vps-jp-core",
         }
         with tempfile.TemporaryDirectory() as directory:
-            template = Path(directory) / "Clash-home.yaml"
+            template = Path(directory) / "home.yaml"
             source = generator.load_yaml(generator.MIHOMO_CONFIG)
             group = next(
                 group
@@ -211,7 +211,7 @@ class GeneratorTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            template = root / "Clash-home.yaml"
+            template = root / "home.yaml"
             source = generator.load_yaml(generator.MIHOMO_CONFIG)
             group = next(
                 group
