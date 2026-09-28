@@ -175,9 +175,6 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 两个节点不能来自同一个物理节点；
 - 普通 Core/Exit 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
 
-当前 `home.yaml` 不包含 ShowIP、Download 策略组；节点生成器和两种节点输入也不再定义
-这两种能力或生成相应的名称标记。
-
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
 
@@ -261,8 +258,9 @@ VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，�
 菜单顶部显示实际管理的 inventory 路径。`--target` 可省略：优先使用
 `CLASH_TRUSTED_NODES_FILE`；显式 `--target` 优先。两个脚本使用相同的默认路径：
 inventory 为 `~/.config/clash/trusted-nodes.yaml`，与自建 VPS 目录无关。
-管理器的默认导入目录为 `~/.config/clash/`；可用 `--import-dir` 或
-`CLASH_TRUSTED_IMPORT_DIR` 指定其他目录。需要其他 inventory 位置时显式指定可信节点文件。
+管理器默认固定扫描 `~/.config/clash/`，不随 `--target` 或
+`CLASH_TRUSTED_NODES_FILE` 改变；可用 `--import-dir` 或
+`CLASH_TRUSTED_IMPORT_DIR` 覆盖。需要其他 inventory 位置时显式指定可信节点文件。
 
 | 选项 | 操作 |
 | --- | --- |
@@ -276,8 +274,7 @@ inventory 为 `~/.config/clash/trusted-nodes.yaml`，与自建 VPS 目录无关�
 `landing-jp-node.yaml`。相同 ID + 协议会用源条目完整替换，源文件中没有提到的节点保留；
 不能选择目标文件自身，也不接受普通订阅的 `proxies:` 格式。
 
-选项 `3` 默认列出 `~/.config/clash/` 中的 `.yaml`、`.yml` 文件，不递归扫描。
-可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 指定其他目录；显式参数优先。
+选项 `3` 只扫描当前导入目录第一层的 `.yaml`、`.yml` 文件，不递归扫描。
 当前目标 inventory 本身及其硬链接别名、符号链接不会列为候选；目录为空时仍可输入源路径。
 导入会检查源文件权限，节点 YAML 应设置为 `0600`。
 预览只显示 ID、协议和变化字段名（如 `proxy.password`、`proxy.ws-opts`），
@@ -348,8 +345,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
   EastAsia、SoutheastAsia、Americas、Oceania、Europe Route 在本地区线路之后引用
   `♾️.Route-[Final.Fallback]`。
 
-当前配置不定义 ShowIP 或 Download 节点池；生成器也不再读取或输出这些能力标记。
-因此它们不会进入本配置的策略组筛选。
+当前配置不含 ShowIP 或 Download 节点池。
 
 当前自动组统一使用 HTTP 200 健康检查、`lazy: true` 和 `max-failed-times: 2`：
 

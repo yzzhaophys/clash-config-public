@@ -595,7 +595,7 @@ def default_trusted_import_dir() -> Path:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="安全维护私有 trusted-nodes.yaml")
     parser.add_argument('--target', type=Path, help='目标 inventory；默认沿用节点生成器的路径')
-    parser.add_argument('--import-dir', type=Path, help='导入文件目录；默认目标目录下的 imports')
+    parser.add_argument('--import-dir', type=Path, help='导入文件目录；默认 ~/.config/clash')
     subparsers = parser.add_subparsers(dest="action")
     for name, help_text in [('list', '查看节点概要'), ('interactive', '打开交互菜单')]:
         command = subparsers.add_parser(name, help=help_text)

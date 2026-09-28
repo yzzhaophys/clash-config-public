@@ -85,8 +85,8 @@ git diff --check
   不提供订阅节点选择或订阅 DNS 策略导入。交互流程用于选择现有节点、代理链和可选完整 Loon 输出。
 - 两个管理/生成脚本共享 `default_trusted_nodes_file()`；默认 inventory 为
   `~/.config/clash/trusted-nodes.yaml`，不再搜索历史 airport 目录。
-  管理器默认在 `~/.config/clash/` 扫描待导入 YAML，可用 `--import-dir` 或
-  `CLASH_TRUSTED_IMPORT_DIR` 覆盖；当前 inventory 自身和别名不会列为导入候选。
+  管理器默认固定在 `~/.config/clash/` 扫描待导入 YAML，不随 `--target` 改变；
+  可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 覆盖；当前 inventory 自身和别名不会列为导入候选。
   新位置使用 `CLASH_TRUSTED_NODES_FILE`、生成器 `--trusted-nodes-file` 或管理器 `--target`，
   不恢复 `CLASH_AIRPORT_DIR` / `--airport-dir`。历史私有输入文件不得作为清理对象删除。
 - Loon 完整配置的格式以设备导出为参考；私有模板使用 `v4-only`、紧凑业务组逗号、
