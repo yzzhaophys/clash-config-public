@@ -6,7 +6,7 @@
 
 | 文件 | 来源与作用 | 是否含凭据、是否提交 |
 | --- | --- | --- |
-| `home.yaml` | 手工维护的 Mihomo/Clash Verge 主模板；定义 DNS、策略组、节点筛选和分流，`proxies` 为空 | 公开，提交 |
+| `Clash-home.yaml` | 当前唯一维护的 Mihomo/Clash Verge 配置；定义 DNS、规则集、策略组、节点筛选和分流，`proxies` 为空 | 公开配置，不含节点凭据，提交 |
 | `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置使用 | 含凭据，忽略、不提交 |
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
 | `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点、选中的代理链及 Route / Line / Chain / DirectExit 四层基础组；不含完整规则 | 含凭据，忽略、不提交 |
@@ -18,18 +18,18 @@
 
 | 脚本或目录 | 职责 |
 | --- | --- |
-| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `home.yaml` 校验筛选 |
+| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `Clash-home.yaml` 校验筛选 |
 | `manage_trusted_nodes.py` | 查看、预览或应用 trusted inventory 的导入、删除、恢复；只改清单，不自动重新生成客户端文件 |
 | `node_io.py` | 脚本共用的严格 YAML 读取，拒绝显式重复键 |
 | `node_conversion.py` | 服务端 Xray/Hysteria 参数到客户端节点字段的转换与审计辅助函数 |
 | `tests/test_generate_raw_nodes.py`、`tests/test_manage_trusted_nodes.py` | 节点生成及 trusted inventory 管理回归测试 |
 | `tests/test_node_parameter_safety.py`、`tests/test_trusted_launch.py` | 参数保留、文件安全、trusted 节点导入及输出测试 |
-| `tests/test_proxy_group_policy.py` | `home.yaml` 策略组与筛选关系测试 |
+| `tests/test_proxy_group_policy.py` | `Clash-home.yaml` 策略组与筛选关系测试 |
 | `.gitignore` | 阻止私有输入、含凭据生成文件和缓存进入 Git |
 | `AGENTS.md` | 仓库协作、安全和交付约束 |
 
 私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`，以及 trusted inventory。生成器负责
-生成基础节点和可选代理链；`home.yaml` 通过节点名称中的地区、角色和能力标记筛选节点。
+生成基础节点和可选代理链；`Clash-home.yaml` 是唯一维护的 Mihomo 配置，并通过节点名称标记筛选节点。
 
 ## 配置生产流程
 
@@ -43,8 +43,8 @@ manage_trusted_nodes.py → ~/.config/clash/trusted-nodes.yaml
 私有 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
 ```
 
-Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` 片段；这里的脚本
-不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
+Clash Verge 使用 `Clash-home.yaml` 和节点生成器输出的 `proxies` 片段；生成器读取配置中的策略组
+校验节点筛选并生成 Loon 基础组，不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
 `loon-nodes.conf`，或显式指定私有模板生成带固定规则的完整配置。
 
 ## 要求
@@ -78,7 +78,7 @@ Clash Verge 使用 `home.yaml` 的规则结构与节点生成器的 `proxies` �
 - `--chains all|none`：非交互模式下生成或跳过代理链；指定该选项时默认使用模板格式。
 - `--routes 'HK<-JP,US<-HK'`：只生成指定的“最终出口 <- 中转入口”方向，并默认使用模板格式；HomeIP 可写成 `US.HomeIP<-JP`，大小写不敏感。
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
-- `--home-template PATH`：指定模板模式校验所用的 `home.yaml`；生成器会校验组引用和实际节点/代理链筛选。
+- `--mihomo-config PATH`：指定策略组校验和 Loon 基础组生成所用的 Mihomo 配置，默认 `Clash-home.yaml`。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 片段输出文件，或关闭片段输出；不影响单独指定的完整配置输出。
 - `--loon-full-output PATH`：额外生成完整 Loon 配置。
@@ -130,11 +130,12 @@ vps_clash_exit_type: general       # general 或 homeip
 vps_clash_allow_relay: true        # 能否作为代理链第一跳/中转
 vps_clash_allow_direct_exit: true  # 能否作为单节点最终出口
 vps_clash_allow_chain_exit: true   # 能否作为代理链最终落地节点
-vps_clash_allow_showip: false
-vps_clash_allow_download: false
 vps_clash_relay_protocol: vless
 vps_clash_chain_exit_protocol: vless
 ```
+
+`host_vars` 和 trusted inventory 都不再配置 ShowIP、Download 能力；生成器不再读取
+这两个字段，也不会为节点或代理链生成 `[ShowIP=true]` / `[Download=true]` 标记。
 
 这些能力相互独立：
 
@@ -142,14 +143,9 @@ vps_clash_chain_exit_protocol: vless
   但不影响它参与代理链。
 - `allow_relay: true`：节点可以作为第一跳/中转节点。
 - `allow_chain_exit: true`：节点可以作为第二跳/最终出口。
-- `allow_showip: true`：节点名增加 `[ShowIP=true]`。节点只有在同时允许
-  `allow_direct_exit` 时才进入 ShowIP 直出组；即使禁止单节点直出，只要允许作为链路出口并满足组链条件，
-  仍可进入 ShowIP 代理链组。
-- `allow_download: true`：节点名增加 `[Download=true]`，可进入下载专用节点组。
 
-默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`，
-`allow_showip` 和 `allow_download` 为 `false`。普通 `general` 节点只有 HK、JP、SG
-默认开启 `allow_relay`；其他地区默认关闭。
+默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`。普通
+`general` 节点只有 HK、JP、SG 默认开启 `allow_relay`；其他地区默认关闭。
 
 `exit_type` 决定自建 VPS 和 Trusted 节点的角色：
 
@@ -177,11 +173,10 @@ Clash 的 `DIRECT`（完全不经过代理）。
 - 节点实际协议与相应的 relay/chain-exit 协议一致；自建节点的链路协议默认是 VLESS，
   可信节点未显式配置时默认使用其 `proxy.type`；
 - 两个节点不能来自同一个物理节点；
-- 普通 Core/Exit、ShowIP 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
+- 普通 Core/Exit 和 HomeIP 都允许使用不同物理节点生成同地区代理链。
 
-ShowIP 是出口节点的附加能力标记，不是独立出口角色。节点仍然是普通 Exit 或
-HomeIP；`[ShowIP=true]` 让节点可参与对应的 ShowIP 策略组。基础节点是否进入 ShowIP
-直出组仍由 `allow_direct_exit` 决定；禁止单节点直出的节点仍可作为代理链落地节点进入 ShowIP 链组。
+当前 `Clash-home.yaml` 不包含 ShowIP、Download 策略组；节点生成器和两种节点输入也不再定义
+这两种能力或生成相应的名称标记。
 
 `allow_direct_exit` 不参与代理链资格判断。因此带 `[Direct=false]` 的节点仍可能是
 代理链的中转节点或最终落地节点。
@@ -191,8 +186,6 @@ HomeIP；`[ShowIP=true]` 让节点可参与对应的 ShowIP 策略组。基础�
 可信节点必须放在私有 `trusted-nodes.yaml` 的 `nodes` 列表中。每个节点都需要
 显式指定稳定 `id`、实际两位国家代码和 `proxy`；`exit-type` 和能力由文件中的
 字段控制，默认只允许单节点直出。Trusted 是未纳入主机管理的自建/客户端节点，
-`allow-showip: true` 可用于已经核实实际公网出口地区的节点，
-并与自建 VPS 使用相同的 ShowIP 标记和筛选。
 生成名称与自建 VPS 保持一致，
 使用 `VPS-[地区.角色]-协议-编号-(地区节点)` 格式，
 并在交互选择时显示“来源文件: trusted-nodes.yaml”。脚本不再接受顶层
@@ -207,8 +200,6 @@ nodes:
     allow-relay: false
     allow-chain-exit: false
     allow-direct-exit: true
-    allow-download: false
-    allow-showip: false
     proxy:
       type: vless
       server: example.com
@@ -228,7 +219,6 @@ nodes:
     allow-relay: true
     allow-chain-exit: true
     allow-direct-exit: true
-    allow-download: false
     proxy:
       type: vless
       server: example.com
@@ -247,15 +237,13 @@ exit-type: general
 allow-relay: false
 allow-chain-exit: true
 allow-direct-exit: false
-allow-showip: false       # 需要作为 ShowIP 链路时改为 true
 ```
 
-可信节点的 `allow-relay`、`allow-chain-exit`、`allow-showip` 和 `allow-download`
-默认是 `false`，`allow-direct-exit` 默认是 `true`。`exit-type` 可设为 `general`
+可信节点的 `allow-relay` 和 `allow-chain-exit` 默认是 `false`，
+`allow-direct-exit` 默认是 `true`。`exit-type` 可设为 `general`
 或 `homeip`；HomeIP 不能同时设置 `allow-relay: true`。必须填写稳定的 `id` 和
-实际两位国家代码，且不能包含已有 `dialer-proxy` 链。只有确认节点实际公网出口
-地区与 `region` 一致时，才应将 `allow-showip` 设为 `true`。稳定的 `id` 也用于
-禁止同一物理节点自连。
+实际两位国家代码，且不能包含已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一
+物理节点自连。
 
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
@@ -345,84 +333,39 @@ chmod 600 /path/to/landing-jp-node.yaml
 SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，默认只作为直出节点；
 它会进入 Clash/Mihomo 输出，Loon 输出也会转换已认证 SOCKS5，并保留可表达的 TLS、SNI、证书校验和 UDP 参数。
 
-### 策略组筛选
+### 策略组筛选与故障切换
 
-`home.yaml` 中的规则与节点名称标记对应：
+`Clash-home.yaml` 是唯一维护的 Mihomo 配置，生成器会读取它的 `proxy-groups`，
+校验节点名称与实际筛选表达式，并用同一组定义输出 Loon 基础组：
 
-- `DirectExit` 组筛选基础节点，并排除 `PrxChain` 和 `[Direct=false]`；
-- `Chain` 组只筛选 `PrxChain-*`；
-- ShowIP 直出组筛选 `[ShowIP=true]`，并继续排除 `[Direct=false]`；ShowIP 链组筛选带 ShowIP 标记的代理链；
-- 下载组只要求节点带 `[Download=true]`，另外排除名称中包含 `PrxChain` 的代理链；
-  `HomeIP`、`ShowIP` 和 `[Direct=false]` 节点只要带有该下载标记也会进入 Download。
+- `DirectExit-[地区]` 匹配对应地区的 Core / Exit；US、JP、SG 另有
+  `DirectExit-[地区.HomeIP]` 组。两类组都排除代理链和 `[Direct=false]` 节点。
+- `Chain-[地区]` 匹配以该地区为最终出口的 `PrxChain`；US、JP、SG 的 HomeIP 链使用独立的
+  `Chain-[地区.HomeIP]` 组。其他地区当前没有 HomeIP 专用策略组。
+- US、JP、SG 的普通 Line 先尝试代理链，再回退到同地区直出；其他地区先直出，再尝试代理链。
+  HomeIP Line 使用对应的 HomeIP 代理链和 HomeIP 直出节点。
+- US、JP、SG 提供 HomeIP Preferred Route：先走同地区 HomeIP Line，失效时回退普通 Line。
+  EastAsia、SoutheastAsia、Americas、Oceania、Europe Route 在本地区线路之后引用
+  `♾️.Route-[Final.Fallback]`。
 
-地区 `Line` 组再根据 `home.yaml` 的定义组合 `DirectExit` 和 `Chain`。因此修改
-节点能力后，需要重新运行生成器并重新加载生成的配置。
+当前配置不定义 ShowIP 或 Download 节点池；生成器也不再读取或输出这些能力标记。
+因此它们不会进入本配置的策略组筛选。
 
-### 代理组检测与故障切换
+当前自动组统一使用 HTTP 200 健康检查、`lazy: true` 和 `max-failed-times: 2`：
 
-业务组使用 `select` 保留手选，实际节点选择交给其下的自动组。
-`select` 不会阻止子组自行检测，也不会在子组失效后替用户选择另一个子组。
-手选组保留测试 URL、状态码和超时信息，但移除 `interval`、`lazy`、
-`max-failed-times`；显式设置周期原本可能产生检测流量，却不会使手选组自动切换。
-
-| 层级 | 策略 | 检测安排与边界 |
+| 组层级 | 策略 | 当前检查参数 |
 | --- | --- | --- |
-| 业务入口 | `select` | 手动选择线路；无额外周期检测 |
-| `⬇️.Route-[Max.Traffic]` | `fallback` | 优先引用 Download，全部失效时回退 `♾️.Route-[Final.Fallback]` |
-| Download | `url-test` | 每 30 秒检测获准下载的真实节点 |
-| 其他 Chain / DirectExit（CN 除外） | `url-test` | 每 30 秒检测各自节点池 |
-| 普通国家 Line（CN 除外） | `fallback` | 检测间隔 45 秒；US / JP / SG 代理链优先、同地区直出备用，其余地区直出优先、代理链备用 |
-| 内层 HomeIP / ShowIP Line | `fallback` | 检测间隔 45 秒，代理链优先、同地区同用途直出备用 |
-| 地区 Route、Final.Fallback、Low.Latency | `fallback` | 每 90 秒检测候选线路 |
-| CDN 业务入口 | `select` | 默认引用 Max.Traffic，也可手选 Low.Latency；不增加跨组自动灾备层 |
-| Americas / Oceania / Europe Route | `fallback` | 每 90 秒检测；本地区线路优先，`♾️.Route-[Final.Fallback]` 作为跨地区备用 |
-| CN Line / CN DirectExit | 单子项 `select` | 当前最终指向 DIRECT，不提供回国代理节点或自动灾备 |
+| Chain / DirectExit 节点池 | `url-test` | 30 秒、3000 毫秒超时、50 毫秒容差 |
+| 地区 Line | `fallback` | 45 秒、4000 毫秒超时 |
+| 地区与大区 Route | `fallback` | 90 秒、5000 毫秒超时 |
+| 业务入口 | `select` | 保留手动选择，不执行周期健康检查 |
 
-业务组通过 `🏠.Route-[US.HomeIP.Preferred]`、`📍.Route-[US.ShowIP.Preferred]` 等上层
-Route 入口选择用途；每 90 秒检查一次，先使用对应的内层地区 Line，失效时回退到同地区普通
-Line。内层 HomeIP / ShowIP 线路仍只在各自的 Chain 和 DirectExit 组之间切换。
+健康检查只反映探测地址的结果，不能证明目标站点、UDP 或大流量传输正常，也不能代替真实网络测试。
+空节点池的 `empty-fallback: REJECT` 与“所有节点测速失败”是不同情况；没有实际候选节点时，
+策略组没有可用备份。生成器不会为缺失地区创建占位节点。
 
-所有自动组设置 `lazy: true`、`max-failed-times: 2`；`url-test` 节点池使用
-`timeout: 3000`，普通国家线路 `fallback` 使用 `timeout: 4000`，HomeIP / ShowIP、跨地区及入口线路
-使用 `timeout: 5000`。
-HK 和 MY 的 Chain 子组在客户端列表中隐藏，仍由对应地区的 Line 组引用。
-`url-test` 使用 `tolerance: 50` 毫秒，减少健康节点间的小幅延迟切换；
-该容差不会阻止内核替换已被探测判定失效的节点。失败阈值只用于触发额外检查，
-其计数受内核版本、失败类型及时间窗口影响，不保证两次业务请求失败就换线。
-检测周期也不是故障恢复时限：探测耗时、多层状态更新、实际流量与探测流量的差异
-都会影响恢复。底层检测更频繁，会增加后台探测开销。
-
-`☁️.<Global>--CDN` 的首选项为 `⬇️.Route-[Max.Traffic]`，保留
-`⚡.Route-[Low.Latency]`、DIRECT 等手动选项。
-配置启用了 `store-selected`，已有选择可能优先于列表首项。CDN 不会在 Download
-整体失效时自动改选 Low.Latency 或 DIRECT，需要手动选择；Download 内部仍自主换节点。
-下载业务仍走 `⬇️.Route-[Max.Traffic]`；它优先使用 Download 节点池，Download 全部故障时明确
-回退到 `♾️.Route-[Final.Fallback]`，因此该灾备路径可能使用未带 `allow_download` 标记的普通节点。
-`home.yaml` 的 `empty-fallback: REJECT` 只处理节点池为空，不等于全部节点测速失败时的跨组灾备；
-缺失地区不会生成占位节点。地区 `fallback` 只有在
-备用节点池实际包含可用节点时才具有备用路径；两个池均为空的地区线路不能使用。
-
-当前统一探测 Apple 测试页面并要求 HTTP 200，它只能代表该地址可达，不能证明
-linux.do、其他站点或 UDP 正常，也不衡量下载带宽。上层探测一个子组时，检验的
-是子组当时选中的路径，不能替代底层节点池的独立检测；不能承诺嵌套后瞬时恢复。
-底层保留独立检测配置，实际调度受 `lazy: true` 影响。单子项 `select` 入口不再重复定时探测。Americas / Oceania /
-Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本地区候选失效后才尝试
-`♾️.Route-[Final.Fallback]`；它关注可用性，不按延迟重新排序。
-
-加载候选配置后应分别验证：
-
-1. 查看 Download 的实际成员，确认各成员符合私有清单中的下载能力声明及名称筛选；
-   自动组保持自动选择，检查面板/API 是否存在手动固定的 `fixed` 状态。
-2. 在隔离测试环境使当前节点失效，观察组内检测历史和 `now` 是否变化，
-   再用新连接访问目标站点；旧的 TCP/下载连接不能自动迁移，应用需要重连。
-3. 测试 Download 全部失效时，Max.Traffic 是否按 Download → `♾️.Route-[Final.Fallback]` 回退，
-   CDN 是否保持手选；有实际备用节点时，测试代理链故障后同用途直出是否接替。
-4. 如果手动测速后仍不切换，确认测的是整个自动组而非仅一个节点或外层入口，
-   核对自动组测试 URL 对应的结果、候选节点健康状态和 `fixed`。
-   目标站点失败而 Apple 正常时，缩短检测周期不能解决，需要单独诊断站点路径。
-
-修改模板不等于修改已生成或正在生效的配置。更新时需用自己的节点输入生成候选配置，
-通过对应版本 Mihomo 的 `-t` 后，再按客户端工作流加载；配置加载成功不代表灾备实测通过。
+更新后应先校验候选配置，再导入客户端；分别检查自动组成员、地区线路的链路顺序、Route 回退路径，
+并在隔离环境实测节点或链路失效后的切换。配置加载成功不代表实际连通和灾备切换通过。
 
 ## 输出文件
 
@@ -431,7 +374,7 @@ Europe Route 的 `fallback` 会按列表顺序使用本地区线路，全部本�
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
 - `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链，
-  `[Proxy Group]` 按 `home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
+  `[Proxy Group]` 按 `Clash-home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
   节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
   `jp.homeip.socks5`，非 HomeIP、允许作链出口且禁止直出的 Exit 节点如 `us.landing.socks5`；
   同类节点按序号区分。代理链会引用这些别名。
@@ -448,9 +391,9 @@ Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon
 交互模式还可以排除基础节点、选择代理链方向或逐条选择代理链；
 被排除节点的相关代理链不会生成。
 Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 Chain 成员由
-`home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
+`Clash-home.yaml` 的筛选表达式在生成时确定；空组省略，上层引用也随之删去。
 `[Remote Filter]` 用于远程订阅节点，不能筛选这里 `[Proxy]` 中的本地节点。
-组名和组间先后顺序沿用 `home.yaml`；测速参数仅输出 Loon 支持的对应项。
+组名和组间先后顺序沿用 `Clash-home.yaml`；测速参数仅输出 Loon 支持的对应项。
 现有节点集合的配置已完成 Loon 导入及导出对比；新节点、自动组切换和实际连通仍需在客户端确认。
 
 完整 Loon 配置使用私有 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
@@ -479,8 +422,8 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 手工编辑生成文件不会回写模板，下一次生成会覆盖这些编辑。
 模板按私有文件管理，完整输出包含节点凭据；两者不得提交或粘贴到公开文档。
 
-模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
-节点名和代理链名匹配 `DirectExit`、`Download`、`ShowIP`、`Chain` 筛选表达式。
+模板模式会在写入私有输出前读取 `Clash-home.yaml`，检查策略组引用没有断链，并用实际生成的
+节点名和代理链名匹配 `DirectExit`、`Chain` 筛选表达式。
 筛选不一致时会在替换任何输出前失败；`--plain` 只生成基础节点，因此跳过这项模板校验。
 
 这些文件包含真实凭据，已加入 `.gitignore`。
@@ -517,14 +460,14 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 
 ## 编辑和安全
 
-`[Direct=false]`、`[ShowIP=true]` 等标记是生成器根据源配置自动写入的，不是 Clash
-节点编辑界面的标准字段。应修改 `host_vars` 或 `trusted-nodes.yaml` 后重新生成，
-不要只在客户端手动改节点名称。
+`[Direct=false]` 等标记是生成器根据源配置自动写入的，不是 Clash 节点编辑界面的
+标准字段。自建 VPS 的地区和分流能力应修改 `host_vars`；Trusted 的 relay、chain-exit
+和 direct-exit 能力应修改 `trusted-nodes.yaml` 后重新生成，不要只在客户端手动改节点名称。
 
 不要提交 `vps-*`、`host.env`、私钥、Xray/Hysteria 配置、`nodes.yaml`、
 `loon-nodes.conf` 或 `clash-vps.generated.yaml`。凭据一旦泄露，应立即轮换。
 
-`home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
+`Clash-home.yaml` 的策略组格式需要保持现有的对齐风格；编辑代理组时不要重写 `dns`、
 `rules` 或 `rule-providers`。
 
 两个脚本通过 `node_io.py` 统一读取 YAML：显式重复键会报错，合法的锚点和
@@ -543,28 +486,18 @@ Loon 对 VLESS flow、REALITY 公钥/short-id 和 ALPN 增加类型检查，非�
 
 ## DNS 与迁移条件
 
-`home.yaml` 是面向 Mihomo / Clash Verge Rev 的空节点模板。迁移到新设备时，需加入
-私有生成节点，并保留地区、角色和能力名称标记；普通订阅的原始节点名未必能命中这里的
-节点池。首次启动还需要下载规则集和 GeoIP/GeoSite 数据，不能依赖旧设备已有的缓存。
+`Clash-home.yaml` 是当前唯一维护的完整 Mihomo / Clash Verge Rev 配置，包含 DNS、规则集、
+策略组和分流规则；节点生成器不导入 DNS 或规则设置，也不会自动合并或重载生效配置。
+迁移到新设备时按这份配置检查 TUN、DNS、代理提供者和规则集的可达性，再按客户端流程
+加入节点生成器输出。节点池依靠地区、角色和 `[Direct=false]` 等名称标记筛选；普通订阅的
+原始节点名未必能匹配。首次启动还需下载配置引用的规则集及 GeoIP / GeoSite 数据。
 
-- `respect-rules: true` 控制普通 DNS 上游连接的路由；DNS URL 中的 `#策略组`
-  显式指定该查询的出口。节点域名由 `proxy-server-nameserver` 单独解析。
-- `default-nameserver` 和 `proxy-server-nameserver` 当前都使用 `223.5.5.5`、
-  `119.29.29.29`。跨境、受限网络或 IPv6-only 环境迁移时，需先验证这些 IPv4 DNS
-  的可达性；独立解析链路不能保证解析服务器在所有网络都可用。
-- `direct-nameserver` 当前使用阿里和 Google DoH，默认不继承全局 `respect-rules`；
-  未设置的 `direct-nameserver-follow-policy` 默认为 `false`，DIRECT 出口域名解析
-  不应被理解为始终沿用业务 `nameserver-policy`。参见
-  [Mihomo DNS 文档](https://wiki.metacubex.one/config/dns/)和
-  [内核 DNS 配置解析](https://github.com/MetaCubeX/mihomo/blob/Meta/config/config.go)。
-- `redir-host` 下 `fake-ip-filter` 不负责选择 DNS 上游。DNS 监听端口 `1053`
-  可以配合 TUN 劫持 53 端口工作；当前监听 `0.0.0.0`，迁移时应按本机或局域网用途
-  检查监听范围。TUN 的实际权限、路由、系统 DNS 和客户端覆写需在目标设备检查。
-- `ChinaDNS` 的首选项为 `REJECT`，是已有的分流选择，不代表独立的节点解析和
-  DNS 引导查询也被禁止；不能由此宣称没有任何直连 DNS 查询。
-- Loon 节点文件只覆盖可表达的基础节点及本次选中的可导出代理链；规则仍需单独维护。
-- 配置可以部署到 Windows 上的 Mihomo 客户端；节点管理脚本依赖 `fcntl`，需在
-  Linux、macOS 或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
+DNS 上游、解析策略和规则集映射以 `Clash-home.yaml` 当前内容为准；迁移到跨境、受限网络
+或 IPv6-only 环境时，应在目标设备验证各解析上游、TUN 路由和系统 DNS。不要沿用旧配置的
+服务器地址或解析行为假设。加载配置成功不代表 DNS 分流或真实网络连通已通过测试。
+
+配置可以部署到 Windows 上的 Mihomo 客户端；节点管理脚本依赖 `fcntl`，需在 Linux、macOS
+或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
 
 当前 `rule-providers` 仍直接引用上游 URL。独立快照仓库的自动同步不会自动修改这里的
 规则来源；若要使用快照，需另行接入对应的地址或本地文件，并处理私有仓库的访问权限。

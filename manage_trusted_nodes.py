@@ -403,8 +403,7 @@ def list_nodes(target: Path) -> list[dict[str, Any]]:
         node_id, protocol = _node_key(node, path=target, index=index - 1)
         capabilities = [label for key, label in (
             ('_allow-relay', 'Relay'), ('_allow-chain-exit', 'Chain'),
-            ('_allow-direct-exit', 'Direct'), ('_allow-showip', 'ShowIP'),
-            ('_allow-download', 'Download'),
+            ('_allow-direct-exit', 'Direct'),
         ) if proxy[key]]
         if proxy['_exit-type'] == 'homeip':
             capabilities.append('HomeIP')

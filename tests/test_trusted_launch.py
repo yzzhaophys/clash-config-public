@@ -21,7 +21,6 @@ def fixture(identity, region, *, landing=False):
         'exit-type': 'homeip' if landing else 'general',
         'allow-relay': not landing, 'allow-chain-exit': landing,
         'allow-direct-exit': not landing,
-        'allow-download': False, 'allow-showip': False,
         'relay-protocol': 'vless', 'chain-exit-protocol': 'vless',
         'proxy': {'type': 'vless', 'server': 'example.invalid', 'port': 443,
                   'uuid': '11111111-1111-4111-8111-111111111111',
@@ -70,7 +69,7 @@ class TrustedLaunchTests(unittest.TestCase):
             self.assertIn('[Direct=false]', base['name'])
             self.assertEqual({k: v for k, v in base.items() if k != 'name'}, jp['proxy'])
             self.assertEqual(chain['dialer-proxy'], proxies[0]['name'])
-            groups = load_yaml(g.SCRIPT_DIR / 'home.yaml')['proxy-groups']
+            groups = load_yaml(g.MIHOMO_CONFIG)['proxy-groups']
 
             def includes(group, name):
                 return (group.get('include-all', False)
@@ -82,7 +81,7 @@ class TrustedLaunchTests(unittest.TestCase):
                                 and includes(gp, chain['name']) for gp in groups))
             for group in groups:
                 self.assertFalse(includes(group, base['name']), group['name'])
-                if any(tag in group['name'] for tag in ('ShowIP', 'Download', 'Route')):
+                if '.Chain-[' not in group['name']:
                     self.assertFalse(includes(group, chain['name']), group['name'])
             self.assertEqual(len(load_yaml(root / 'raw.yaml')['proxies']), 2)
             loon_text = (root / 'loon.conf').read_text()
@@ -93,7 +92,7 @@ class TrustedLaunchTests(unittest.TestCase):
                 self.assertEqual((root / filename).stat().st_mode & 0o777, 0o600)
 
             # A later failed update keeps the valid inventory intact.
-            jp['allow-showip'] = True
+            jp['proxy']['udp'] = False
             g.secure_write(source, yaml.safe_dump({'nodes': [jp]}))
             with mock.patch.object(m.os, 'replace', side_effect=OSError('fixture failure')):
                 with self.assertRaises(OSError):

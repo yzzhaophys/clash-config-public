@@ -15,15 +15,15 @@
   Proxy、Proxy Chain、Route、Line、Chain、DirectExit；固定业务组和规则不得由节点
   生成器重写。每台设备需在 Loon 中自行生成 CA，并在系统中安装和信任；
   模板和完整输出均须保持私有且不得提交。
-- `home.yaml` 是 Mihomo/Clash Verge 的规则、筛选和 DNS 基础；Loon 使用独立
+- `Clash-home.yaml` 是唯一维护的 Mihomo/Clash Verge 配置，包含规则、筛选和 DNS；Loon 使用独立
   输出的 `loon-nodes.conf`，其规则文件另行维护。Loon 的 `[Proxy Group]` 沿用
-  `home.yaml` 的 Route、Line、Chain、DirectExit 组名和顺序，仅引用实际导出的
+  `Clash-home.yaml` 的 Route、Line、Chain、DirectExit 组名和顺序，仅引用实际导出的
   节点、代理链与非空下级组；本地 `[Proxy]` 节点由生成器筛选，不用 `[Remote Filter]`。
-- Clash Verge 使用 `home.yaml` 与节点生成器输出的 `proxies` 片段；本仓库脚本不会
+- Clash Verge 使用 `Clash-home.yaml` 与节点生成器输出的 `proxies` 片段；本仓库脚本不会
   自动合并或重载生效配置。
 - 保留用户已有改动。修改脚本不代表获准覆盖、重载 Clash Verge 生效配置，
   也不代表获准提交或推送；这些操作须有用户明确授权。
-- 修改 `home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
+- 修改 `Clash-home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
 - 清理工作区时只删除明确可重新生成的缓存或临时文件，例如 `__pycache__/`。
   不要把被 Git 忽略的 `clash-vps.generated.yaml`、`nodes.yaml`、
   `loon-nodes.conf`、私有 Loon 模板、完整配置、设备导出或 trusted inventory 当作垃圾删除。
@@ -47,10 +47,9 @@
   Loon 节点别名保留普通节点的 `地区.协议`，HomeIP 用 `地区.homeip.协议`，
   非 HomeIP、允许作链出口且禁止直出的 Exit 节点用 `地区.landing.协议`；代理链引用实际别名。
 - 不生成缺失地区的占位或补位节点，也不通过复制节点、修改地区标签来填充空策略组。
-- ShowIP 是出口节点的附加能力，不是独立出口角色。同地区普通 Core / Exit、ShowIP
-  和 HomeIP 均可组链，但必须同时满足落地允许 chain-exit、入口允许 relay、链路协议
+- 普通 Core / Exit 和 HomeIP 均可组链，但必须同时满足落地允许 chain-exit、入口允许 relay、链路协议
   匹配且物理节点不同；`allow_direct_exit` 不参与代理链资格判断。
-- 修改名称、能力标记或组链规则时，必须同时测试 `home.yaml` 的实际筛选表达式。
+- 修改名称、能力标记或组链规则时，必须同时测试 `Clash-home.yaml` 的实际筛选表达式。
 
 ## 文件写入
 

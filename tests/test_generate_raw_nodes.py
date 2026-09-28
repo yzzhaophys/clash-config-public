@@ -33,34 +33,11 @@ class GeneratorTests(unittest.TestCase):
 
         self.assertEqual(candidates, [(exit_proxy, dialer)])
         self.assertEqual(generator.route_key(candidates[0]), ("US", "US"))
-        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
+        config = generator.load_yaml(generator.MIHOMO_CONFIG)
         chain_group = next(
-            group for group in home["proxy-groups"] if group["name"] == "🇺🇸🔗.Chain-[US]"
+            group for group in config["proxy-groups"] if group["name"] == "🇺🇸.Chain-[US]"
         )
         self.assertRegex(generator.chain_name(*candidates[0]), chain_group["filter"])
-
-    def test_same_region_showip_general_chain_can_use_a_distinct_landing(self) -> None:
-        dialer = {
-            "name": generator.node_name("us", "vless", 0, "Core"),
-            "type": "vless",
-            "_allow-relay": True,
-            "_relay-protocol": "vless",
-            "_physical-node-id": "vps-us-relay",
-        }
-        showip_exit = {
-            "name": generator.node_name("us", "vless", 1, "Exit", allow_showip=True),
-            "type": "vless",
-            "_allow-chain-exit": True,
-            "_allow-showip": True,
-            "_chain-exit-protocol": "vless",
-            "_physical-node-id": "vps-us-showip",
-        }
-
-        candidates = generator.chain_candidates([dialer, showip_exit])
-
-        self.assertEqual(candidates, [(showip_exit, dialer)])
-        self.assertEqual(generator.route_key(candidates[0]), ("US", "US"))
-        self.assertTrue(generator.chain_name(*candidates[0]).endswith("[ShowIP=true]"))
 
     def test_homeip_route_is_case_insensitive(self) -> None:
         dialer = {
@@ -138,56 +115,16 @@ class GeneratorTests(unittest.TestCase):
         self.assertFalse(nodes[0]["_allow-relay"])
         self.assertTrue(nodes[0]["_allow-direct-exit"])
         self.assertFalse(nodes[0]["_allow-chain-exit"])
-        self.assertFalse(nodes[0]["_allow-download"])
-        self.assertFalse(nodes[0]["_allow-showip"])
+        self.assertNotIn("_allow-download", nodes[0])
+        self.assertNotIn("_allow-showip", nodes[0])
 
-    def test_trusted_showip_capability_is_encoded_and_matches_home_filters(self) -> None:
-        nodes = generator.normalize_trusted_nodes(
-            [
-                {
-                    "id": "trusted-us-showip",
-                    "region": "US",
-                    "allow-chain-exit": True,
-                    "allow-showip": True,
-                    "proxy": {
-                        "type": "vless",
-                        "server": "trusted.example",
-                        "port": 443,
-                        "uuid": "trusted-uuid",
-                    },
-                }
-            ],
-            {},
-            Path("trusted-nodes.yaml"),
-        )
-
-        node = nodes[0]
-        self.assertTrue(node["_allow-showip"])
-        self.assertTrue(node["_allow-chain-exit"])
-        self.assertIn("[ShowIP=true]", node["name"])
-
-        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
-        direct_group = next(
-            group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
-        )
-        self.assertRegex(node["name"], direct_group["filter"])
-        self.assertIsNone(re.search(direct_group["exclude-filter"], node["name"]))
-
-        dialer = {"name": generator.node_name("jp", "vless", 0, "Core")}
-        chain = generator.chain_name(node, dialer)
-        chain_group = next(
-            group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔗.Chain-[US.ShowIP]"
-        )
-        self.assertRegex(chain, chain_group["filter"])
-
-    def test_trusted_showip_flag_rejects_invalid_types(self) -> None:
-        base = {
-            "id": "trusted-us-showip",
+    def test_removed_trusted_capability_fields_do_not_affect_generated_nodes(self) -> None:
+        source = {
+            "id": "trusted-us-legacy",
             "region": "US",
+            "allow-chain-exit": True,
+            "allow-showip": True,
+            "allow-download": True,
             "proxy": {
                 "type": "vless",
                 "server": "trusted.example",
@@ -195,25 +132,24 @@ class GeneratorTests(unittest.TestCase):
                 "uuid": "trusted-uuid",
             },
         }
-        for value in ("maybe", 2, [], {}):
-            with self.subTest(value=value), self.assertRaisesRegex(
-                ValueError, "allow-showip"
-            ):
-                generator.normalize_trusted_nodes(
-                    [{**base, "allow-showip": value}],
-                    {},
-                    Path("trusted-nodes.yaml"),
-                )
 
-    def test_generated_names_match_current_home_filters(self) -> None:
+        node = generator.normalize_trusted_nodes(
+            [source], {}, Path("trusted-nodes.yaml")
+        )[0]
+
+        self.assertTrue(node["_allow-chain-exit"])
+        self.assertNotIn("_allow-showip", node)
+        self.assertNotIn("_allow-download", node)
+        self.assertNotIn("[ShowIP=true]", node["name"])
+        self.assertNotIn("[Download=true]", node["name"])
+
+    def test_generated_names_match_current_mihomo_filters(self) -> None:
         exit_proxy = {
             "name": generator.node_name(
-                "us", "vless", 0, "HomeIP", allow_showip=True, allow_download=True
+                "us", "vless", 0, "HomeIP"
             ),
             "_allow-direct-exit": True,
             "_allow-chain-exit": True,
-            "_allow-showip": True,
-            "_allow-download": True,
             "_chain-exit-protocol": "vless",
             "_physical-node-id": "vps-us-homeip",
         }
@@ -223,58 +159,18 @@ class GeneratorTests(unittest.TestCase):
             "_relay-protocol": "vless",
             "_physical-node-id": "vps-jp-core",
         }
-        generator.validate_generated_against_home(
+        groups = generator.load_mihomo_proxy_groups()
+        homeip_direct = groups["🇺🇸.DirectExit-[US.HomeIP]"]
+        homeip_chain = groups["🇺🇸.Chain-[US.HomeIP]"]
+        chain = generator.chain_name(exit_proxy, dialer)
+        self.assertTrue(generator._group_matches_proxy(homeip_direct, exit_proxy["name"]))
+        self.assertTrue(generator._group_matches_proxy(homeip_chain, chain))
+        self.assertFalse(any("ShowIP" in name or "Download" in name for name in groups))
+        generator.validate_generated_against_config(
             [exit_proxy, dialer], [(exit_proxy, dialer)]
         )
 
-    def test_showip_without_direct_exit_can_match_showip_chain_filter(self) -> None:
-        proxy = {
-            "name": generator.node_name(
-                "us",
-                "socks5",
-                0,
-                "Exit",
-                allow_direct_exit=False,
-                allow_showip=True,
-            ),
-            "type": "socks5",
-            "_allow-direct-exit": False,
-            "_allow-showip": True,
-            "_allow-chain-exit": True,
-            "_chain-exit-protocol": "socks5",
-            "_allow-relay": False,
-            "_physical-node-id": "trusted:us-showip",
-        }
-        dialer = {
-            "name": generator.node_name("us", "vless", 0, "Core"),
-            "type": "vless",
-            "_allow-direct-exit": True,
-            "_allow-chain-exit": False,
-            "_allow-relay": True,
-            "_relay-protocol": "vless",
-            "_physical-node-id": "vps-us-relay",
-        }
-        chains = generator.chain_candidates([proxy, dialer])
-        self.assertEqual(chains, [(proxy, dialer)])
-
-        home = generator.load_yaml(generator.HOME_TEMPLATE)
-        showip_group = next(
-            group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
-        )
-        showip_chain_group = next(
-            group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔗.Chain-[US.ShowIP]"
-        )
-        chain_name = generator.chain_name(*chains[0])
-
-        self.assertFalse(generator._group_matches_proxy(showip_group, proxy["name"]))
-        self.assertTrue(generator._group_matches_proxy(showip_chain_group, chain_name))
-        generator.validate_generated_against_home([proxy, dialer], chains)
-
-    def test_generated_chain_is_rejected_when_home_filter_changes(self) -> None:
+    def test_generated_chain_is_rejected_when_mihomo_filter_changes(self) -> None:
         exit_proxy = {
             "name": generator.node_name("us", "vless", 0, "Exit"),
             "_allow-chain-exit": True,
@@ -288,23 +184,24 @@ class GeneratorTests(unittest.TestCase):
             "_physical-node-id": "vps-jp-core",
         }
         with tempfile.TemporaryDirectory() as directory:
-            template = Path(directory) / "home.yaml"
-            source = generator.load_yaml(generator.HOME_TEMPLATE)
+            template = Path(directory) / "Clash-home.yaml"
+            source = generator.load_yaml(generator.MIHOMO_CONFIG)
             group = next(
                 group
                 for group in source["proxy-groups"]
                 if group["name"].endswith(".Chain-[US]")
             )
             group["filter"] = r"(?i)^NO_MATCH$"
+            template.touch(mode=0o600)
             template.write_text(
                 yaml.safe_dump(source, allow_unicode=True), encoding="utf-8"
             )
-            with self.assertRaisesRegex(ValueError, "未命中 home 模板筛选"):
-                generator.validate_generated_against_home(
+            with self.assertRaisesRegex(ValueError, "未命中 Mihomo 配置筛选"):
+                generator.validate_generated_against_config(
                     [exit_proxy, dialer], [(exit_proxy, dialer)], template
                 )
 
-    def test_home_template_failure_keeps_existing_template_output(self) -> None:
+    def test_mihomo_config_failure_keeps_existing_template_output(self) -> None:
         proxy = {
             "name": generator.node_name("us", "vless", 0, "Exit"),
             "type": "vless",
@@ -314,14 +211,15 @@ class GeneratorTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            template = root / "home.yaml"
-            source = generator.load_yaml(generator.HOME_TEMPLATE)
+            template = root / "Clash-home.yaml"
+            source = generator.load_yaml(generator.MIHOMO_CONFIG)
             group = next(
                 group
                 for group in source["proxy-groups"]
                 if group["name"].endswith(".DirectExit-[US]")
             )
             group["filter"] = r"(?i)^NO_MATCH$"
+            template.touch(mode=0o600)
             template.write_text(
                 yaml.safe_dump(source, allow_unicode=True), encoding="utf-8"
             )
@@ -330,13 +228,13 @@ class GeneratorTests(unittest.TestCase):
             with (
                 mock.patch.object(generator, "collect_proxies", return_value=[proxy]),
                 mock.patch.object(generator, "load_trusted_nodes", return_value=[]),
-                self.assertRaisesRegex(SystemExit, "home 模板"),
+                self.assertRaisesRegex(SystemExit, "Mihomo 配置"),
             ):
                 generator.main(
                     [
                         "--template",
                         "--no-loon",
-                        "--home-template",
+                        "--mihomo-config",
                         str(template),
                         "--output",
                         str(output),
@@ -350,7 +248,6 @@ class GeneratorTests(unittest.TestCase):
             "region": "US",
             "exit-type": "homeip",
             "allow-chain-exit": True,
-            "allow-showip": True,
             "proxy": {
                 "type": "vless",
                 "server": "trusted.example",
@@ -363,21 +260,19 @@ class GeneratorTests(unittest.TestCase):
         )[0]
 
         self.assertEqual(generator.node_meta(node["name"])["role"], "HomeIP")
-        self.assertIn("[ShowIP=true]", node["name"])
+        self.assertNotIn("[ShowIP=true]", node["name"])
 
-        home = generator.load_yaml(generator.SCRIPT_DIR / "home.yaml")
+        config = generator.load_yaml(generator.MIHOMO_CONFIG)
         homeip_group = next(
             group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔰.DirectExit-[US.HomeIP]"
-        )
-        showip_group = next(
-            group
-            for group in home["proxy-groups"]
-            if group["name"] == "🇺🇸🔰.DirectExit-[US.ShowIP]"
+            for group in config["proxy-groups"]
+            if group["name"] == "🇺🇸.DirectExit-[US.HomeIP]"
         )
         self.assertRegex(node["name"], homeip_group["filter"])
-        self.assertRegex(node["name"], showip_group["filter"])
+        self.assertFalse(any(
+            "ShowIP" in group["name"] or "Download" in group["name"]
+            for group in config["proxy-groups"]
+        ))
 
         with self.assertRaisesRegex(ValueError, "allow-relay"):
             generator.normalize_trusted_nodes(
@@ -857,6 +752,41 @@ class GeneratorTests(unittest.TestCase):
                 Path("vps-virtual-region"), {"VPS_CLASH_REGION": "EUR"}
             )
 
+    def test_removed_host_vars_showip_and_download_fields_are_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            host_vars = Path(directory) / "vps-test.yml"
+            host_vars.write_text(
+                "vps_clash_region: jp\n"
+                "vps_clash_allow_showip: true\n"
+                "vps_clash_allow_download: true\n",
+                encoding="utf-8",
+            )
+
+            mapped = generator.load_ansible_clash_vars(host_vars)
+
+        self.assertEqual(mapped, {"VPS_CLASH_REGION": "jp"})
+
+    def test_self_hosted_nodes_ignore_legacy_showip_and_download_env(self) -> None:
+        capabilities = generator.host_capabilities(
+            Path("vps-test"),
+            {
+                "VPS_CLASH_REGION": "jp",
+                "VPS_CLASH_ALLOW_SHOWIP": "true",
+                "VPS_CLASH_ALLOW_DOWNLOAD": "true",
+            },
+        )
+
+        self.assertNotIn("allow_showip", capabilities)
+        self.assertNotIn("allow_download", capabilities)
+        name = generator.node_name(
+            "jp",
+            "vless",
+            0,
+            generator.capability_role(capabilities),
+        )
+        self.assertNotIn("[ShowIP=true]", name)
+        self.assertNotIn("[Download=true]", name)
+
     def test_listen_port_supports_single_ports_and_ranges(self) -> None:
         self.assertEqual(generator.port_from_listen(":443", 20002), 443)
         self.assertEqual(generator.port_from_listen(":443-500", 20002), 443)
@@ -1115,22 +1045,22 @@ class GeneratorTests(unittest.TestCase):
             self.assertIn("us.landing.socks5 = socks5,exit.example,1080", content)
             self.assertIn("[Proxy Chain]\nchain.us.landing.socks5.via.jp.vless = jp.vless,us.landing.socks5\n", content)
             self.assertIn("[Proxy Group]\n", content)
-            self.assertIn("🇯🇵🔰.DirectExit-[JP] = url-test,jp.vless,", content)
-            self.assertIn("🇺🇸🔗.Chain-[US] = url-test,chain.us.landing.socks5.via.jp.vless,", content)
-            self.assertIn("🇺🇸.Line-[US] = fallback,🇺🇸🔗.Chain-[US],", content)
+            self.assertIn("🇯🇵.DirectExit-[JP] = url-test,jp.vless,", content)
+            self.assertIn("🇺🇸.Chain-[US] = url-test,chain.us.landing.socks5.via.jp.vless,", content)
+            self.assertIn("🇺🇸.Line-[US] = fallback,🇺🇸.Chain-[US],", content)
             self.assertIn("♾️.Route-[Final.Fallback] = fallback,🇭🇰.Line-[HK],🇯🇵.Line-[JP],", content)
             self.assertLess(content.index("♾️.Route-[Final.Fallback] ="), content.index("🇺🇸.Line-[US] ="))
-            self.assertLess(content.index("🇺🇸.Line-[US] ="), content.index("🇺🇸🔗.Chain-[US] ="))
-            self.assertLess(content.index("🇺🇸🔗.Chain-[US] ="), content.index("🇯🇵🔰.DirectExit-[JP] ="))
-            self.assertNotIn("🇺🇸🔰.DirectExit-[US] =", content)
-            self.assertNotIn("🇬🇧🔗.Chain-[UK] =", content)
+            self.assertLess(content.index("🇺🇸.Line-[US] ="), content.index("🇺🇸.Chain-[US] ="))
+            self.assertLess(content.index("🇺🇸.Chain-[US] ="), content.index("🇯🇵.DirectExit-[JP] ="))
+            self.assertNotIn("🇺🇸.DirectExit-[US] =", content)
+            self.assertNotIn("🇬🇧.Chain-[UK] =", content)
             self.assertNotIn("chain.us.landing.socks5.via.hk.vless", content)
             self.assertIn("入口仅支持 VLESS", skipped[0])
             _, no_chain_count, _ = generator.write_loon(proxies, output, [])
             self.assertEqual(no_chain_count, 0)
             self.assertNotIn("[Proxy Chain]", output.read_text())
             self.assertIn("us.landing.socks5 =", output.read_text())
-            self.assertNotIn("🇺🇸🔗.Chain-[US] =", output.read_text())
+            self.assertNotIn("🇺🇸.Chain-[US] =", output.read_text())
             self.assertNotIn("🇺🇸.Line-[US] =", output.read_text())
 
     def test_loon_alias_distinguishes_homeip_landing_and_regular_nodes(self) -> None:

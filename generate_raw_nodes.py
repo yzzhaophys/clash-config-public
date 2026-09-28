@@ -21,7 +21,7 @@ OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
 LOON_FULL_OUT = SCRIPT_DIR / "Loon-home.generated.lcf"
 LOON_FULL_TEMPLATE = SCRIPT_DIR / "Loon-home.template.lcf"
-HOME_TEMPLATE = SCRIPT_DIR / "home.yaml"
+MIHOMO_CONFIG = SCRIPT_DIR / "Clash-home.yaml"
 LOON_FULL_MARKERS = {
     "proxy": "[Proxy]",
     "proxy-chain": "[Proxy Chain]",
@@ -89,8 +89,6 @@ CLASH_HOST_VAR_MAP = {
     "vps_clash_allow_direct_exit": "VPS_CLASH_ALLOW_DIRECT_EXIT",
     "vps_clash_allow_chain_exit": "VPS_CLASH_ALLOW_CHAIN_EXIT",
     "vps_clash_exit_type": "VPS_CLASH_EXIT_TYPE",
-    "vps_clash_allow_showip": "VPS_CLASH_ALLOW_SHOWIP",
-    "vps_clash_allow_download": "VPS_CLASH_ALLOW_DOWNLOAD",
     "vps_clash_relay_protocol": "VPS_CLASH_RELAY_PROTOCOL",
     "vps_clash_chain_exit_protocol": "VPS_CLASH_CHAIN_EXIT_PROTOCOL",
 }
@@ -267,8 +265,6 @@ def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
         "allow_relay": allow_relay,
         "allow_direct_exit": env_bool(env, "VPS_CLASH_ALLOW_DIRECT_EXIT", True),
         "allow_chain_exit": env_bool(env, "VPS_CLASH_ALLOW_CHAIN_EXIT", True),
-        "allow_download": env_bool(env, "VPS_CLASH_ALLOW_DOWNLOAD", False),
-        "allow_showip": env_bool(env, "VPS_CLASH_ALLOW_SHOWIP", False),
         "exit_type": exit_type,
         "physical_node_id": host_dir.name,
         "relay_protocol": relay_protocol,
@@ -286,8 +282,6 @@ def attach_capabilities(proxy: dict[str, Any], capabilities: dict[str, Any]) -> 
     proxy["_allow-relay"] = capabilities["allow_relay"]
     proxy["_allow-direct-exit"] = capabilities["allow_direct_exit"]
     proxy["_allow-chain-exit"] = capabilities["allow_chain_exit"]
-    proxy["_allow-download"] = capabilities["allow_download"]
-    proxy["_allow-showip"] = capabilities["allow_showip"]
     proxy["_exit-type"] = capabilities["exit_type"]
     proxy["_physical-node-id"] = capabilities["physical_node_id"]
     proxy["_relay-protocol"] = capabilities["relay_protocol"]
@@ -295,18 +289,10 @@ def attach_capabilities(proxy: dict[str, Any], capabilities: dict[str, Any]) -> 
     return proxy
 
 
-def capability_name_suffix(
-    allow_direct_exit: bool,
-    allow_download: bool,
-    allow_showip: bool = False,
-) -> str:
+def capability_name_suffix(allow_direct_exit: bool) -> str:
     suffix = ""
     if not allow_direct_exit:
         suffix += "-[Direct=false]"
-    if allow_download:
-        suffix += "-[Download=true]"
-    if allow_showip:
-        suffix += "-[ShowIP=true]"
     return suffix
 
 
@@ -317,8 +303,6 @@ def node_name(
     role: str = "Exit",
     *,
     allow_direct_exit: bool = True,
-    allow_download: bool = False,
-    allow_showip: bool = False,
 ) -> str:
     region = normalize_region(region)
     code = REGION_CODE.get(region, region.upper())
@@ -336,13 +320,13 @@ def node_name(
     description = descriptions.get(role, cn + "节点")
     return (
         f"VPS-[{code}.{role}]-{proto}-{index:02d}-({description})"
-        + capability_name_suffix(allow_direct_exit, allow_download, allow_showip)
+        + capability_name_suffix(allow_direct_exit)
     )
 
 
 def node_meta(name: str) -> dict[str, Any]:
     match = re.match(
-        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Download=(?P<download>[^]]+)\])?(?:-\[ShowIP=(?P<showip>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
+        r"^VPS-\[(?P<region>[A-Z]+)\.(?P<role>[A-Za-z]+)\]-(?P<proto>[A-Z0-9]+)-(?P<idx>\d+)-\((?P<desc>[^)]+)\)(?:-\[Source=(?P<source>[^]]+)\])?(?:-\[Special=(?P<special>[^]]+)\])?(?:-\[Direct=(?P<direct>[^]]+)\])?(?:-\[Trusted=(?P<trusted>[^]]+)\])?$",
         name,
     )
     if not match:
@@ -350,18 +334,18 @@ def node_meta(name: str) -> dict[str, Any]:
     return match.groupdict()
 
 
-def load_home_proxy_groups(path: Path = HOME_TEMPLATE) -> dict[str, dict[str, Any]]:
-    """Load and validate the public group graph used by template output."""
+def load_mihomo_proxy_groups(path: Path = MIHOMO_CONFIG) -> dict[str, dict[str, Any]]:
+    """Load and validate proxy groups from the active Mihomo configuration."""
 
     try:
         source = load_yaml(path)
     except (OSError, ValueError, yaml.YAMLError) as exc:
-        raise ValueError(f"{path}: 无法读取 home 模板") from exc
+        raise ValueError(f"{path}: 无法读取 Mihomo 配置") from exc
     if not isinstance(source, dict):
-        raise ValueError(f"{path}: home 模板顶层必须是映射")
+        raise ValueError(f"{path}: Mihomo 配置顶层必须是映射")
     groups = source.get("proxy-groups")
     if not isinstance(groups, list):
-        raise ValueError(f"{path}: proxy-groups 必须是列表")
+        raise ValueError(f"{path}: Mihomo 配置的 proxy-groups 必须是列表")
 
     by_name: dict[str, dict[str, Any]] = {}
     references: dict[str, list[str]] = {}
@@ -432,7 +416,7 @@ def _group_with_suffix(
     matches = [group for name, group in groups.items() if name.endswith(suffix)]
     if len(matches) > 1:
         names = ", ".join(str(group.get("name")) for group in matches)
-        raise ValueError(f"home 模板中存在重复的组后缀 {suffix}: {names}")
+        raise ValueError(f"Mihomo 配置中存在重复的组后缀 {suffix}: {names}")
     return matches[0] if matches else None
 
 
@@ -450,22 +434,22 @@ def _check_optional_group_match(
     actual = _group_matches_proxy(group, proxy_name)
     if actual != expected:
         raise ValueError(
-            f"生成节点 {proxy_name} 与 home 模板的 {label} 筛选不一致: {group['name']}"
+            f"生成节点 {proxy_name} 与 Mihomo 配置的 {label} 筛选不一致: {group['name']}"
         )
 
 
-def validate_generated_against_home(
+def validate_generated_against_config(
     proxies: list[dict[str, Any]],
     chains: list[tuple[dict[str, Any], dict[str, Any]]],
-    home_template: Path = HOME_TEMPLATE,
+    mihomo_config: Path = MIHOMO_CONFIG,
 ) -> None:
-    """Check generated names against the active home.yaml filters and groups."""
+    """Check generated names against the active Mihomo config filters and groups."""
 
-    groups = load_home_proxy_groups(home_template)
+    groups = load_mihomo_proxy_groups(mihomo_config)
     for proxy in proxies:
         name = proxy.get("name")
         if not isinstance(name, str) or not node_meta(name):
-            raise ValueError("生成节点名称无法按 home 模板解析")
+            raise ValueError("生成节点名称无法按 Mihomo 配置解析")
         meta = node_meta(name)
         region = meta["region"]
         role = meta["role"]
@@ -477,26 +461,6 @@ def validate_generated_against_home(
             expected=bool(proxy.get("_allow-direct-exit", True)),
             label="DirectExit",
         )
-        if proxy.get("_allow-showip", False):
-            # ShowIP is independent of single-node direct exit. A ShowIP node
-            # enters the direct-exit subgroup only when direct exit is allowed;
-            # chain eligibility is checked separately on generated chains.
-            _check_optional_group_match(
-                groups,
-                f".DirectExit-[{region}.ShowIP]",
-                name,
-                expected=bool(proxy.get("_allow-direct-exit", True)),
-                label="ShowIP DirectExit",
-            )
-        if proxy.get("_allow-download", False):
-            _check_optional_group_match(
-                groups,
-                ".DirectExit-[Download]",
-                name,
-                expected=True,
-                label="Download",
-            )
-
     for candidate in chains:
         if not isinstance(candidate, tuple) or len(candidate) != 2:
             raise ValueError("生成代理链候选项格式无效")
@@ -505,32 +469,18 @@ def validate_generated_against_home(
         dialer_name = dialer.get("name")
         exit_meta = node_meta(exit_name) if isinstance(exit_name, str) else {}
         if not exit_meta or not isinstance(dialer_name, str) or not node_meta(dialer_name):
-            raise ValueError("生成代理链包含无法按 home 模板解析的节点")
+            raise ValueError("生成代理链包含无法按 Mihomo 配置解析的节点")
         chain = chain_name(exit_proxy, dialer)
         exit_tag = exit_meta["region"]
         if exit_meta["role"] == "HomeIP":
             exit_tag += ".HomeIP"
         chain_group = _group_with_suffix(groups, f".Chain-[{exit_tag}]")
         if chain_group is None or "filter" not in chain_group:
-            raise ValueError(f"home 模板缺少代理链组: .Chain-[{exit_tag}]")
+            raise ValueError(f"Mihomo 配置缺少代理链组: .Chain-[{exit_tag}]")
         if not _group_matches_proxy(chain_group, chain):
             raise ValueError(
-                f"生成代理链 {chain} 未命中 home 模板筛选: {chain_group['name']}"
+                f"生成代理链 {chain} 未命中 Mihomo 配置筛选: {chain_group['name']}"
             )
-        if exit_proxy.get("_allow-showip", False):
-            show_group = _group_with_suffix(
-                groups, f".Chain-[{exit_meta['region']}.ShowIP]"
-            )
-            if show_group is None or "filter" not in show_group:
-                raise ValueError(
-                    f"home 模板缺少 ShowIP 代理链组: .Chain-[{exit_meta['region']}.ShowIP]"
-                )
-            if not _group_matches_proxy(show_group, chain):
-                raise ValueError(
-                    f"生成 ShowIP 代理链 {chain} 未命中 home 模板筛选: {show_group['name']}"
-                )
-
-
 def anchor_name(name: str) -> str:
     meta = node_meta(name)
     if not meta:
@@ -719,8 +669,6 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
                             idx,
                             role,
                             allow_direct_exit=capabilities["allow_direct_exit"],
-                            allow_download=capabilities["allow_download"],
-                            allow_showip=capabilities["allow_showip"],
                         ),
                         **config,
                     },
@@ -766,8 +714,6 @@ def hy2_node(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, str]
             idx,
             role,
             allow_direct_exit=capabilities["allow_direct_exit"],
-            allow_download=capabilities["allow_download"],
-            allow_showip=capabilities["allow_showip"],
         ),
         "type": "hysteria2",
         "server": server,
@@ -849,8 +795,6 @@ def client_inventory_nodes(
             idx,
             role,
             allow_direct_exit=capabilities["allow_direct_exit"],
-            allow_download=capabilities["allow_download"],
-            allow_showip=capabilities["allow_showip"],
         )
         out.append(attach_capabilities(proxy, capabilities))
     return out
@@ -863,8 +807,8 @@ def normalize_trusted_nodes(
 ) -> list[dict[str, Any]]:
     """Normalize explicitly trusted, client-side nodes.
 
-    A trusted node may relay, become a chain landing, enter ShowIP, or be classified as
-    HomeIP only when the private file says so explicitly.  Trusted entries are
+    A trusted node may relay, become a chain landing, or be classified as HomeIP
+    only when the private file says so explicitly. Trusted entries are
     unmanaged self-hosted/client nodes, so the generator preserves their
     explicit capability declarations but does not infer them.  SOCKS5 entries
     are supported as optional, authenticated client-facing nodes for
@@ -929,7 +873,6 @@ def normalize_trusted_nodes(
             raise ValueError(
                 f"{field}.exit-type 必须是 general 或 homeip，当前值为 {exit_type!r}"
             )
-        allow_showip = yaml_bool(source.get("allow-showip"), f"{field}.allow-showip", False)
         allow_relay = yaml_bool(source.get("allow-relay"), f"{field}.allow-relay", False)
         if exit_type == "homeip" and allow_relay:
             raise ValueError(f"{field}.exit-type 为 homeip 时不能设置 allow-relay: true")
@@ -939,10 +882,6 @@ def normalize_trusted_nodes(
         allow_direct_exit = yaml_bool(
             source.get("allow-direct-exit"), f"{field}.allow-direct-exit", True
         )
-        allow_download = yaml_bool(
-            source.get("allow-download"), f"{field}.allow-download", False
-        )
-
         relay_protocol = str(source.get("relay-protocol", protocol)).strip().lower()
         chain_exit_protocol = str(
             source.get("chain-exit-protocol", protocol)
@@ -969,8 +908,6 @@ def normalize_trusted_nodes(
             "allow_relay": allow_relay,
             "allow_direct_exit": allow_direct_exit,
             "allow_chain_exit": allow_chain_exit,
-            "allow_download": allow_download,
-            "allow_showip": allow_showip,
             "exit_type": exit_type,
             "physical_node_id": f"trusted:{node_id}",
             "relay_protocol": relay_protocol,
@@ -987,8 +924,6 @@ def normalize_trusted_nodes(
                 node_index,
                 role,
                 allow_direct_exit=allow_direct_exit,
-                allow_download=allow_download,
-                allow_showip=allow_showip,
             )
         )
         normalized.append(attach_capabilities(proxy, capabilities))
@@ -1467,10 +1402,10 @@ def loon_node_alias(proxy: dict[str, Any], counts: dict[str, int]) -> str:
 def loon_proxy_groups(
     aliases: dict[str, str],
     chain_aliases: dict[str, str],
-    home_template: Path = HOME_TEMPLATE,
+    mihomo_config: Path = MIHOMO_CONFIG,
 ) -> list[str]:
-    """Render the four home group layers using only exported Loon members."""
-    source = load_home_proxy_groups(home_template)
+    """Render the active Mihomo group layers using exported Loon members."""
+    source = load_mihomo_proxy_groups(mihomo_config)
     layers = ("Route", "Line", "Chain", "DirectExit")
     selected = {
         name: group for name, group in source.items()
@@ -1492,7 +1427,7 @@ def loon_proxy_groups(
             candidates = [candidate for candidate in group["proxies"]
                           if candidate in {"DIRECT", "REJECT"}
                           or (candidate in selected and available(candidate))]
-        # The home graph is already checked for cycles by load_home_proxy_groups.
+        # The Mihomo graph is already checked for cycles by load_mihomo_proxy_groups.
         members[name] = list(dict.fromkeys(candidates))
         return bool(members[name])
 
@@ -1525,7 +1460,7 @@ def write_loon(
     proxies: list[dict[str, Any]],
     output: Path,
     chains: list[tuple[dict[str, Any], dict[str, Any]]] = (),
-    home_template: Path = HOME_TEMPLATE,
+    mihomo_config: Path = MIHOMO_CONFIG,
 ) -> tuple[int, int, list[str]]:
     """Write Loon nodes and the selected, representable proxy chains."""
     node_lines: list[str] = []
@@ -1571,7 +1506,7 @@ def write_loon(
     lines = ["[Proxy]", *node_lines]
     if chain_lines:
         lines.extend(["", "[Proxy Chain]", *chain_lines])
-    group_lines = loon_proxy_groups(aliases, chain_aliases, home_template)
+    group_lines = loon_proxy_groups(aliases, chain_aliases, mihomo_config)
     if group_lines:
         lines.extend(["", "[Proxy Group]", *group_lines])
     secure_write(output, "\n".join(lines) + "\n")
@@ -1723,8 +1658,6 @@ def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
         f"--<<-{dialer_meta['region']}.{dialer_meta['role']}.{dialer_meta['proto']}.{dialer_meta['idx']}"
         f"-(代理链=={exit_meta['desc']}<-{dialer_meta['desc']})"
     )
-    if exit_proxy.get("_allow-showip", False):
-        name += "-[ShowIP=true]"
     return name
 
 
@@ -2058,10 +1991,10 @@ def write_template(
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="从各 VPS 本地配置生成 Mihomo 节点和代理链")
     parser.add_argument(
-        "--home-template",
+        "--mihomo-config",
         type=Path,
-        default=HOME_TEMPLATE,
-        help="用于校验代理组筛选的 home.yaml（默认仓库中的 home.yaml）",
+        default=MIHOMO_CONFIG,
+        help=f"用于校验节点筛选并生成 Loon 策略组的 Mihomo 配置（默认 {MIHOMO_CONFIG.name}）",
     )
     parser.add_argument(
         "--hosts-dir",
@@ -2255,8 +2188,8 @@ def main(argv: list[str] | None = None) -> int:
     counters: dict[tuple[str, str], int] = {}
     protected_inputs = input_paths(hosts_dir, trusted_nodes_file,
                                    ansible_host_vars_dir)
-    home_template = args.home_template.expanduser().resolve()
-    protected_inputs.append(home_template)
+    mihomo_config = args.mihomo_config.expanduser().resolve()
+    protected_inputs.append(mihomo_config)
     loon_full_template = args.loon_full_template.expanduser().resolve()
     if args.loon_full_output:
         if not loon_full_template.is_file():
@@ -2336,9 +2269,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if output_format != "plain":
         try:
-            validate_generated_against_home(proxies, chains, home_template)
+            validate_generated_against_config(proxies, chains, mihomo_config)
         except (OSError, ValueError, yaml.YAMLError) as exc:
-            raise SystemExit(f"生成结果与 home 模板不一致：{exc}") from exc
+            raise SystemExit(f"生成结果与 Mihomo 配置不一致：{exc}") from exc
 
     # Render every requested format before replacing any user output. Staging
     # files contain credentials and live only in a private temporary directory.
@@ -2365,7 +2298,7 @@ def main(argv: list[str] | None = None) -> int:
                 destination = loon_output or loon_full_output
                 loon = stage / 'loon.conf'
                 loon_count, loon_chain_count, loon_skipped = write_loon(
-                    proxies, loon, chains, home_template
+                    proxies, loon, chains, mihomo_config
                 )
                 loon_text = loon.read_text(encoding='utf-8')
                 if loon_output:

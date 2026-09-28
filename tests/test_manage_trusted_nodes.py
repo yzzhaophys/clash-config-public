@@ -33,8 +33,6 @@ def node(node_id: str, *, port: int = 443, protocol: str = "vless") -> dict:
         "allow-relay": False,
         "allow-chain-exit": False,
         "allow-direct-exit": True,
-        "allow-download": False,
-        "allow-showip": False,
         "relay-protocol": protocol,
         "chain-exit-protocol": protocol,
         "proxy": proxy,
@@ -161,6 +159,8 @@ class InteractiveTests(unittest.TestCase):
         output = self.run_menu(['1', '0'])
         self.assertIn("1. 'one' | US | vless", output)
         self.assertIn('Direct', output)
+        self.assertNotIn('ShowIP', output)
+        self.assertNotIn('Download', output)
         for value in ('uuid-one', 'password-one', 'user-one', 'one.example'):
             self.assertNotIn(value, output)
         self.assertFalse(list(self.root.glob('*.bak-*')))
@@ -278,21 +278,20 @@ class TrustedNodesMergeTests(unittest.TestCase):
                 self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
                 self.assertFalse(manager.merge_trusted_nodes_file(target, source, apply=True).changed)
 
-    def test_showip_capability_is_accepted_and_preserved(self) -> None:
+    def test_removed_capabilities_are_not_reported_by_node_list(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "trusted-nodes.yaml"
-            source = root / "new.yaml"
-            showip = node("provider-us-showip")
-            showip["allow-showip"] = True
-            write_nodes(target, [])
-            write_nodes(source, [showip])
+            legacy = node("provider-us-legacy")
+            legacy["allow-showip"] = True
+            legacy["allow-download"] = True
+            write_nodes(target, [legacy])
 
-            result = manager.merge_trusted_nodes_file(target, source, apply=True)
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                manager.list_nodes(target)
 
-            self.assertEqual((result.added, result.updated), (1, 0))
-            stored = yaml.safe_load(target.read_text())["nodes"][0]
-            self.assertTrue(stored["allow-showip"])
+            self.assertNotIn("ShowIP", captured.getvalue())
+            self.assertNotIn("Download", captured.getvalue())
 
     def test_new_node_is_appended_and_existing_node_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
