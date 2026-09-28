@@ -56,7 +56,9 @@ class InteractiveTests(unittest.TestCase):
         output = io.StringIO()
         with mock.patch('builtins.input', side_effect=answers), \
                 contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-            code = manager.main(['--target', str(self.target)])
+            code = manager.main([
+                '--target', str(self.target), '--import-dir', str(self.root / 'imports')
+            ])
         self.assertEqual(code, 0)
         return output.getvalue()
 
@@ -80,7 +82,31 @@ class InteractiveTests(unittest.TestCase):
                 self.assertEqual(manager.parse_args(command).import_dir, self.root / 'cli')
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertEqual(manager.parse_args(['--target', str(self.target)]).import_dir,
-                             self.root / 'imports')
+                             Path.home() / '.config' / 'clash')
+
+    def test_default_import_directory_is_clash_config_dir(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                mock.patch.object(manager.Path, 'home', return_value=self.root):
+            expected = self.root / '.config' / 'clash'
+            args = manager.parse_args(['--target', str(self.target)])
+            self.assertEqual(args.import_dir, expected)
+            self.assertEqual(manager.default_trusted_import_dir(), expected)
+
+    def test_default_import_scan_excludes_active_inventory(self):
+        home = self.root / 'home'
+        directory = home / '.config' / 'clash'
+        directory.mkdir(parents=True)
+        target = directory / 'trusted-nodes.yaml'
+        write_nodes(target, [node('existing')])
+        source = directory / 'jp01.yaml'
+        write_nodes(source, [node('incoming')])
+        output = io.StringIO()
+        with mock.patch.object(manager.Path, 'home', return_value=home), \
+                mock.patch('builtins.input', return_value='1'), \
+                contextlib.redirect_stdout(output):
+            selected = manager.choose_file(manager.default_trusted_import_dir(), target)
+        self.assertEqual(selected, source)
+        self.assertNotIn('trusted-nodes.yaml', output.getvalue())
 
     def test_numbered_import_and_field_preview_hide_values(self):
         directory = self.root / 'imports'

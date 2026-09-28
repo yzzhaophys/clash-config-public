@@ -261,7 +261,7 @@ VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，�
 菜单顶部显示实际管理的 inventory 路径。`--target` 可省略：优先使用
 `CLASH_TRUSTED_NODES_FILE`；显式 `--target` 优先。两个脚本使用相同的默认路径：
 inventory 为 `~/.config/clash/trusted-nodes.yaml`，与自建 VPS 目录无关。
-管理器的默认导入目录为同目录下的 `imports/`；可用 `--import-dir` 或
+管理器的默认导入目录为 `~/.config/clash/`；可用 `--import-dir` 或
 `CLASH_TRUSTED_IMPORT_DIR` 指定其他目录。需要其他 inventory 位置时显式指定可信节点文件。
 
 | 选项 | 操作 |
@@ -276,10 +276,10 @@ inventory 为 `~/.config/clash/trusted-nodes.yaml`，与自建 VPS 目录无关�
 `landing-jp-node.yaml`。相同 ID + 协议会用源条目完整替换，源文件中没有提到的节点保留；
 不能选择目标文件自身，也不接受普通订阅的 `proxies:` 格式。
 
-选项 `3` 默认列出目标 inventory 同目录下 `imports/` 中的 `.yaml`、`.yml` 文件，
-不递归扫描。可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 指定已有的私有目录；
-显式参数优先。目录不会自动创建或搬移文件；目录为空时仍可输入源路径。
-符号链接和目标文件别名不列为候选，导入仍检查源文件权限，节点 YAML 应设置为 `0600`。
+选项 `3` 默认列出 `~/.config/clash/` 中的 `.yaml`、`.yml` 文件，不递归扫描。
+可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 指定其他目录；显式参数优先。
+当前目标 inventory 本身及其硬链接别名、符号链接不会列为候选；目录为空时仍可输入源路径。
+导入会检查源文件权限，节点 YAML 应设置为 `0600`。
 预览只显示 ID、协议和变化字段名（如 `proxy.password`、`proxy.ws-opts`），
 不显示字段值或嵌套字典键。导入使用私有临时快照，退出后自动清理。
 

@@ -503,7 +503,7 @@ def interactive_restore(target: Path) -> None:
 
 
 def interactive_menu(target: Path, import_dir: Path | None = None) -> int:
-    import_dir = import_dir or target.parent / 'imports'
+    import_dir = import_dir or default_trusted_import_dir()
     print(f"当前 inventory：{target}")
     try:
         while True:
@@ -584,6 +584,14 @@ def interactive_menu(target: Path, import_dir: Path | None = None) -> int:
         return 0
 
 
+def default_trusted_import_dir() -> Path:
+    """Use ~/.config/clash for import candidates unless explicitly overridden."""
+    configured = os.environ.get('CLASH_TRUSTED_IMPORT_DIR')
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / '.config' / 'clash'
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="安全维护私有 trusted-nodes.yaml")
     parser.add_argument('--target', type=Path, help='目标 inventory；默认沿用节点生成器的路径')
@@ -632,8 +640,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.target is None:
         args.target = generator.default_trusted_nodes_file()
     args.target = args.target.expanduser()
-    args.import_dir = (args.import_dir or Path(os.environ.get('CLASH_TRUSTED_IMPORT_DIR')
-                                             or args.target.parent / 'imports')).expanduser()
+    args.import_dir = (args.import_dir or default_trusted_import_dir()).expanduser()
     return args
 
 
