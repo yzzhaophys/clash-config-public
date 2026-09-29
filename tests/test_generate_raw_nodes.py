@@ -242,11 +242,12 @@ class GeneratorTests(unittest.TestCase):
                 )
             self.assertEqual(output.read_text(encoding="utf-8"), "old output\n")
 
-    def test_trusted_homeip_uses_self_hosted_role_and_constraints(self) -> None:
+    def test_trusted_homeip_can_relay_when_enabled(self) -> None:
         source = {
-            "id": "trusted-us-homeip",
-            "region": "US",
+            "id": "trusted-jp-homeip",
+            "region": "JP",
             "exit-type": "homeip",
+            "allow-relay": True,
             "allow-chain-exit": True,
             "proxy": {
                 "type": "vless",
@@ -260,13 +261,14 @@ class GeneratorTests(unittest.TestCase):
         )[0]
 
         self.assertEqual(generator.node_meta(node["name"])["role"], "HomeIP")
+        self.assertTrue(node["_allow-relay"])
         self.assertNotIn("[ShowIP=true]", node["name"])
 
         config = generator.load_yaml(generator.MIHOMO_CONFIG)
         homeip_group = next(
             group
             for group in config["proxy-groups"]
-            if group["name"] == "🇺🇸.DirectExit-[US.HomeIP]"
+            if group["name"] == "🇯🇵.DirectExit-[JP.HomeIP]"
         )
         self.assertRegex(node["name"], homeip_group["filter"])
         self.assertFalse(any(
@@ -274,12 +276,39 @@ class GeneratorTests(unittest.TestCase):
             for group in config["proxy-groups"]
         ))
 
-        with self.assertRaisesRegex(ValueError, "allow-relay"):
-            generator.normalize_trusted_nodes(
-                [{**source, "allow-relay": True}],
-                {},
-                Path("trusted-nodes.yaml"),
-            )
+        landing_source = {
+            "id": "trusted-us-landing",
+            "region": "US",
+            "exit-type": "general",
+            "allow-chain-exit": True,
+            "proxy": {
+                "type": "vless",
+                "server": "landing.example",
+                "port": 443,
+                "uuid": "landing-uuid",
+            },
+        }
+        landing = generator.normalize_trusted_nodes(
+            [landing_source], {}, Path("trusted-nodes.yaml")
+        )[0]
+        candidates = generator.chain_candidates([node, landing])
+        self.assertEqual(candidates, [(landing, node)])
+        generator.validate_generated_against_config([node, landing], candidates)
+
+    def test_self_hosted_homeip_can_relay_when_enabled(self) -> None:
+        capabilities = generator.host_capabilities(
+            Path("vps-jp-homeip"),
+            {
+                "VPS_CLASH_REGION": "jp",
+                "VPS_CLASH_EXIT_TYPE": "homeip",
+                "VPS_CLASH_ALLOW_RELAY": "true",
+                "VPS_CLASH_ALLOW_DIRECT_EXIT": "false",
+                "VPS_CLASH_ALLOW_CHAIN_EXIT": "false",
+            },
+        )
+
+        self.assertTrue(capabilities["allow_relay"])
+        self.assertEqual(generator.capability_role(capabilities), "HomeIP")
 
     def test_trusted_socks5_is_supported_with_authentication(self) -> None:
         nodes = generator.normalize_trusted_nodes(

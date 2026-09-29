@@ -251,8 +251,6 @@ def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
         "VPS_CLASH_ALLOW_RELAY",
         exit_type == "general" and region in DEFAULT_CORE_REGIONS,
     )
-    if exit_type == "homeip" and allow_relay:
-        raise ValueError("HomeIP 节点不能设置 VPS_CLASH_ALLOW_RELAY=true")
     relay_protocol = env.get("VPS_CLASH_RELAY_PROTOCOL", "vless").strip().lower()
     chain_exit_protocol = env.get("VPS_CLASH_CHAIN_EXIT_PROTOCOL", "vless").strip().lower()
     allowed_protocols = {"vless", "hysteria2"}
@@ -874,8 +872,6 @@ def normalize_trusted_nodes(
                 f"{field}.exit-type 必须是 general 或 homeip，当前值为 {exit_type!r}"
             )
         allow_relay = yaml_bool(source.get("allow-relay"), f"{field}.allow-relay", False)
-        if exit_type == "homeip" and allow_relay:
-            raise ValueError(f"{field}.exit-type 为 homeip 时不能设置 allow-relay: true")
         allow_chain_exit = yaml_bool(
             source.get("allow-chain-exit"), f"{field}.allow-chain-exit", False
         )

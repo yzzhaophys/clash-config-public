@@ -144,12 +144,13 @@ vps_clash_chain_exit_protocol: vless
 - `allow_relay: true`：节点可以作为第一跳/中转节点。
 - `allow_chain_exit: true`：节点可以作为第二跳/最终出口。
 
-默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`。普通
-`general` 节点只有 HK、JP、SG 默认开启 `allow_relay`；其他地区默认关闭。
+默认值：自建节点的 `allow_direct_exit` 和 `allow_chain_exit` 为 `true`。未提供
+`VPS_CLASH_ALLOW_RELAY` 时，HK、JP、SG 的 `general` 节点默认开启中转，其他节点默认关闭；
+显式设置 `VPS_CLASH_ALLOW_RELAY` 后，该参数对 `general` 和 `homeip` 都独立生效。
 
 `exit_type` 决定自建 VPS 和 Trusted 节点的角色：
 
-- `homeip` → `HomeIP`，不能开启 `allow_relay`；
+- `homeip` → `HomeIP`；它可以依据 `allow_relay` 同时作为中转；
 - `general` 且 `allow_relay: true` → `Core`；
 - `general` 且 `allow_relay: false` → `Exit`。
 
@@ -238,8 +239,8 @@ allow-direct-exit: false
 
 可信节点的 `allow-relay` 和 `allow-chain-exit` 默认是 `false`，
 `allow-direct-exit` 默认是 `true`。`exit-type` 可设为 `general`
-或 `homeip`；HomeIP 不能同时设置 `allow-relay: true`。必须填写稳定的 `id` 和
-实际两位国家代码，且不能包含已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一
+或 `homeip`；`allow-relay` 独立控制是否可作为中转，HomeIP 也可设置为 `true`。必须填写稳定的 `id`
+和实际两位国家代码，且不能包含已有 `dialer-proxy` 链。稳定的 `id` 也用于禁止同一
 物理节点自连。
 
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
