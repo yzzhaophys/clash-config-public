@@ -163,6 +163,8 @@ dns:
 
   # ── Fake-IP ──
   fake-ip-filter:
+    - "+.aitacoo.com"
+    - "+.yzznode.com"
     - "rule-set:R-private"                   # 局域网 / 私有域名：必须返回真实 IP，否则本地服务无法访问
     - "rule-set:R-fakeipfilter"              # 标准 Fake-IP 豁免表 NTP / STUN / 音乐 / 游戏等
     - "rule-set:R-connectivity"              # 连通性探测：返回假 IP 会导致 Windows/macOS 报断网
@@ -654,6 +656,11 @@ rule-providers:
 # 8. 分流规则 Rules
 # =======================================================
 rules:
+
+  # ══════════════════════════════════════════
+  # 0.My VPS
+  # ══════════════════════════════════════════
+
 
   # ══════════════════════════════════════════
   # 1.REJECT
