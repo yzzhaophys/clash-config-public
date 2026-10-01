@@ -352,8 +352,8 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 | 组层级 | 策略 | 当前检查参数 |
 | --- | --- | --- |
-| Chain / DirectExit 节点池 | `url-test` | 30 秒、3000 毫秒超时、50 毫秒容差 |
-| 地区 Line | `fallback` | 45 秒、4000 毫秒超时 |
+| Chain / DirectExit 节点池 | `url-test` | 300 秒、3000 毫秒超时、50 毫秒容差 |
+| 地区 Line | `fallback` | 90 秒、4000 毫秒超时 |
 | 地区与大区 Route | `fallback` | 90 秒、5000 毫秒超时 |
 | 业务入口 | `select` | 保留手动选择，不执行周期健康检查 |
 

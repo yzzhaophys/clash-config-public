@@ -52,11 +52,11 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertEqual(group["max-failed-times"], 2)
                 self.assertEqual(group["expected-status"], 200)
                 if group["type"] == "url-test":
-                    self.assertEqual(group["interval"], 30)
+                    self.assertEqual(group["interval"], 300)
                     self.assertEqual(group["timeout"], 3000)
                     self.assertEqual(group["tolerance"], 50)
                 else:
-                    self.assertIn(group["interval"], {45, 90})
+                    self.assertEqual(group["interval"], 90)
                     self.assertIn(group["timeout"], {4000, 5000})
 
     def test_select_groups_do_not_schedule_health_checks(self):
