@@ -50,7 +50,8 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertIn(group["type"], {"url-test", "fallback"})
                 self.assertIs(group["lazy"], True)
                 self.assertEqual(group["max-failed-times"], 2)
-                self.assertEqual(group["expected-status"], 200)
+                self.assertEqual(group["url"], "https://www.gstatic.com/generate_204")
+                self.assertEqual(group["expected-status"], 204)
                 if group["type"] == "url-test":
                     self.assertEqual(group["interval"], 300)
                     self.assertEqual(group["timeout"], 3000)

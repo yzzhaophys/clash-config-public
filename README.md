@@ -348,7 +348,8 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 当前配置不含 ShowIP 或 Download 节点池。
 
-当前自动组统一使用 HTTP 200 健康检查、`lazy: true` 和 `max-failed-times: 2`：
+当前自动组统一使用 `https://www.gstatic.com/generate_204` 健康检查，预期 HTTP 204，
+并设置 `lazy: true` 和 `max-failed-times: 2`：
 
 | 组层级 | 策略 | 当前检查参数 |
 | --- | --- | --- |
