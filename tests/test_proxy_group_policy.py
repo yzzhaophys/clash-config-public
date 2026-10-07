@@ -122,13 +122,16 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 expected = [chain, direct] if region in {"US", "JP", "SG"} else [direct, chain]
                 self.assertEqual(line["proxies"], expected)
 
-    def test_homeip_preferred_routes_fall_back_to_regular_region(self):
+    def test_homeip_preferred_routes_fall_back_to_regular_region_then_final(self):
         for region, flag in {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬"}.items():
             name = f"🏠.Route-[{region}.HomeIP.Preferred]"
             with self.subTest(route=name):
                 self.assertEqual(
                     self.groups[name]["proxies"],
-                    [f"{flag}.Line-[{region}.HomeIP]", f"{flag}.Line-[{region}]"],
+                    [
+                        f"{flag}.Line-[{region}.HomeIP]", f"{flag}.Line-[{region}]",
+                        "♾️.Route-[Final.Fallback]",
+                    ],
                 )
 
     def test_region_routes_use_final_fallback_after_local_regions(self):
@@ -141,7 +144,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 "🇸🇬.Line-[SG]", "🇲🇾.Line-[MY]", "♾️.Route-[Final.Fallback]",
             ],
             "🌎.Route-[Americas]": [
-                "🇺🇸.Line-[US]", "♾️.Route-[Final.Fallback]",
+                "🇺🇸.Line-[US]", "🇺🇸.Line-[US.HomeIP]", "♾️.Route-[Final.Fallback]",
             ],
             "🌏.Route-[Oceania]": [
                 "🇦🇺.Line-[AU]", "♾️.Route-[Final.Fallback]",

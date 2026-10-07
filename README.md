@@ -342,7 +342,8 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
   `Chain-[地区.HomeIP]` 组。其他地区当前没有 HomeIP 专用策略组。
 - US、JP、SG 的普通 Line 先尝试代理链，再回退到同地区直出；其他地区先直出，再尝试代理链。
   HomeIP Line 使用对应的 HomeIP 代理链和 HomeIP 直出节点。
-- US、JP、SG 提供 HomeIP Preferred Route：先走同地区 HomeIP Line，失效时回退普通 Line。
+- US、JP、SG 提供 HomeIP Preferred Route：先走同地区 HomeIP Line，失效时回退普通 Line，
+  再回退到 `♾️.Route-[Final.Fallback]`。Americas Route 先走美国普通 Line，再尝试美国 HomeIP Line。
   EastAsia、SoutheastAsia、Americas、Oceania、Europe Route 在本地区线路之后引用
   `♾️.Route-[Final.Fallback]`。
 
