@@ -28,8 +28,13 @@
 | `.gitignore` | 阻止私有输入、含凭据生成文件和缓存进入 Git |
 | `AGENTS.md` | 仓库协作、安全和交付约束 |
 
-私有输入通常在仓库外：`vps-*` 主机目录、Ansible `host_vars`，以及 trusted inventory。生成器负责
+私有输入通常在仓库外：受管主机 ID 目录（兼容旧 `vps-*`）、Ansible `host_vars`，以及 trusted inventory。生成器负责
 生成基础节点和可选代理链；`home.yaml` 是唯一维护的 Mihomo 配置，并通过节点名称标记筛选节点。
+
+受管主机来源支持去掉 `vps-` 的 ID。旧目录可搭配新名 Ansible 公共声明，最终目录迁移后继续使用
+同一读取流程；新旧 active 目录或公共声明同时存在时拒绝生成。目录排序和物理节点 ID 按去前缀
+后的值确定，保留所有协议参数和节点能力；`debian/alpine-relay/landing` 仍只通过 trusted inventory
+处理，不扫描为受管来源。`--hosts-dir`、输入路径冲突检查及交互来源提示使用同一发现规则。
 
 ## 配置生产流程
 
@@ -99,9 +104,9 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 - Ansible 角色配置：相邻 `infra/ansible/host_vars`，可用
   `CLASH_ANSIBLE_HOST_VARS_DIR` 或 `--ansible-host-vars-dir` 覆盖。
 
-只有包含有效 `host.env` 的 `vps-*` 目录会被读取。Ansible `host_vars` 中的
+只有包含有效 `host.env` 的受管主机目录（兼容旧 `vps-*`）会被读取。Ansible `host_vars` 中的
 `vps_clash_*` 值优先于 `host.env`；后者只是兼容旧配置。NAT 或非标准主机可用
-`vps-*/secrets/client/clash-nodes.yaml` 声明面向客户端的地址和端口，该文件存在时
+`<主机 ID>/secrets/client/clash-nodes.yaml` 声明面向客户端的地址和端口，该文件存在时
 作为该主机唯一来源（即使其中 `proxies: []` 也不会回退到服务端配置）。
 `VPS_CLASH_ORDER` 可用于稳定多个主机的排序和节点编号，必须是整数。
 
@@ -109,7 +114,7 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 
 | 来源 | 私有输入 | 导入时机 | 命名与标记 | 默认链路能力 |
 | --- | --- | --- | --- | --- |
-| 自建 VPS | `vps-*/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `vps-*/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
+| 自建 VPS | `<主机 ID>/host.env` 及 Xray/Hysteria 配置；NAT 主机可用 `<主机 ID>/secrets/client/clash-nodes.yaml` | 每次运行自动导入 | `VPS-[US.Core]-...`、`VPS-[US.Exit]-...` 或 `VPS-[US.HomeIP]-...` | 直出和 Chain 落地默认开启；HK、JP、SG 的普通节点默认可 Relay，可由 `host_vars` 覆盖 |
 | Trusted（未纳入主机管理的自建/客户端节点） | `trusted-nodes.yaml` (`nodes` 格式) | 每次运行自动导入 | `VPS-[US.Core|Exit|HomeIP]-...`；交互时显示来源文件 | 按 `exit-type` 和 `allow-*` 字段决定，默认仅允许直出 |
 
 两种来源共享 `(region, protocol)` 编号计数器，按“自建 VPS → Trusted”的顺序分配编号。因此已有一个美国 H2 自建节点时，后续的美国

@@ -264,7 +264,7 @@ def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
         "allow_direct_exit": env_bool(env, "VPS_CLASH_ALLOW_DIRECT_EXIT", True),
         "allow_chain_exit": env_bool(env, "VPS_CLASH_ALLOW_CHAIN_EXIT", True),
         "exit_type": exit_type,
-        "physical_node_id": host_dir.name,
+        "physical_node_id": managed_host_id(host_dir.name) or host_dir.name,
         "relay_protocol": relay_protocol,
         "chain_exit_protocol": chain_exit_protocol,
     }
@@ -956,6 +956,38 @@ def load_trusted_nodes(
     return normalize_trusted_nodes(source_nodes, counters, path)
 
 
+def managed_host_id(name: str) -> str | None:
+    """Read new managed IDs and project legacy directories; leave special inputs alone."""
+    host = name.removeprefix("vps-")
+    if name == "vps-template" or host in {"localhost", "all", "ungrouped"}:
+        return None
+    if re.match(r"(?:debian|alpine)-(?:relay|landing)-", host):
+        return None
+    return host if re.fullmatch(r"[a-z0-9][a-z0-9-]*", host) else None
+
+
+def managed_host_directories(root: Path) -> list[Path]:
+    directories: dict[str, Path] = {}
+    for path in sorted(root.glob("*")):
+        host = managed_host_id(path.name)
+        if host is None or not path.is_dir() or not (path / "host.env").is_file():
+            continue
+        if host in directories:
+            raise ValueError(f"{host}: 新旧受管来源同时存在，拒绝重复生成")
+        directories[host] = path
+    return list(directories.values())
+
+
+def managed_host_vars_path(root: Path, name: str) -> Path:
+    host = managed_host_id(name)
+    if host is None:
+        raise ValueError("非法受管主机来源")
+    current, legacy = root / f"{host}.yml", root / f"vps-{host}.yml"
+    if current.exists() and legacy.exists():
+        raise ValueError(f"{host}: 新旧公共声明同时存在")
+    return legacy if legacy.exists() else current
+
+
 def default_hosts_dir() -> Path:
     """优先使用显式环境变量和标准私有目录，并兼容旧目录结构。"""
     configured = os.environ.get("CLASH_HOSTS_DIR")
@@ -967,12 +999,7 @@ def default_hosts_dir() -> Path:
         SCRIPT_DIR,
         SCRIPT_DIR.parent,
     ):
-        if any(
-            path.is_dir()
-            and path.name != "vps-template"
-            and (path / "host.env").is_file()
-            for path in candidate.glob("vps-*")
-        ):
+        if managed_host_directories(candidate):
             return candidate
     return SCRIPT_DIR
 
@@ -1000,21 +1027,15 @@ def collect_proxies(
 ) -> list[dict[str, Any]]:
     counters = counters if counters is not None else {}
     proxies: list[dict[str, Any]] = []
-    # A retired controller source keeps its vps-* directory, secrets, and
-    # matching Ansible host_vars for recovery.  Only an active host.env makes
-    # that directory part of the client node inventory.
-    host_dirs = [
-        path
-        for path in hosts_dir.glob("vps-*")
-        if path.name != "vps-template" and (path / "host.env").is_file()
-    ]
+    # Retained directories only participate when their active host.env exists.
+    host_dirs = managed_host_directories(hosts_dir)
 
     def clash_env(host_dir: Path) -> dict[str, str]:
         env = load_env(host_dir / "host.env")
         if ansible_host_vars_dir:
             env.update(
                 load_ansible_clash_vars(
-                    ansible_host_vars_dir / f"{host_dir.name}.yml"
+                    managed_host_vars_path(ansible_host_vars_dir, host_dir.name)
                 )
             )
         return env
@@ -1032,7 +1053,7 @@ def collect_proxies(
     host_dirs.sort(
         key=lambda path: (
             host_order(path),
-            path.name,
+            managed_host_id(path.name),
         )
     )
     for host_dir in host_dirs:
@@ -1659,7 +1680,7 @@ def chain_name(exit_proxy: dict[str, Any], dialer: dict[str, Any]) -> str:
 
 def proxy_source_directory(proxy: dict[str, Any]) -> str | None:
     source = str(proxy.get("_physical-node-id", "")).strip()
-    return source if source.startswith("vps-") else None
+    return source if managed_host_id(source) is not None else None
 
 
 def interactive_proxy_source(proxy: dict[str, Any], prefix: str = "") -> str | None:
@@ -1996,7 +2017,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--hosts-dir",
         type=Path,
         default=default_hosts_dir(),
-        help="包含 vps-* 私有配置目录（默认 CLASH_HOSTS_DIR 或 ~/.config/infra/hosts）",
+        help="包含受管主机 ID 私有配置目录（兼容旧 vps-*）（默认 CLASH_HOSTS_DIR 或 ~/.config/infra/hosts）",
     )
     parser.add_argument(
         "--trusted-nodes-file",
@@ -2151,7 +2172,7 @@ def validate_output_paths(
 def input_paths(hosts_dir: Path, trusted_file: Path,
                 ansible_dir: Path | None) -> list[Path]:
     paths = [trusted_file]
-    for host in hosts_dir.glob('vps-*'):
+    for host in managed_host_directories(hosts_dir):
         if host.name == 'vps-template' or not (host / 'host.env').is_file():
             continue
         paths.extend(host / relative for relative in (
@@ -2161,7 +2182,9 @@ def input_paths(hosts_dir: Path, trusted_file: Path,
         ))
         paths.extend((host / 'config/xray').glob('*.json'))
         if ansible_dir:
-            paths.append(ansible_dir / f'{host.name}.yml')
+            managed_host_vars_path(ansible_dir, host.name)
+            host_id = managed_host_id(host.name)
+            paths.extend((ansible_dir / f'{host_id}.yml', ansible_dir / f'vps-{host_id}.yml'))
     return paths
 
 
@@ -2210,7 +2233,7 @@ def main(argv: list[str] | None = None) -> int:
     if not proxies:
         raise SystemExit(
             f"没有在 {hosts_dir} 或 {trusted_nodes_file} 找到节点；"
-            "请检查 vps-*/host.env 或 trusted-nodes.yaml"
+            "请检查受管主机 host.env 或 trusted-nodes.yaml"
         )
     if args.audit:
         for proxy in proxies:
