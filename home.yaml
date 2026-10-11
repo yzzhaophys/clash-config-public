@@ -670,9 +670,9 @@ rules:
   - RULE-SET,R-icloudprivaterelay,REJECT-DROP                      # iCloud 私有中继
   - RULE-SET,R-reject,REJECT-DROP
   - RULE-SET,R-reject-ip,REJECT-DROP,no-resolve
-  - RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
-  - RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
-  - RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
+  #- RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
+  #- RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
+  #- RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
   - RULE-SET,R-httpdns-cn,REJECT-DROP                              # 国内 HTTPDNS 劫持
   - RULE-SET,R-win-spy,REJECT-DROP                                 # Windows 隐私追踪
 
