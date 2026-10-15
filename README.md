@@ -402,7 +402,8 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 
 完整 Loon 配置使用私有 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
 分别填入 Proxy、Proxy Chain 和 Route、Line、Chain、DirectExit 四层基础组。
-业务手选组、远端规则、DNS、MitM 域名等其他行原样保留。模板不包含
+业务手选组、远端规则、DNS、MitM 域名等其他行原样保留。Loon 规则在私有模板中
+独立维护，不由 `home.yaml` 的规则集自动转换。模板不包含
 `ca-p12` 和 `ca-passphrase`；每台设备导入后须在 Loon 中生成 CA，
 再在系统中安装并信任该证书，才能使用 MitM。节点变化后可运行：
 
@@ -503,8 +504,7 @@ DNS 上游、解析策略和规则集映射以 `home.yaml` 当前内容为准；
 配置可以部署到 Windows 上的 Mihomo 客户端；节点管理脚本依赖 `fcntl`，需在 Linux、macOS
 或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
 
-当前 `rule-providers` 仍直接引用上游 URL。独立快照仓库的自动同步不会自动修改这里的
-规则来源；若要使用快照，需另行接入对应的地址或本地文件，并处理私有仓库的访问权限。
+当前 `home.yaml` 的 `rule-providers` 直接引用上游 URL。
 
 ## 维护与验证
 
@@ -531,7 +531,4 @@ Mihomo 对 DNS policy 引用的 `classical` 规则集会提示只匹配其中的
 不因 Loon 导出文件省略这些字段而删除。设备导出的测试配置含节点及 CA，保持 `0600` 并忽略提交；
 不得将设备证书复制进模板。
 
-本轮验收已通过单元测试、脚本语法检查、差异检查，以及私有临时目录中的
-trusted 管理和完整生成流程；当前生成结果与 Loon 导出配置的结构、规则及策略组一致。
-ALPN / UDP 字段和设备 CA 按上述约定保留差异。未完成 Mihomo 内核加载验证及真实网络、
-自动切换验收；后续节点或规则变化后应重新验证。
+修改规则或节点后，应重新验证生成配置的加载、Loon App 中的规则命中及实际网络连通。
