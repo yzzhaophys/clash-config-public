@@ -1613,7 +1613,7 @@ def validate_full_loon_references(config: str) -> None:
             name, value = (part.strip() for part in line.split("=", 1))
             if not name or not value:
                 raise ValueError("Loon 完整配置包含空名称或空定义")
-            if name in {"DIRECT", "REJECT"} or any(name in values for values in names.values()):
+            if name in {"DIRECT", "REJECT", "REJECT-DROP"} or any(name in values for values in names.values()):
                 raise ValueError(f"Loon 完整配置包含重复名称：{name}")
             names[section].add(name)
             if section == "[Proxy Chain]":
@@ -1628,7 +1628,7 @@ def validate_full_loon_references(config: str) -> None:
             fields = [part.strip() for part in line.split(",")]
             if fields and fields[0] == "FINAL" and len(fields) > 1:
                 local_policies.append(fields[1])
-    available = set().union(*names.values()) | {"DIRECT", "REJECT"}
+    available = set().union(*names.values()) | {"DIRECT", "REJECT", "REJECT-DROP"}
     group_edges: dict[str, list[str]] = {}
     for group_section, name, value in entries:
         fields = [part.strip() for part in value.split(",")]

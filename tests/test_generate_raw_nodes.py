@@ -946,13 +946,18 @@ class GeneratorTests(unittest.TestCase):
             )
 
     def test_full_loon_references_accept_spacing_and_reject_invalid_graphs(self) -> None:
-        valid = "[Proxy Group]\n A=select,DIRECT\nB = select,A\n[Remote Rule]\nhttps://example.invalid/rules, policy = B\n"
+        valid = (
+            "[Proxy Group]\n A=select,DIRECT\nB = select,A\n"
+            "[Remote Rule]\nhttps://example.invalid/rules, policy = B\n"
+            "https://example.invalid/block, policy = REJECT-DROP\n"
+        )
         generator.validate_full_loon_references(valid)
         cases = [
             ("[Proxy Group]\nA=select,Missing\n", "不存在"),
             ("[Proxy Group]\nA=select,B\nB=select,A\n", "循环引用"),
             ("[Proxy Group]\nA=select,A\n", "循环引用"),
             ("[Proxy Group]\nA=select,DIRECT\nA = select,REJECT\n", "重复名称"),
+            ("[Proxy Group]\nREJECT-DROP=select,DIRECT\n", "重复名称"),
             ("[Proxy]\nA=VLESS,example.invalid,443,fixture\n[Proxy Group]\nA=select,DIRECT\n", "重复名称"),
             ("[Proxy Group]\nA=select,DIRECT\n[Remote Rule]\nhttps://example.invalid/rules, policy = Missing\n", "不存在"),
         ]
