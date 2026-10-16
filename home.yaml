@@ -316,9 +316,9 @@ rule-providers:
   R-icloudprivaterelay: {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/icloudprivaterelay.yaml"}                  # iCloud私有中继 → REJECT
   R-reject:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject.yaml"}
   R-reject-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject-ip.yaml"}
-  R-ads:                {<<: *domain, url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
-  R-ads-add:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
-  R-ads-add-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
+  #R-ads:                {<<: *domain, url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
+  #R-ads-add:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
+  #R-ads-add-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
   R-httpdns-cn:         {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-httpdns-cn.yaml"}                 # 国内HTTPDNS劫持 → REJECT
   R-win-spy:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/win-spy.mrs"}                        # Windows隐私追踪 → REJECT
 
@@ -679,7 +679,7 @@ rules:
   # ══════════════════════════════════════════
   # 2.LAN
   # ══════════════════════════════════════════
-  - RULE-SET,R-private-ip,DIRECT                                   # 内网 IP 地址
+  - RULE-SET,R-private-ip,DIRECT,no-resolve                        # 内网 IP 地址
   - RULE-SET,R-private,DIRECT                                      # 内网域名
   - RULE-SET,R-fakeipfilter,DIRECT                                 # FakeIP 过滤
   - RULE-SET,R-connectivity,DIRECT                                 # 网络连通性检测

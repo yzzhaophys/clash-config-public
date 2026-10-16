@@ -1,6 +1,7 @@
 nodes.yaml
 clash-vps.generated.yaml
 loon-nodes.conf
+*.stoverride
 trusted-nodes.yaml
 
 __pycache__/
