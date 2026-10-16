@@ -316,9 +316,9 @@ rule-providers:
   R-icloudprivaterelay: {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/icloudprivaterelay.yaml"}                  # iCloud私有中继 → REJECT
   R-reject:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject.yaml"}
   R-reject-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject-ip.yaml"}
-  #R-ads:                {<<: *domain, url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
-  #R-ads-add:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
-  #R-ads-add-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
+  R-ads:                {<<: *domain, url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
+  R-ads-add:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
+  R-ads-add-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
   R-httpdns-cn:         {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-httpdns-cn.yaml"}                 # 国内HTTPDNS劫持 → REJECT
   R-win-spy:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/win-spy.mrs"}                        # Windows隐私追踪 → REJECT
 
@@ -670,9 +670,9 @@ rules:
   - RULE-SET,R-icloudprivaterelay,REJECT-DROP                      # iCloud 私有中继
   - RULE-SET,R-reject,REJECT-DROP
   - RULE-SET,R-reject-ip,REJECT-DROP,no-resolve
-  #- RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
-  #- RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
-  #- RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
+  - RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
+  - RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
+  - RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
   - RULE-SET,R-httpdns-cn,REJECT-DROP                              # 国内 HTTPDNS 劫持
   - RULE-SET,R-win-spy,REJECT-DROP                                 # Windows 隐私追踪
 
