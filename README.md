@@ -406,8 +406,9 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 DNS、MitM 域名等其他行原样保留。当前模板的 30 个业务组
 由 `sync_loon_template.py` 按 `home.yaml` 的名称、顺序、成员和图标生成；`[Remote Rule]` 按 `home.yaml` 的
 233 条 `RULE-SET` 引用顺序，使用公开的 `yzzhaophys/loon-rules` 仓库中同名 `.list`。
-该仓库的 GitHub Actions 从公开的 `home.yaml` 读取规则源并更新 `.list`，
-包括 3 条已注释的规则源及规则引用；模板中这 3 条也设置为 `enabled=true`，
+该仓库直接按公开 `home.yaml` 中的地址下载上游 YAML：原本使用 MRS 的规则取上游同名 YAML，
+再转换并发布 234 个 `.list`；所有规则成功后才更新，失败时保留旧列表。
+其中包括 3 条已注释的规则源及规则引用；模板中这 3 条也设置为 `enabled=true`，
 因此它们在 Loon 中会生效。未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅。
 `[Rule]` 的 `FINAL` 指向与 Mihomo 同名的 `Final` 业务组。以后修改 `home.yaml` 的
 业务组或 `rules` 时，运行 `python3 sync_loon_template.py`；推送 `home.yaml` 到主分支后，
