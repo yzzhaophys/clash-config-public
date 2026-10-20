@@ -321,6 +321,13 @@ iosapps.itunes.apple.com = iosapps.itunes.apple.com.download.ks-cdn.com
 [Script]
 
 [Plugin]
+https://kelee.one/Tool/Loon/Lpx/Remove_ads_by_keli.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Himalaya_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/CosmosPodcast_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Walmart_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/MeetYou_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Umetrip_remove_ads.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/DiDi_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/BaiduNetDisk_remove_ads.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/Weixin_external_links_unlock.lpx, enabled=true
 https://kelee.one/Tool/Loon/Lpx/WexinMiniPrograms_Remove_ads.lpx, enabled=true
