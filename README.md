@@ -9,7 +9,6 @@
 | `home.yaml` | 当前唯一维护的 Mihomo/Clash Verge 配置；定义 DNS、规则集、策略组、节点筛选和分流，`proxies` 为空 | 公开配置，不含节点凭据，提交 |
 | `clash-vps.generated.yaml` | `generate_raw_nodes.py` 输出的 `proxies` 片段，包含基础节点及按本次选择生成的代理链；供 Clash Verge 扩展配置使用 | 含凭据，忽略、不提交 |
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
-| `stash-nodes.generated.stoverride` | Stash override，含基础节点、选中的代理链和按实际节点裁剪的 `home.yaml` 策略组 | 含凭据，忽略、不提交 |
 | `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点、选中的代理链及 Route / Line / Chain / DirectExit 四层基础组；不含完整规则 | 含凭据，忽略、不提交 |
 | `Loon-home.template.lcf` | 公开 Loon 模板；业务组和远程规则从 `home.yaml` 同步，以六处标记接收动态节点、代理链和四层基础组；不含节点和设备 CA | 公开，提交 |
 | `Loon-home.generated.lcf` | 可选的完整 Loon 生成配置；由公开模板与本次节点、代理链和基础组合成，不覆盖手工维护的 `Loon-home.lcf` | 含凭据，忽略、不提交 |
@@ -46,8 +45,7 @@ manage_trusted_nodes.py → ~/.config/clash/trusted-nodes.yaml
 自建 VPS + trusted inventory → generate_raw_nodes.py
                               ├─ clash-vps.generated.yaml：基础节点与选中的代理链
                               ├─ nodes.yaml：纯基础节点
-                              ├─ loon-nodes.conf：节点、代理链及四层基础组
-                              └─ stash-nodes.generated.stoverride：Stash 节点与策略组
+                              └─ loon-nodes.conf：节点、代理链及四层基础组
 公开 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
 ```
 
@@ -88,7 +86,6 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 - `--exclude-node REGEX`：按节点名称排除基础节点，相关代理链也会被排除。
 - `--mihomo-config PATH`：指定策略组校验和 Loon 基础组生成所用的 Mihomo 配置，默认 `home.yaml`。
 - `--raw-output PATH`：额外输出仅含基础节点的 YAML。
-- `--stash-output PATH` / `--no-stash`：指定 Stash override 路径，或关闭该输出；默认在主输出同目录生成 `stash-nodes.generated.stoverride`。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 片段输出文件，或关闭片段输出；不影响单独指定的完整配置输出。
 - `--loon-full-output PATH`：额外生成完整 Loon 配置。
 - `--loon-full-template PATH`：指定完整配置模板，默认 `Loon-home.template.lcf`。
@@ -96,7 +93,7 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 ### 本地文件清理
 
 `__pycache__/` 和 `tests/__pycache__/` 是可重新生成的 Python 缓存，可以清理。
-`clash-vps.generated.yaml`、`nodes.yaml`、`loon-nodes.conf`、`*.stoverride`
+`clash-vps.generated.yaml`、`nodes.yaml`、`loon-nodes.conf`
 以及完整 Loon 配置、设备导出文件和 `trusted-nodes.yaml`
 属于被 Git 忽略的私有输入或导出产物；不要把它们当作
 垃圾删除，也不要提交。
@@ -381,7 +378,6 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 - `clash-vps.generated.yaml`：Clash Verge Rev YAML 扩展配置，包含基础节点和选中的代理链；
 - `nodes.yaml`：选中的基础节点，不含代理链；
-- `stash-nodes.generated.stoverride`：`name: stash-nodes.generated`、`proxies` 与 `proxy-groups: #!replace`；节点及代理链跟随本次选择，组名、顺序和参数取自 `home.yaml`；输出在策略组结束，不包含规则源；
 - `loon-nodes.conf`：`[Proxy]` 放本次选中的基础节点，`[Proxy Chain]` 放本次选中的可用代理链，
   `[Proxy Group]` 按 `home.yaml` 的原名和顺序生成 Route、Line、Chain、DirectExit 四层策略组。
   节点别名按地区、属性、协议命名：普通节点如 `hk.vless`，HomeIP 如
@@ -389,11 +385,7 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
   同类节点按序号区分。代理链会引用这些别名。
 
 显式 `--plain` 时主输出默认为 `nodes.yaml`；`--template`、`--merge`、`--chains` 或
-`--routes` 时主输出默认为 `clash-vps.generated.yaml`。Stash 输出默认与主输出同目录；
-可用 `--stash-output` 改路径或 `--no-stash` 关闭。所有输出路径不能相同。
-Stash 底层 Chain / DirectExit 组只保留实际匹配本次节点或代理链的组；空的 Line / Route
-也会省略，上层组引用同步裁剪。业务分流组沿用 `home.yaml` 的选择顺序、图标和其他参数，
-但会移除指向已省略 Route 的选项。`nodes.stoverride` 可作为本地格式参考；生成器不会自动覆盖它。
+`--routes` 时主输出默认为 `clash-vps.generated.yaml`。所有输出路径不能相同。
 除非使用 `--no-loon`，每次运行都会额外生成 Loon 文件；当前转换 VLESS、Hysteria2、
 Shadowsocks 和已认证 SOCKS5，其他协议会跳过并在终端列出。Loon 代理链沿用 Clash
 本次选择的结果：`--chains none` / `--plain` 不输出链，`--routes` 仅输出选定方向的链，
@@ -454,7 +446,7 @@ GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Chain` 筛选表达式。
-筛选不一致时会在替换任何输出前失败；启用 Stash 输出时 `--plain` 也会检查基础节点名与筛选表达式。
+筛选不一致时会在替换任何输出前失败。
 
 这些文件包含真实凭据，已加入 `.gitignore`。
 

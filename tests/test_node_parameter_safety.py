@@ -146,7 +146,7 @@ class FileSafetyTests(unittest.TestCase):
         symlink.symlink_to(source)
         hardlink = self.root / 'hardlink.yaml'
         os.link(source, hardlink)
-        for label in ('主输出', 'raw-output', 'loon-output', 'stash-output'):
+        for label in ('主输出', 'raw-output', 'loon-output', 'loon-full-output'):
             for output in (source, symlink, hardlink):
                 with self.subTest(label=label, output=output.name), self.assertRaisesRegex(SystemExit, '输入文件'):
                     g.validate_output_paths([(label, output)], [source])

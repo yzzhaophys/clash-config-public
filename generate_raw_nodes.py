@@ -19,7 +19,6 @@ from node_conversion import xray_options, hysteria_options
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUT = SCRIPT_DIR / "nodes.yaml"
 LOON_OUT = SCRIPT_DIR / "loon-nodes.conf"
-STASH_OUT = SCRIPT_DIR / "stash-nodes.generated.stoverride"
 LOON_FULL_OUT = SCRIPT_DIR / "Loon-home.generated.lcf"
 LOON_FULL_TEMPLATE = SCRIPT_DIR / "Loon-home.template.lcf"
 MIHOMO_CONFIG = SCRIPT_DIR / "home.yaml"
@@ -2013,88 +2012,6 @@ def write_template(
     secure_write(output, render_template(proxies, chains))
 
 
-def _replace_flow_members(line: str, members: list[str]) -> str:
-    match = re.search(r"\bproxies\s*:\s*\[", line)
-    if match is None:
-        raise ValueError("Mihomo 策略组缺少可编辑的 proxies 列表")
-    quoted: str | None = None
-    escaped = False
-    end = None
-    for index in range(match.end(), len(line)):
-        char = line[index]
-        if escaped:
-            escaped = False
-        elif char == "\\" and quoted:
-            escaped = True
-        elif char == quoted:
-            quoted = None
-        elif char in {"'", '"'} and quoted is None:
-            quoted = char
-        elif char == "]" and quoted is None:
-            end = index
-            break
-    if end is None:
-        raise ValueError("Mihomo 策略组的 proxies 列表未闭合")
-    return line[:match.end()] + " " + " , ".join(yaml_scalar(item) for item in members) + " " + line[end:]
-
-
-def render_stash_override(
-    proxies: list[dict[str, Any]],
-    chains: list[tuple[dict[str, Any], dict[str, Any]]],
-    mihomo_config: Path = MIHOMO_CONFIG,
-) -> str:
-    """Render a Stash override with only populated node and route groups."""
-    groups = load_mihomo_proxy_groups(mihomo_config)
-    names = [proxy["name"] for proxy in proxies]
-    names.extend(chain_name(*candidate) for candidate in chains)
-    members: dict[str, list[str]] = {}
-
-    def available(name: str) -> bool:
-        if name in members:
-            return bool(members[name])
-        group = groups[name]
-        if group.get("include-all"):
-            candidates = [item for item in names if _group_matches_proxy(group, item)]
-        else:
-            candidates = [item for item in group.get("proxies", [])
-                          if item in PROXY_GROUP_BUILTINS or available(item)]
-        members[name] = list(dict.fromkeys(candidates))
-        return bool(members[name])
-
-    for name in groups:
-        available(name)
-
-    source = mihomo_config.read_text(encoding="utf-8").splitlines()
-    start = next((i for i, line in enumerate(source) if line == "proxy-groups:"), None)
-    if start is None:
-        raise ValueError("Mihomo 配置缺少 proxy-groups 段")
-    end = next((i for i in range(start + 1, len(source))
-                if source[i] and not source[i][0].isspace()
-                and (not source[i].startswith("#")
-                     or source[i].startswith("# ==="))), len(source))
-    section = source[start + 1:end]
-    group_lines = [line for line in section if line.lstrip().startswith("- {")]
-    if len(group_lines) != len(groups):
-        raise ValueError("Mihomo 策略组须为逐行 flow 映射，才能保留 Stash 格式")
-    output_lines: list[str] = []
-    group_iter = iter(groups)
-    for line in section:
-        if not line.lstrip().startswith("- {"):
-            output_lines.append(line)
-            continue
-        name = next(group_iter)
-        if not members[name]:
-            continue
-        group = groups[name]
-        if "proxies" in group and members[name] != group["proxies"]:
-            line = _replace_flow_members(line, members[name])
-        output_lines.append(line)
-    while output_lines and not output_lines[-1].strip():
-        output_lines.pop()
-    proxy_text = render_template(proxies, chains)
-    return "name: stash-nodes.generated\n" + proxy_text + "\n# ── 策略组 ──\nproxy-groups: #!replace\n" + "\n".join(output_lines) + "\n"
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="从各 VPS 本地配置生成 Mihomo 节点和代理链")
     parser.add_argument(
@@ -2134,9 +2051,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="输出文件（plain 默认 nodes.yaml，其余格式默认 clash-vps.generated.yaml）",
     )
     parser.add_argument("--raw-output", type=Path, help="额外输出仅含基础节点的 proxies YAML")
-    parser.add_argument("--stash-output", type=Path,
-                        help="额外输出 Stash override（默认与主输出同目录）")
-    parser.add_argument("--no-stash", action="store_true", help="不生成 Stash override")
     parser.add_argument('--audit', action='store_true', help='显示参数转换审计（仅字段名，不显示凭据值）')
     parser.add_argument(
         "--loon-output",
@@ -2155,7 +2069,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--loon-full-template",
         type=Path,
         default=LOON_FULL_TEMPLATE,
-        help="完整 Loon 配置的私有模板（默认 Loon-home.template.lcf）",
+        help="完整 Loon 配置模板（默认 Loon-home.template.lcf）",
     )
     parser.add_argument(
         "--loon-full-output",
@@ -2193,8 +2107,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="仅生成指定方向，例如 'HK<-JP,US<-HK'；也可写成 'HK:JP,US:HK'",
     )
     args = parser.parse_args(argv)
-    if args.no_stash and args.stash_output is not None:
-        parser.error("--no-stash 不能与 --stash-output 同时使用")
     if args.interactive and any(
         (
             args.plain,
@@ -2313,7 +2225,6 @@ def main(argv: list[str] | None = None) -> int:
         ('主输出', args.output), ('raw-output', args.raw_output),
         ('loon-output', args.loon_output),
         ('loon-full-output', args.loon_full_output),
-        ('stash-output', args.stash_output),
     ], protected_inputs)
     try:
         proxies = collect_proxies(hosts_dir, ansible_host_vars_dir, counters)
@@ -2369,10 +2280,6 @@ def main(argv: list[str] | None = None) -> int:
 
     default_output = OUT if output_format == "plain" else SCRIPT_DIR / "clash-vps.generated.yaml"
     output = (args.output or default_output).expanduser()
-    stash_output = None if args.no_stash else (
-        args.stash_output.expanduser() if args.stash_output
-        else output.parent / STASH_OUT.name
-    )
     raw_output = args.raw_output.expanduser() if args.raw_output else None
     loon_output = args.loon_output.expanduser() if args.loon_output else None
     loon_full_output = args.loon_full_output.expanduser() if args.loon_full_output else None
@@ -2382,12 +2289,11 @@ def main(argv: list[str] | None = None) -> int:
             ("raw-output", raw_output),
             ("loon-output", loon_output),
             ("loon-full-output", loon_full_output),
-            ("stash-output", stash_output),
         ],
         protected_inputs,
     )
 
-    if output_format != "plain" or stash_output:
+    if output_format != "plain":
         try:
             validate_generated_against_config(proxies, chains, mihomo_config)
         except (OSError, ValueError, yaml.YAMLError) as exc:
@@ -2413,12 +2319,6 @@ def main(argv: list[str] | None = None) -> int:
                 write_plain(proxies, raw)
                 load_yaml(raw)
                 rendered.append((raw_output, raw.read_text(encoding='utf-8')))
-            if stash_output:
-                label, destination = 'Stash 输出', stash_output
-                stash = stage / 'stash.stoverride'
-                secure_write(stash, render_stash_override(proxies, chains, mihomo_config))
-                load_yaml(stash)
-                rendered.append((stash_output, stash.read_text(encoding='utf-8')))
             if loon_output or loon_full_output:
                 label = 'Loon 输出' if loon_output else 'Loon 完整配置'
                 destination = loon_output or loon_full_output
@@ -2439,8 +2339,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(f'无法写入{label} {destination}：{exc}') from exc
     validate_output_paths([('主输出', output), ('raw-output', raw_output),
                            ('loon-output', loon_output),
-                           ('loon-full-output', loon_full_output),
-                           ('stash-output', stash_output)], protected_inputs)
+                           ('loon-full-output', loon_full_output)], protected_inputs)
     for destination, content in rendered:
         try:
             secure_write(destination, content)
@@ -2452,8 +2351,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     if raw_output:
         print(f"wrote {raw_output} ({len(proxies)} nodes, raw=True)")
-    if stash_output:
-        print(f"wrote {stash_output} ({len(proxies)} base nodes, {len(chains)} chains, format=stash)")
     if loon_output:
         print(f"wrote {loon_output} ({loon_count} nodes, {loon_chain_count} chains, format=loon)")
     if loon_full_output:
