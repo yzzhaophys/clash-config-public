@@ -947,7 +947,7 @@ class GeneratorTests(unittest.TestCase):
 
     def test_full_loon_references_accept_spacing_and_reject_invalid_graphs(self) -> None:
         valid = (
-            "[Proxy Group]\n A=select,DIRECT\nB = select,A\n"
+            "[Proxy Group]\n A=select,DIRECT,img-url=https://example.invalid/a.png\nB = select,A\n"
             "[Remote Rule]\nhttps://example.invalid/rules, policy = B\n"
             "https://example.invalid/block, policy = REJECT-DROP\n"
         )

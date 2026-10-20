@@ -1638,7 +1638,7 @@ def validate_full_loon_references(config: str) -> None:
             group_edges[name] = [member for member in members if member in names["[Proxy Group]"]]
         for member in members:
             if group_section == "[Proxy Group]" and re.match(
-                r"^(url|interval|max-timeout|tolerance|algorithm)\s*=", member
+                r"^(url|interval|max-timeout|tolerance|algorithm|img-url)\s*=", member
             ):
                 continue
             valid_targets = names["[Proxy]"] if group_section == "[Proxy Chain]" else available

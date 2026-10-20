@@ -11,15 +11,16 @@
 | `nodes.yaml` | 同一节点生成器输出的纯基础节点 `proxies` 列表，不含代理链 | 含凭据，忽略、不提交 |
 | `stash-nodes.generated.stoverride` | Stash override，含基础节点、选中的代理链和按实际节点裁剪的 `home.yaml` 策略组 | 含凭据，忽略、不提交 |
 | `loon-nodes.conf` | 同一节点生成器输出的 Loon 基础节点、选中的代理链及 Route / Line / Chain / DirectExit 四层基础组；不含完整规则 | 含凭据，忽略、不提交 |
-| `Loon-home.template.lcf` | 私有完整 Loon 模板；保留业务手选组、规则、DNS、MitM 域名等固定内容，以六处标记接收动态节点、代理链和四层基础组；不内嵌 CA | 私有，忽略、不提交 |
-| `Loon-home.generated.lcf` | 可选的完整 Loon 生成配置；由私有模板与本次节点、代理链和基础组合成，不覆盖手工维护的 `Loon-home.lcf` | 含凭据，忽略、不提交 |
+| `Loon-home.template.lcf` | 公开 Loon 模板；业务组和远程规则从 `home.yaml` 同步，以六处标记接收动态节点、代理链和四层基础组；不含节点和设备 CA | 公开，提交 |
+| `Loon-home.generated.lcf` | 可选的完整 Loon 生成配置；由公开模板与本次节点、代理链和基础组合成，不覆盖手工维护的 `Loon-home.lcf` | 含凭据，忽略、不提交 |
 | `Loon-home.lcf`（可选） | 原手工维护的完整配置；生成器不读取也不自动覆盖，可作历史参考 | 含凭据，忽略、不提交 |
 | `Loon-home.generated.test*.lcf`（可选） | 从 Loon App 导出的验收配置，可能包含设备 CA；用于本地对比，不是生成器输入 | 含凭据和证书，忽略、不提交 |
 | `trusted-nodes.yaml` | `manage_trusted_nodes.py` 管理的私有 trusted inventory；也是节点生成器的输入，不是客户端配置 | 含凭据，忽略、不提交 |
 
 | 脚本或目录 | 职责 |
 | --- | --- |
-| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用私有 Loon 模板生成完整配置，模板模式还按 `home.yaml` 校验筛选 |
+| `generate_raw_nodes.py` | 读取自建 VPS 和 trusted inventory，生成节点输出；可选用公开 Loon 模板生成完整配置，模板模式还按 `home.yaml` 校验筛选 |
+| `sync_loon_template.py` | 将 `home.yaml` 的业务组与规则引用同步到公开 Loon 模板；`--check` 可检查是否已同步 |
 | `manage_trusted_nodes.py` | 查看、预览或应用 trusted inventory 的导入、删除、恢复；只改清单，不自动重新生成客户端文件 |
 | `node_io.py` | 脚本共用的严格 YAML 读取，拒绝显式重复键 |
 | `node_conversion.py` | 服务端 Xray/Hysteria 参数到客户端节点字段的转换与审计辅助函数 |
@@ -47,12 +48,12 @@ manage_trusted_nodes.py → ~/.config/clash/trusted-nodes.yaml
                               ├─ nodes.yaml：纯基础节点
                               ├─ loon-nodes.conf：节点、代理链及四层基础组
                               └─ stash-nodes.generated.stoverride：Stash 节点与策略组
-私有 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
+公开 Loon 模板 + 本次 Loon 片段 → Loon-home.generated.lcf（可选）
 ```
 
 Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；生成器读取配置中的策略组
 校验节点筛选并生成 Loon 基础组，不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
-`loon-nodes.conf`，或显式指定私有模板生成带固定规则的完整配置。
+`loon-nodes.conf`，或显式指定公开模板生成带固定规则的完整配置。
 
 ## 要求
 
@@ -90,13 +91,13 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 - `--stash-output PATH` / `--no-stash`：指定 Stash override 路径，或关闭该输出；默认在主输出同目录生成 `stash-nodes.generated.stoverride`。
 - `--loon-output PATH` / `--no-loon`：指定 Loon 片段输出文件，或关闭片段输出；不影响单独指定的完整配置输出。
 - `--loon-full-output PATH`：额外生成完整 Loon 配置。
-- `--loon-full-template PATH`：指定私有完整配置模板，默认 `Loon-home.template.lcf`。
+- `--loon-full-template PATH`：指定完整配置模板，默认 `Loon-home.template.lcf`。
 
 ### 本地文件清理
 
 `__pycache__/` 和 `tests/__pycache__/` 是可重新生成的 Python 缓存，可以清理。
 `clash-vps.generated.yaml`、`nodes.yaml`、`loon-nodes.conf`、`*.stoverride`
-以及私有 Loon 模板、完整配置、设备导出文件和 `trusted-nodes.yaml`
+以及完整 Loon 配置、设备导出文件和 `trusted-nodes.yaml`
 属于被 Git 忽略的私有输入或导出产物；不要把它们当作
 垃圾删除，也不要提交。
 
@@ -408,10 +409,19 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 组名和组间先后顺序沿用 `home.yaml`；测速参数仅输出 Loon 支持的对应项。
 现有节点集合的配置已完成 Loon 导入及导出对比；新节点、自动组切换和实际连通仍需在客户端确认。
 
-完整 Loon 配置使用私有 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
+完整 Loon 配置使用公开 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
 分别填入 Proxy、Proxy Chain 和 Route、Line、Chain、DirectExit 四层基础组。
-业务手选组、远端规则、DNS、MitM 域名等其他行原样保留。Loon 规则在私有模板中
-独立维护，不由 `home.yaml` 的规则集自动转换。模板不包含
+DNS、MitM 域名等其他行原样保留。当前模板的 30 个业务组
+由 `sync_loon_template.py` 按 `home.yaml` 的名称、顺序、成员和图标生成；`[Remote Rule]` 按 `home.yaml` 的
+233 条 `RULE-SET` 引用顺序，使用公开的 `yzzhaophys/loon-rules` 仓库中同名 `.list`。
+该仓库的 GitHub Actions 从公开的 `home.yaml` 读取规则源并更新 `.list`，
+包括 3 条已注释的规则源及规则引用；模板中这 3 条也设置为 `enabled=true`，
+因此它们在 Loon 中会生效。未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅。
+`[Rule]` 的 `FINAL` 指向与 Mihomo 同名的 `Final` 业务组。以后修改 `home.yaml` 的
+业务组或 `rules` 时，运行 `python3 sync_loon_template.py`；推送 `home.yaml` 到主分支后，
+GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的模板。
+如新增规则集尚未发布，该次同步会失败并保留旧模板；每天的定时任务会重试。
+节点生成器不会改写这些固定内容。模板不包含
 `ca-p12` 和 `ca-passphrase`；每台设备导入后须在 Loon 中生成 CA，
 再在系统中安装并信任该证书，才能使用 MitM。节点变化后可运行：
 
@@ -422,18 +432,25 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
   --loon-full-output Loon-home.generated.lcf
 ```
 
-也可用 `--loon-full-template PATH` 指定另一份私有模板。交互模式会在节点与代理链选择后询问
+也可用 `--loon-full-template PATH` 指定另一份模板。交互模式会在节点与代理链选择后询问
 是否生成完整 Loon 配置，默认不生成；选“是”写入 `Loon-home.generated.lcf`。
 非交互模式需显式指定 `--loon-full-output`。上述命令写入独立文件，
 不覆盖手工维护的 `Loon-home.lcf`。
 若新节点集合使固定手选组引用的 Route 不再存在，生成器会报错，旧输出保持不变。
 完整配置还检查节点、链及组的名称冲突和策略组循环；定义中的等号两侧可带或不带空格。
 规则引用校验覆盖远端规则的 `policy` 和本地 `FINAL`，不等同于 Loon 全部语法校验。
-修改固定规则或业务组时，应修改私有模板，再重新生成完整配置。
+修改规则或业务组时，先修改 `home.yaml` 并同步模板，再重新生成完整配置。
 日常更新流程：修改自建输入或 trusted inventory 后重新运行生成器；
-修改 Loon 固定设置、业务组或规则时先改私有模板，再生成完整配置并导入 App。
+修改 Loon 固定设置时修改公开模板；修改业务组或规则时先改 `home.yaml`、同步模板，再生成完整配置并导入 App。
 手工编辑生成文件不会回写模板，下一次生成会覆盖这些编辑。
-模板按私有文件管理，完整输出包含节点凭据；两者不得提交或粘贴到公开文档。
+公开模板不得加入凭据和设备 CA；完整输出包含节点凭据，必须保持私有。
+
+`loon-rules` 位于另一个 GitHub 仓库，当前按每天定时任务或手动触发更新 `.list`；
+本仓库在 `home.yaml` 推送后尝试同步模板，另在规则仓库日常构建后定时重试。
+新规则的 `.list` 尚未发布时，模板不会提前引用它；可手动触发 `loon-rules` 的更新工作流加快发布。
+仅修改本地 `home.yaml` 不会触发 GitHub Actions；本地可先运行
+`python3 ../loon-rules/build.py --home home.yaml --output ../loon-rules/lists`，再运行
+`python3 sync_loon_template.py --lists-dir ../loon-rules/lists`，最后生成完整 Loon 配置。
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Chain` 筛选表达式。
@@ -534,7 +551,7 @@ Mihomo 对 DNS policy 引用的 `classical` 规则集会提示只匹配其中的
 
 完整配置以本地 Loon 导出文件的格式为参考：模板使用 `ip-mode = v4-only`，
 业务策略组候选使用紧凑逗号，远端规则使用单逗号分隔。生成器保留模板的固定内容，
-因此格式调整在私有 `Loon-home.template.lcf` 中维护。
+因此格式调整在公开 `Loon-home.template.lcf` 中维护。
 节点仍保留输入中的可表达参数，包括 VLESS 的 `alpn=http/1.1` 和 SOCKS5 的 `udp=false`；
 不因 Loon 导出文件省略这些字段而删除。设备导出的测试配置含节点及 CA，保持 `0600` 并忽略提交；
 不得将设备证书复制进模板。

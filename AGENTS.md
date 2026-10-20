@@ -10,13 +10,14 @@
 - `generate_raw_nodes.py` 输出含基础节点与可选代理链的 `clash-vps.generated.yaml`，
   还可输出仅含基础节点的 `nodes.yaml` 和 Loon 格式节点及选中代理链的 `loon-nodes.conf`。
   三者含凭据，均被 `.gitignore` 忽略；文件职责与更新命令见 README。
-- `Loon-home.template.lcf` 是不内嵌 CA 的私有完整配置模板；非交互模式显式指定
+- `Loon-home.template.lcf` 是不含节点凭据和设备 CA 的公开完整配置模板；非交互模式显式指定
   `--loon-full-output`，或交互模式选择生成时才写入完整 Loon 配置。六个生成标记分别承载
   Proxy、Proxy Chain、Route、Line、Chain、DirectExit；固定业务组和规则不得由节点
   生成器重写。每台设备需在 Loon 中自行生成 CA，并在系统中安装和信任；
-  模板和完整输出均须保持私有且不得提交。
+  完整输出须保持私有且不得提交。模板中的业务组与远程规则由 `sync_loon_template.py`
+  根据 `home.yaml` 同步，其他段落和六个生成标记由模板维护。
 - `home.yaml` 是唯一维护的 Mihomo/Clash Verge 配置，包含规则、筛选和 DNS；Loon 使用独立
-  输出的 `loon-nodes.conf`，其规则文件另行维护。Loon 的 `[Proxy Group]` 沿用
+  输出的 `loon-nodes.conf`，其规则文件由公开 `loon-rules` 仓库转换，模板引用由同步脚本维护。Loon 的 `[Proxy Group]` 沿用
   `home.yaml` 的 Route、Line、Chain、DirectExit 组名和顺序，仅引用实际导出的
   节点、代理链与非空下级组；本地 `[Proxy]` 节点由生成器筛选，不用 `[Remote Filter]`。
 - Clash Verge 使用 `home.yaml` 与节点生成器输出的 `proxies` 片段；本仓库脚本不会
@@ -26,7 +27,7 @@
 - 修改 `home.yaml` 时保留原有对齐风格，避免无关的 DNS、规则和规则集重写。
 - 清理工作区时只删除明确可重新生成的缓存或临时文件，例如 `__pycache__/`。
   不要把被 Git 忽略的 `clash-vps.generated.yaml`、`nodes.yaml`、
-  `loon-nodes.conf`、私有 Loon 模板、完整配置、设备导出或 trusted inventory 当作垃圾删除。
+  `loon-nodes.conf`、公开 Loon 模板、完整配置、设备导出或 trusted inventory 当作垃圾删除。
   `*:Zone.Identifier` 是 Windows 下载标记，可清理；设备导出配置可能包含 CA，不能据此当作缓存删除。
 
 ## 参数与分流约束
@@ -89,15 +90,17 @@ git diff --check
   可用 `--import-dir` 或 `CLASH_TRUSTED_IMPORT_DIR` 覆盖；当前 inventory 自身和别名不会列为导入候选。
   新位置使用 `CLASH_TRUSTED_NODES_FILE`、生成器 `--trusted-nodes-file` 或管理器 `--target`，
   不恢复 `CLASH_AIRPORT_DIR` / `--airport-dir`。历史私有输入文件不得作为清理对象删除。
-- Loon 完整配置的格式以设备导出为参考；私有模板使用 `v4-only`、紧凑业务组逗号、
+- Loon 完整配置的格式以设备导出为参考；公开模板使用 `v4-only`、紧凑业务组逗号、
   单逗号远端规则。保留节点的 ALPN 和 UDP 参数，不依据 App 导出时的省略删除参数。
   设备导出测试配置含 CA 和凭据，必须忽略提交且保持 `0600`；模板不得包含设备 CA。
 
 - trusted inventory 用稳定 `id + proxy.type` 更新时保留位置；删除后重导入追加到末尾，
   可能改变生成编号。Route / Line 等组及代理链引用在生成时同步更新，不依赖固定编号；
   不为维持编号复制节点或增加占位节点。
-- Loon 固定内容以私有模板为维护入口；节点及链以自建输入和 trusted inventory 为入口。
+- Loon 固定内容以公开模板为维护入口；节点及链以自建输入和 trusted inventory 为入口。
   修改上游后重新生成并由用户导入 App；生成产物的手工编辑不会回写上游。
 
 - 完整 Loon 配置写入前检查跨节点/链/组的名称冲突、组引用及循环；等号空格变化
   不应绕过检查。远端 `policy` 与本地 `FINAL` 引用校验不代表完整 Loon 语法验证。
+- 提交公开模板前确认其中不含节点凭据、设备 CA、令牌或其他私密参数；
+  Loon App 导出文件仍须保持私有、忽略提交且权限为 `0600`。

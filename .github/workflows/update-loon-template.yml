@@ -1,0 +1,40 @@
+name: Update public Loon template
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [home.yaml]
+  schedule:
+    - cron: '47 4 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: yzzhaophys/loon-rules
+          ref: main
+          path: rule-repository
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML
+      - run: python sync_loon_template.py --lists-dir rule-repository/lists
+      - name: Commit template if changed
+        run: |
+          git add Loon-home.template.lcf
+          if git diff --cached --quiet; then
+            echo 'Template is current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Sync Loon template from home.yaml'
+          git push
