@@ -196,8 +196,7 @@ dns:
 # ── 策略组 ──
 proxy-groups:
 
-  # ── Speedtest ──
-  - {name: Speedtest,   type: select, proxies: [ 'DIRECT'                         , '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'             , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/speedtest.png"}   # 测速
+  - {name: Proxy,       type: select, proxies: [ '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'              , 'DIRECT'                        , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/proxy.png"}       # Proxy
 
   # ── Proxy App ──
   - {name: OpenAI,      type: select, proxies: [ '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'              , 'DIRECT'                        , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/chatgpt.png"}     # OpenAI / ChatGPT
@@ -229,6 +228,9 @@ proxy-groups:
   - {name: Steam,       type: select, proxies: [ 'DIRECT'                         , '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'             , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/steam.png"}       # Steam
   - {name: Epic,        type: select, proxies: [ 'DIRECT'                         , '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'             , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/epic.png"}        # Epic Games
   - {name: TapTap,      type: select, proxies: [ 'DIRECT'                         , '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'             , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/taptap.png"}      # TapTap
+
+  # ── Speedtest ──
+  - {name: Speedtest,   type: select, proxies: [ 'DIRECT'                         , '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'             , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/speedtest.png"}   # 测速
 
   # ── R18 默认注释 ──
   - {name: R18,         type: select, proxies: [ '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'              , 'DIRECT'                        , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/r18.png"}         # 成人内容
@@ -300,359 +302,365 @@ proxy-groups:
 
 # ===== 锚点 Providers =====
 rule-anchor:
-  ip:           &ip           {type: http, behavior: ipcidr,    format: mrs,  interval: 86400, proxy: Final}
-  domain:       &domain       {type: http, behavior: domain,    format: mrs,  interval: 86400, proxy: Final}
-  yaml:         &yaml         {type: http, behavior: domain,    format: yaml, interval: 86400, proxy: Final}
-  yaml-ip:      &yaml-ip      {type: http, behavior: ipcidr,    format: yaml, interval: 86400, proxy: Final}
-  yaml-classic: &yaml-classic {type: http, behavior: classical, format: yaml, interval: 86400, proxy: Final}
-  list-class:   &list-class   {type: http, behavior: classical, format: text, interval: 86400, proxy: Final}
+  ip:           &ip           {type: http, behavior: ipcidr,    format: mrs,  interval: 86400, proxy: Proxy}
+  domain:       &domain       {type: http, behavior: domain,    format: mrs,  interval: 86400, proxy: Proxy}
+  yaml:         &yaml         {type: http, behavior: domain,    format: yaml, interval: 86400, proxy: Proxy}
+  yaml-ip:      &yaml-ip      {type: http, behavior: ipcidr,    format: yaml, interval: 86400, proxy: Proxy}
+  yaml-classic: &yaml-classic {type: http, behavior: classical, format: yaml, interval: 86400, proxy: Proxy}
+  list-class:   &list-class   {type: http, behavior: classical, format: text, interval: 86400, proxy: Proxy}
 
 # ===== 远程规则集 Remote Rule =====
 rule-providers:
 
   # ══════════════════════════════════════════
+  # 0.R-custom
+  # ══════════════════════════════════════════
+  R-custom:              {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/custom.yaml"}
+
+  # ══════════════════════════════════════════
   # 1.REJECT
   # ══════════════════════════════════════════
-  R-icloudprivaterelay: {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/icloudprivaterelay.yaml"}                  # iCloud私有中继 → REJECT
-  R-reject:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject.yaml"}
-  R-reject-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject-ip.yaml"}
-  #R-ads:                {<<: *domain, url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
-  #R-ads-add:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
-  #R-ads-add-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
-  R-httpdns-cn:         {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-httpdns-cn.yaml"}                 # 国内HTTPDNS劫持 → REJECT
-  R-win-spy:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/win-spy.mrs"}                        # Windows隐私追踪 → REJECT
+  R-icloudprivaterelay:  {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/icloudprivaterelay.yaml"}                  # iCloud私有中继 → REJECT
+  R-reject:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject.yaml"}
+  R-reject-ip:           {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/reject-ip.yaml"}
+  R-ads:                 {<<: *domain,  url: "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Clash.mrs"}       # 全量广告拦截 → REJECT
+  R-ads-add:             {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add.yaml"}
+  R-ads-add-ip:          {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/ads-add-ip.yaml"}
+  R-httpdns-cn:          {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-httpdns-cn.yaml"}                 # 国内HTTPDNS劫持 → REJECT
+  R-win-spy:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/win-spy.mrs"}                        # Windows隐私追踪 → REJECT
 
   # ══════════════════════════════════════════
   # 2.LAN
   # ══════════════════════════════════════════
-  R-private:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/private.yaml"}                             # 内网域名 → DIRECT
-  R-private-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml"}                         # 内网IP地址 → DIRECT
-  R-fakeipfilter:       {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/fakeipfilter.yaml"}                        # FakeIP过滤 → DIRECT
-  R-sniffer-skip-ip:    {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/sniffer-skip-ip.yaml"}                     # 嗅探豁免 IP 列表
-  R-connectivity:       {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/connectivity-check.yaml"}                  # 网络连通性检测 → DIRECT
+  R-private:             {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/private.yaml"}                             # 内网域名 → DIRECT
+  R-private-ip:          {<<: *yaml-ip, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml"}                         # 内网IP地址 → DIRECT
+  R-fakeipfilter:        {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/fakeipfilter.yaml"}                        # FakeIP过滤 → DIRECT
+  R-sniffer-skip-ip:     {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/sniffer-skip-ip.yaml"}                     # 嗅探豁免 IP 列表
+  R-connectivity:        {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/connectivity-check.yaml"}                  # 网络连通性检测 → DIRECT
 
   # ══════════════════════════════════════════
   # 3.Proxy
   # ══════════════════════════════════════════
 
   # ── YouTube ──
-  R-youtube:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}                        # YouTube
+  R-youtube:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}                        # YouTube
 
   # ── Google ──
-  R-google:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}                         # Google全家桶
-  R-google-ip:          {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
-  R-FCM:                {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/googlefcm.mrs"}                      # Firebase推送
-  R-gemini:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs"}                  # Gemini AI
-  R-deepmind:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-deepmind.mrs"}                # DeepMind
-  R-google-play:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-play.mrs"}                    # Google Play
-  R-google-play-cn:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-play@cn.mrs"}                 # Google Play国内节点 → DIRECT
-  R-google-scholar:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-scholar.mrs"}                 # Google学术
-  R-firebase:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/firebase.mrs"}                       # Firebase开发平台
-  R-firebase-cn:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/firebase@cn.mrs"}                    # Firebase国内节点 → DIRECT
-  R-fonts:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fonts.mrs"}                          # Google字体
-  R-golang:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/golang.mrs"}                         # Go语言官方
-  R-dart:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dart.mrs"}                           # Dart语言
-  R-v8:                 {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/v8.mrs"}                             # V8引擎
-  R-goproxy:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/goproxy.mrs"}                        # Go模块代理
-  R-amp:                {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amp.mrs"}                            # Google AMP
-  R-amp-cn:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amp@cn.mrs"}                         # Google AMP国内节点 → DIRECT
+  R-google:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs"}                         # Google全家桶
+  R-google-ip:           {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs"}
+  R-FCM:                 {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/googlefcm.mrs"}                      # Firebase推送
+  R-gemini:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-gemini.mrs"}                  # Gemini AI
+  R-deepmind:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-deepmind.mrs"}                # DeepMind
+  R-google-play:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-play.mrs"}                    # Google Play
+  R-google-play-cn:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-play@cn.mrs"}                 # Google Play国内节点 → DIRECT
+  R-google-scholar:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google-scholar.mrs"}                 # Google学术
+  R-firebase:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/firebase.mrs"}                       # Firebase开发平台
+  R-firebase-cn:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/firebase@cn.mrs"}                    # Firebase国内节点 → DIRECT
+  R-fonts:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fonts.mrs"}                          # Google字体
+  R-golang:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/golang.mrs"}                         # Go语言官方
+  R-dart:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dart.mrs"}                           # Dart语言
+  R-v8:                  {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/v8.mrs"}                             # V8引擎
+  R-goproxy:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/goproxy.mrs"}                        # Go模块代理
+  R-amp:                 {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amp.mrs"}                            # Google AMP
+  R-amp-cn:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amp@cn.mrs"}                         # Google AMP国内节点 → DIRECT
 
   # ── Adobe ──
-  R-adobe-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe@cn.mrs"}                       # Adobe国内节点 → DIRECT
-  R-adobe-activation:   {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe-activation.mrs"}               # Adobe激活服务
-  R-adobe:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe.mrs"}                          # Adobe全家桶
+  R-adobe-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe@cn.mrs"}                       # Adobe国内节点 → DIRECT
+  R-adobe-activation:    {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe-activation.mrs"}               # Adobe激活服务
+  R-adobe:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/adobe.mrs"}                          # Adobe全家桶
 
   # ── OpenAI ──
-  R-openai:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs"}                         # OpenAI
+  R-openai:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs"}                         # OpenAI
 
   # ── Anthropic ──
-  R-anthropic:          {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/anthropic.yaml"}                           # Anthropic / Claude
-  R-anthropic-ip:       {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/anthropic-ip.yaml"}
+  R-anthropic:           {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/anthropic.yaml"}                           # Anthropic / Claude
+  R-anthropic-ip:        {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/anthropic-ip.yaml"}
 
   # ── AI ──
-  R-perplexity:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/perplexity.mrs"}                     # Perplexity AI搜索
-  R-groq:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/groq.mrs"}                           # Groq AI推理
-  R-cerebras:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cerebras.mrs"}                       # Cerebras AI
-  R-huggingface:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/huggingface.mrs"}                    # Hugging Face
-  R-cursor:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cursor.mrs"}                         # Cursor AI编辑器
-  R-elevenlabs:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/elevenlabs.mrs"}                     # ElevenLabs AI语音
-  R-comfy:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/comfy.mrs"}                          # ComfyUI
-  R-comfy-launcher:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/comfy-ui-launcher.mrs"}              # ComfyUI启动器
-  R-ai:                 {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-ai-chat-!cn.yaml"}                # AI服务兜底
+  R-perplexity:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/perplexity.mrs"}                     # Perplexity AI搜索
+  R-groq:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/groq.mrs"}                           # Groq AI推理
+  R-cerebras:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cerebras.mrs"}                       # Cerebras AI
+  R-huggingface:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/huggingface.mrs"}                    # Hugging Face
+  R-cursor:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cursor.mrs"}                         # Cursor AI编辑器
+  R-elevenlabs:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/elevenlabs.mrs"}                     # ElevenLabs AI语音
+  R-comfy:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/comfy.mrs"}                          # ComfyUI
+  R-comfy-launcher:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/comfy-ui-launcher.mrs"}              # ComfyUI启动器
+  R-ai:                  {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-ai-chat-!cn.yaml"}                # AI服务兜底
 
   # ── Crypto ──
-  R-crypto:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-cryptocurrency.yaml"}             # 加密货币
+  R-crypto:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/category-cryptocurrency.yaml"}             # 加密货币
 
   # ── GitHub ──
-  R-github:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/github.yaml"}                              # GitHub / VSCode
-  R-github1s:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github1s.mrs"}                       # GitHub在线VSCode
-  R-github-copilot:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github-copilot.mrs"}                 # GitHub Copilot
+  R-github:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/github.yaml"}                              # GitHub / VSCode
+  R-github1s:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github1s.mrs"}                       # GitHub在线VSCode
+  R-github-copilot:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github-copilot.mrs"}                 # GitHub Copilot
 
   # ── Discord ──
-  R-discord:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/discord.yaml"}                             # Discord
-  R-discord-ip:         {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/discord-ip.yaml"}
+  R-discord:             {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/discord.yaml"}                             # Discord
+  R-discord-ip:          {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/discord-ip.yaml"}
 
   # ── Telegram ──
-  R-telegram:           {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/telegram.yaml"}                            # Telegram
-  R-telegram-ip:        {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/telegram-ip.yaml"}                         # Telegram IP
+  R-telegram:            {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/telegram.yaml"}                            # Telegram
+  R-telegram-ip:         {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/telegram-ip.yaml"}                         # Telegram IP
 
   # ── Social ──
-  R-reddit:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/reddit.mrs"}                         # Reddit
-  R-tumblr:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tumblr.mrs"}                         # Tumblr
-  R-line:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/line.mrs"}                           # LINE
+  R-reddit:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/reddit.mrs"}                         # Reddit
+  R-tumblr:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tumblr.mrs"}                         # Tumblr
+  R-line:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/line.mrs"}                           # LINE
 
   # ── Meta ──
-  R-meta:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/meta.mrs"}                           # Facebook / Instagram / Facebook Developers / WhatsApp / hreads / Messenger / Graph / Analytics
-  R-meta-ads:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/meta@ads.mrs"}                       # Meta广告 → REJECT
+  R-meta:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/meta.mrs"}                           # Facebook / Instagram / Facebook Developers / WhatsApp / hreads / Messenger / Graph / Analytics
+  R-meta-ads:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/meta@ads.mrs"}                       # Meta广告 → REJECT
 
   # ── Elon Musk ──
-  R-x-ads:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/x@ads.mrs"}                          # X广告 → REJECT
-  R-twitter-ads:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter@ads.mrs"}                    # Twitter广告 → REJECT
-  R-x:                  {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/x.mrs"}                              # X补充域名
-  R-twitter:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs"}                        # Twitter/X
-  R-twitter-ip:         {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs"}                          # Twitter IP
-  R-xai:                {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xai.mrs"}                            # xAI / Grok
-  R-spacex:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spacex.mrs"}                         # SpaceX
-  R-neuralink:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/neuralink.mrs"}                      # Neuralink
-  R-theboringcompany:   {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/theboringcompany.mrs"}               # The Boring Company
-  R-tesla:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tesla.mrs"}                          # Tesla
+  R-x-ads:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/x@ads.mrs"}                          # X广告 → REJECT
+  R-twitter-ads:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter@ads.mrs"}                    # Twitter广告 → REJECT
+  R-x:                   {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/x.mrs"}                              # X补充域名
+  R-twitter:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs"}                        # Twitter/X
+  R-twitter-ip:          {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs"}                          # Twitter IP
+  R-xai:                 {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xai.mrs"}                            # xAI / Grok
+  R-spacex:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spacex.mrs"}                         # SpaceX
+  R-neuralink:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/neuralink.mrs"}                      # Neuralink
+  R-theboringcompany:    {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/theboringcompany.mrs"}               # The Boring Company
+  R-tesla:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tesla.mrs"}                          # Tesla
 
-  # ── TikTok / 字节跳动 ──
-  R-tiktok:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/tiktok.yaml"}                              # TikTok → 代理
+  # ── TikTok / 字节跳动  ──
+  R-tiktok:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/tiktok.yaml"}                              # TikTok → 代理
 
-  R-bytedance-ai-!cn:   {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bytedance-ai-!cn.mrs"}               # 字节AI海外(豆包/Coze国际版) → 代理
-  R-bytedance-!cn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bytedance@!cn.mrs"}                  # 字节海外域名 → 代理
+  R-bytedance-ai-!cn:    {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bytedance-ai-!cn.mrs"}               # 字节AI海外(豆包/Coze国际版) → 代理
+  R-bytedance-!cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bytedance@!cn.mrs"}                  # 字节海外域名 → 代理
 
-  R-douyin:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/douyin.yaml"}
-  R-douyin-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/douyin-ip.yaml"}
+  R-douyin:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/douyin.yaml"}
+  R-douyin-ip:           {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/douyin-ip.yaml"}
 
-  R-bytedance:          {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/bytedance.yaml"}                           # 字节全量兜底(抖音/飞书/头条) → DIRECT
+  R-bytedance:           {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/bytedance.yaml"}                           # 字节全量兜底(抖音/飞书/头条) → DIRECT
 
   # ── Netflix ──
-  R-netflix:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}                        # Netflix
-  R-netflix-ip:         {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}                          # Netflix IP
+  R-netflix:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"}                        # Netflix
+  R-netflix-ip:          {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs"}                          # Netflix IP
 
   # ── Media ──
-  R-hulu:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hulu.mrs"}                           # Hulu
-  R-primevideo:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.mrs"}                     # Prime Video
-  R-dazn:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dazn.mrs"}                           # DAZN体育直播
-  R-hbo:                {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hbo.mrs"}                            # HBO
-  R-disney:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"}                         # Disney+
-  R-vimeo:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/vimeo.mrs"}                          # Vimeo
-  R-twitch:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitch.mrs"}                         # Twitch
-  R-rumble:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/rumble.mrs"}                         # Rumble
-  R-plex:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/plex.mrs"}                           # Plex媒体服务器
+  R-hulu:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hulu.mrs"}                           # Hulu
+  R-primevideo:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.mrs"}                     # Prime Video
+  R-dazn:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dazn.mrs"}                           # DAZN体育直播
+  R-hbo:                 {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hbo.mrs"}                            # HBO
+  R-disney:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"}                         # Disney+
+  R-vimeo:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/vimeo.mrs"}                          # Vimeo
+  R-twitch:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitch.mrs"}                         # Twitch
+  R-rumble:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/rumble.mrs"}                         # Rumble
+  R-plex:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/plex.mrs"}                           # Plex媒体服务器
 
   # ── Spotify ──
-  R-spotify:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"}                        # Spotify
-  R-spotify-ads:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify@ads.mrs"}                    # Spotify广告 → REJECT
+  R-spotify:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"}                        # Spotify
+  R-spotify-ads:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify@ads.mrs"}                    # Spotify广告 → REJECT
 
   # ── Steam ──
-  R-steam:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"}                          # Steam
-  R-steam-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam@cn.mrs"}                       # Steam国内节点 → DIRECT
+  R-steam:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs"}                          # Steam
+  R-steam-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam@cn.mrs"}                       # Steam国内节点 → DIRECT
 
-  R-steamunlocked:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steamunlocked.mrs"}                  # SteamUnlocked游戏资源
-  R-steaminventory:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steaminventoryhelper.mrs"}           # Steam库存助手
+  R-steamunlocked:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steamunlocked.mrs"}                  # SteamUnlocked游戏资源
+  R-steaminventory:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steaminventoryhelper.mrs"}           # Steam库存助手
 
   # ── Epic ──
-  R-epicgames:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs"}                      # Epic Games
+  R-epicgames:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs"}                      # Epic Games
+
   # ── TapTap ──
-  R-taptap:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/taptap.mrs"}                         # TapTap
-  R-taptap-!cn:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/taptap@!cn.mrs"}                     # TapTap海外版
+  R-taptap:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/taptap.mrs"}                         # TapTap
+  R-taptap-!cn:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/taptap@!cn.mrs"}                     # TapTap海外版
 
   # ── Bilibili ──
-  R-bilibili-!cn:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili@!cn.mrs"}                   # B站海外版 → 代理
-  R-bilibili-cdn-!cn:   {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-cdn@!cn.mrs"}               # B站海外CDN → 代理
-  R-biliintl:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/biliintl.mrs"}                       # B站国际版
-  R-bilibili:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs"}                       # B站主域名 → DIRECT
-  R-bilibili-ip:        {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/bilibili.mrs"}                    # B站 IP → DIRECT
-  R-bilibili-game:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-game.mrs"}                  # B站游戏 → DIRECT
-  R-bilibili-cdn:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-cdn.mrs"}                   # B站CDN → DIRECT
+  R-bilibili-!cn:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili@!cn.mrs"}                   # B站海外版 → 代理
+  R-bilibili-cdn-!cn:    {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-cdn@!cn.mrs"}               # B站海外CDN → 代理
+  R-biliintl:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/biliintl.mrs"}                       # B站国际版
+  R-bilibili:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs"}                       # B站主域名 → DIRECT
+  R-bilibili-ip:         {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/bilibili.mrs"}                    # B站 IP → DIRECT
+  R-bilibili-game:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-game.mrs"}                  # B站游戏 → DIRECT
+  R-bilibili-cdn:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili-cdn.mrs"}                   # B站CDN → DIRECT
 
   # ── Speedtest ──
-  R-speedtest:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs"}                # Speedtest测速
+  R-speedtest:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ookla-speedtest.mrs"}                # Speedtest测速
 
   # ── Nodeseek ──
-  R-nodeseek:           {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/nodeseek.yaml"}                            # nodeseek自建服务
+  R-nodeseek:            {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/nodeseek.yaml"}                            # nodeseek自建服务
 
   # ── Cloudflare ──
-  R-cloudflare:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare.mrs"}                     # Cloudflare
-  R-cloudflare-ip:      {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudflare.mrs"}                       # Cloudflare IP
-  R-cloudflare-ipfs:    {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare-ipfs.mrs"}                # Cloudflare IPFS网关
-  R-cloudflare-cn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare-cn.mrs"}                  # Cloudflare中国域名 → DIRECT
+  R-cloudflare:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare.mrs"}                     # Cloudflare
+  R-cloudflare-ip:       {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudflare.mrs"}                       # Cloudflare IP
+  R-cloudflare-ipfs:     {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare-ipfs.mrs"}                # Cloudflare IPFS网关
+  R-cloudflare-cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare-cn.mrs"}                  # Cloudflare中国域名 → DIRECT
 
   # ── Aws ──
-  R-aws:                {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aws.yaml"}                                 # AWS
-  R-aws-cn:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aws@cn.yaml"}                              # AWS中国域名 → DIRECT
+  R-aws:                 {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aws.yaml"}                                 # AWS
+  R-aws-cn:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aws@cn.yaml"}                              # AWS中国域名 → DIRECT
 
   # ── Microsoft ──
-  R-microsoft:          {<<: *yaml,   url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.yaml"}                     # Microsoft全家桶
-  R-microsoft-cn:       {<<: *yaml,   url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.yaml"}                  # Microsoft国内节点 → DIRECT
+  R-microsoft:           {<<: *yaml,    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.yaml"}                     # Microsoft全家桶
+  R-microsoft-cn:        {<<: *yaml,    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.yaml"}                  # Microsoft国内节点 → DIRECT
 
   # ── Apple ──
-  R-icloud:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud.mrs"}                         # iCloud
-  R-icloud-cn:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud@cn.mrs"}                      # iCloud国内节点(云上贵州) → DIRECT
-  R-itunes:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/itunes.mrs"}                         # iTunes
-  R-itunes-cn:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/itunes@cn.mrs"}                      # iTunes国内节点 → DIRECT
-  R-apple-pki:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-pki.mrs"}                      # Apple证书服务(国际)
-  R-apple:              {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/apple.yaml"}                               # Apple全家桶
-  R-apple-ip:           {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/apple-ip.yaml"}                            # Apple IP段
-  R-apple-update:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-update.mrs"}                   # iOS/macOS系统更新 → DIRECT
-  R-apple-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-cn.mrs"}                       # Apple中国专属域名 → DIRECT
-  R-apple-at-cn:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple@cn.mrs"}                       # Apple国内服务补充 → DIRECT
-  R-apple-dev-cn:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-dev@cn.mrs"}                   # Apple开发者国内节点 → DIRECT
-  R-appleakamai:        {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/appleakamai.yaml"}                         # Apple akamai节点
+  R-icloud:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud.mrs"}                         # iCloud
+  R-icloud-cn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud@cn.mrs"}                      # iCloud国内节点(云上贵州) → DIRECT
+  R-itunes:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/itunes.mrs"}                         # iTunes
+  R-itunes-cn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/itunes@cn.mrs"}                      # iTunes国内节点 → DIRECT
+  R-apple-pki:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-pki.mrs"}                      # Apple证书服务(国际)
+  R-apple:               {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/apple.yaml"}                               # Apple全家桶
+  R-apple-ip:            {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/apple-ip.yaml"}                            # Apple IP段
+  R-apple-update:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-update.mrs"}                   # iOS/macOS系统更新 → DIRECT
+  R-apple-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-cn.mrs"}                       # Apple中国专属域名 → DIRECT
+  R-apple-at-cn:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple@cn.mrs"}                       # Apple国内服务补充 → DIRECT
+  R-apple-dev-cn:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-dev@cn.mrs"}                   # Apple开发者国内节点 → DIRECT
+  R-appleakamai:         {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/appleakamai.yaml"}                         # Apple akamai节点
 
   # ── Android ──
-  R-android:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/android.mrs"}                        # Android系统相关
-  R-fdroid:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/f-droid.mrs"}                        # F-Droid开源应用商店
-  R-apkpure:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkpure.mrs"}                        # APKPure
-  R-apkmirror:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkmirror.mrs"}                      # APKMirror
-  R-apkcombo:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkcombo.mrs"}                       # APKCombo
+  R-android:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/android.mrs"}                        # Android系统相关
+  R-fdroid:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/f-droid.mrs"}                        # F-Droid开源应用商店
+  R-apkpure:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkpure.mrs"}                        # APKPure
+  R-apkmirror:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkmirror.mrs"}                      # APKMirror
+  R-apkcombo:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apkcombo.mrs"}                       # APKCombo
 
   # ── CN App ──
-  R-wechat:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/wechat.yaml"}
-  R-wechat-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/wechat-ip.yaml"}
+  R-wechat:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/wechat.yaml"}
+  R-wechat-ip:           {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/wechat-ip.yaml"}
 
-  R-alipay:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/alipay.yaml"}
+  R-alipay:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/alipay.yaml"}
 
-  R-netease:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/netease.yaml"}
-  R-meituan:            {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/meituan.yaml"}
+  R-netease:             {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/netease.yaml"}
+  R-meituan:             {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/meituan.yaml"}
 
-  R-jingdong:           {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/jingdong.yaml"}
-  R-jingdongcloud-ip:   {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/jingdongcloud-ip.yaml"}
+  R-jingdong:            {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/jingdong.yaml"}
+  R-jingdongcloud-ip:    {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/jingdongcloud-ip.yaml"}
 
-  R-duowan:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/duowan.yaml"}                              # 多玩游戏/yy语音
-  R-duowan-ip:          {<<: *yaml-ip,url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/duowan-ip.yaml"}
+  R-duowan:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/duowan.yaml"}                              # 多玩游戏/yy语音
+  R-duowan-ip:           {<<: *yaml-ip, url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/duowan-ip.yaml"}
 
-  R-huawei:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/huawei.yaml"}
-  R-xiaomi:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/xiaomi.yaml"}
+  R-huawei:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/huawei.yaml"}
+  R-xiaomi:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/xiaomi.yaml"}
 
-  R-tencent:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent.mrs"}
-  R-tendcloud:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tendcloud.mrs"}
-  R-tencent-dev:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent-dev.mrs"}
-  R-tencent-games:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent-games.mrs"}
-  R-aliyun:             {<<: *yaml,   url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aliyun.yaml"}
-  R-aliyun-drive:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/aliyun-drive.mrs"}
-  R-alibaba:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/alibaba.mrs"}
-  R-alibabacloud:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/alibabacloud.mrs"}
+  R-tencent:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent.mrs"}
+  R-tendcloud:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tendcloud.mrs"}
+  R-tencent-dev:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent-dev.mrs"}
+  R-tencent-games:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent-games.mrs"}
+  R-aliyun:              {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aliyun.yaml"}
+  R-aliyun-drive:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/aliyun-drive.mrs"}
+  R-alibaba:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/alibaba.mrs"}
+  R-alibabacloud:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/alibabacloud.mrs"}
 
   # ── 硬件 / 杂项 ──
-  R-nvidia-cn:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nvidia@cn.mrs"}                      # Nvidia国内节点 → DIRECT
-  R-intel-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/intel@cn.mrs"}                       # Intel国内节点 → DIRECT
-  R-synology-cn:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/synology@cn.mrs"}                    # 群晖国内节点 → DIRECT
-  R-amazon-cn:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon@cn.mrs"}                      # Amazon国内节点 → DIRECT
+  R-nvidia-cn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nvidia@cn.mrs"}                      # Nvidia国内节点 → DIRECT
+  R-intel-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/intel@cn.mrs"}                       # Intel国内节点 → DIRECT
+  R-synology-cn:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/synology@cn.mrs"}                    # 群晖国内节点 → DIRECT
+  R-amazon-cn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon@cn.mrs"}                      # Amazon国内节点 → DIRECT
 
   # ══════════════════════════════════════════
   # 4.Final
   # ══════════════════════════════════════════
 
   # ── Category ──
-  R-cdn-cn:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-cdn-cn.mrs"}                # 国内CDN → DIRECT
-  R-bank-cn:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-bank-cn.mrs"}               # 国内银行 → DIRECT
-  R-securities-cn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-securities-cn.mrs"}         # 国内证券 → DIRECT
-  R-finance-cn:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-finance@cn.mrs"}            # 国内金融 → DIRECT
-  R-ntp-cn:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp-cn.mrs"}                # 国内NTP时间服务 → DIRECT
-  R-netdisk-cn:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-netdisk-cn.mrs"}            # 国内网盘 → DIRECT
-  R-games-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games-cn.mrs"}              # 国内游戏 → DIRECT
-  R-getui:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/getui.mrs"}                          # 国内个推推送服务 → DIRECT
-  R-globalsign@cn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/globalsign@cn.mrs"}                  # Globalsign国内节点 → DIRECT
-  R-digicert@cn:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/digicert@cn.mrs"}                    # Digicert国内节点 → DIRECT
+  R-cdn-cn:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-cdn-cn.mrs"}                # 国内CDN → DIRECT
+  R-bank-cn:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-bank-cn.mrs"}               # 国内银行 → DIRECT
+  R-securities-cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-securities-cn.mrs"}         # 国内证券 → DIRECT
+  R-finance-cn:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-finance@cn.mrs"}            # 国内金融 → DIRECT
+  R-ntp-cn:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ntp-cn.mrs"}                # 国内NTP时间服务 → DIRECT
+  R-netdisk-cn:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-netdisk-cn.mrs"}            # 国内网盘 → DIRECT
+  R-games-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-games-cn.mrs"}              # 国内游戏 → DIRECT
+  R-getui:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/getui.mrs"}                          # 国内个推推送服务 → DIRECT
+  R-globalsign@cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/globalsign@cn.mrs"}                  # Globalsign国内节点 → DIRECT
+  R-digicert@cn:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/digicert@cn.mrs"}                    # Digicert国内节点 → DIRECT
 
   # ── Final ──
-  geolocation-!cn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"}                # 非中国域名兜底 → 代理
-  geosite-cn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}                             # 中国域名兜底 → DIRECT
-  geoip-cn:             {<<: *ip,     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}                               # 中国IP兜底 → DIRECT
+  geolocation-!cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"}                # 非中国域名兜底 → 代理
+  geosite-cn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"}                             # 中国域名兜底 → DIRECT
+  geoip-cn:              {<<: *ip,      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs"}                               # 中国IP兜底 → DIRECT
 
   # ══════════════════════════════════════════
   # 5.R18 默认注释
   # ══════════════════════════════════════════
 
-  # ── 视频、直播与信息聚合 ──
-  R-54647:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/54647.mrs"}                      # 54647.com — 日本成人视频平台
-  R-928plus:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/928plus.mrs"}                    # 928plus.com — 成人视频
-  R-akiko:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/akiko.mrs"}                      # akiko — 日本 AV 女优站
-  R-avmoo:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/avmoo.mrs"}                      # avmoo.com — AV 影片数据库
-  R-baltamatica:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/baltamatica.mrs"}                # baltamatica — 成人视频
-  R-bdsmhub:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bdsmhub.mrs"}                    # bdsmhub.com — BDSM 主题成人视频
-  R-boboporn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/boboporn.mrs"}                   # boboporn — 成人视频
-  R-bongacams:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bongacams.mrs"}                  # bongacams.com — 成人直播平台
-  R-braveux:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/braveux.mrs"}                    # braveux — 成人视频
-  R-brazzers:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/brazzers.mrs"}                   # brazzers.com — 美国知名成人制片公司
-  R-camwhores:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/camwhores.mrs"}                  # camwhores.tv — 直播 / 自拍成人视频
-  R-cavporn:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cavporn.mrs"}                    # cavporn — 成人视频
-  R-chatwhores:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/chatwhores.mrs"}                 # chatwhores — 成人直播
-  R-clips4sale:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/clips4sale.mrs"}                 # clips4sale.com — 独立创作者成人视频平台
+  # ── 视频、直播与信息 聚合 ──
+  R-54647:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/54647.mrs"}                      # 54647.com — 日本成人视频平台
+  R-928plus:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/928plus.mrs"}                    # 928plus.com — 成人视频
+  R-akiko:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/akiko.mrs"}                      # akiko — 日本 AV 女优站
+  R-avmoo:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/avmoo.mrs"}                      # avmoo.com — AV 影片数据库
+  R-baltamatica:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/baltamatica.mrs"}                # baltamatica — 成人视频
+  R-bdsmhub:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bdsmhub.mrs"}                    # bdsmhub.com — BDSM 主题成人视频
+  R-boboporn:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/boboporn.mrs"}                   # boboporn — 成人视频
+  R-bongacams:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bongacams.mrs"}                  # bongacams.com — 成人直播平台
+  R-braveux:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/braveux.mrs"}                    # braveux — 成人视频
+  R-brazzers:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/brazzers.mrs"}                   # brazzers.com — 美国知名成人制片公司
+  R-camwhores:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/camwhores.mrs"}                  # camwhores.tv — 直播 / 自拍成人视频
+  R-cavporn:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cavporn.mrs"}                    # cavporn — 成人视频
+  R-chatwhores:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/chatwhores.mrs"}                 # chatwhores — 成人直播
+  R-clips4sale:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/clips4sale.mrs"}                 # clips4sale.com — 独立创作者成人视频平台
 
-  R-coomer:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/coomer.mrs"}                     # coomer.su — OF/Fansly 内容聚合
-  R-digitalplayground:  {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/digitalplayground.mrs"}          # digitalplayground.com — 美国成人制片公司
-  R-dwion:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dwion.mrs"}                      # dwion — 成人视频
-  R-fans66:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fans66.mrs"}                     # fans66 — 华人粉丝内容平台
-  R-fansta:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fansta.mrs"}                     # fansta — 成人内容订阅平台
-  R-heyzo:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/heyzo.mrs"}                      # heyzo.com — 日本无码 AV 平台
-  R-jable:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/jable.mrs"}                      # jable.tv — 日本 AV 影片聚合（繁中字幕）
-  R-japonx:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/japonx.mrs"}                     # japonx.com — 日本 AV 视频网站
+  R-coomer:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/coomer.mrs"}                     # coomer.su — OF/Fansly 内容聚合
+  R-digitalplayground:   {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/digitalplayground.mrs"}          # digitalplayground.com — 美国成人制片公司
+  R-dwion:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dwion.mrs"}                      # dwion — 成人视频
+  R-fans66:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fans66.mrs"}                     # fans66 — 华人粉丝内容平台
+  R-fansta:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/fansta.mrs"}                     # fansta — 成人内容订阅平台
+  R-heyzo:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/heyzo.mrs"}                      # heyzo.com — 日本无码 AV 平台
+  R-jable:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/jable.mrs"}                      # jable.tv — 日本 AV 影片聚合（繁中字幕）
+  R-japonx:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/japonx.mrs"}                     # japonx.com — 日本 AV 视频网站
 
-  R-javbus:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javbus.mrs"}                     # javbus.com — 日本 AV 数据库 / 磁链索引
-  R-javcc:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javcc.mrs"}                      # javcc — 日本 AV 数据库
-  R-javdb:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javdb.mrs"}                      # javdb.com — 日本 AV 数据库（评分 / 磁链）
-  R-javwide:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javwide.mrs"}                    # javwide — 日本 AV 相关
+  R-javbus:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javbus.mrs"}                     # javbus.com — 日本 AV 数据库 / 磁链索引
+  R-javcc:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javcc.mrs"}                      # javcc — 日本 AV 数据库
+  R-javdb:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javdb.mrs"}                      # javdb.com — 日本 AV 数据库（评分 / 磁链）
+  R-javwide:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/javwide.mrs"}                    # javwide — 日本 AV 相关
 
-  R-justav:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/justav.mrs"}                     # justav — 日本 AV 视频网站
-  R-kubakuba:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/kubakuba.mrs"}                   # kubakuba — 成人视频
-  R-lethalhardcore:     {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/lethalhardcore.mrs"}             # lethalhardcore.com — 美国成人制片公司
-  R-missav:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/missav.mrs"}                     # missav.com — 日本 AV 在线播放
-  R-mydirtyhobby:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mydirtyhobby.mrs"}               # mydirtyhobby.com — 德国业余成人内容平台
-  R-netflav:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflav.mrs"}                    # netflav.com — 日本 AV 在线流媒体
-  R-pingsx:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pingsx.mrs"}                     # pingsx — 成人视频
-  R-playboy:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/playboy.mrs"}                    # playboy.com — 成人杂志 / 内容平台
-  R-pornhub:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pornhub.mrs"}                    # pornhub.com — 全球最大成人视频平台
-  R-pornpros:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pornpros.mrs"}                   # pornpros.com — 美国成人制片公司
-  R-realitykings:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/realitykings.mrs"}               # realitykings.com — 美国成人制片公司
-  R-redtube:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/redtube.mrs"}                    # redtube.com — 成人视频平台
-  R-sehuatang:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/sehuatang.mrs"}                  # 色花堂 — 华人成人论坛 / 图片
-  R-smtiaojiaoshi:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/smtiaojiaoshi.mrs"}              # 丝袜调教师 — 成人视频 / 内容
-  R-spankbang:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spankbang.mrs"}                  # spankbang.com — 成人视频平台
-  R-swag:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/swag.mrs"}                       # swag.live — 台湾成人直播 / 视频平台
-  R-theporndude:        {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/theporndude.mrs"}                # theporndude.com — 成人网站导航 / 评测
-  R-tube8:              {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tube8.mrs"}                      # tube8.com — 成人视频平台（MindGeek 旗下）
+  R-justav:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/justav.mrs"}                     # justav — 日本 AV 视频网站
+  R-kubakuba:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/kubakuba.mrs"}                   # kubakuba — 成人视频
+  R-lethalhardcore:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/lethalhardcore.mrs"}             # lethalhardcore.com — 美国成人制片公司
+  R-missav:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/missav.mrs"}                     # missav.com — 日本 AV 在线播放
+  R-mydirtyhobby:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mydirtyhobby.mrs"}               # mydirtyhobby.com — 德国业余成人内容平台
+  R-netflav:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflav.mrs"}                    # netflav.com — 日本 AV 在线流媒体
+  R-pingsx:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pingsx.mrs"}                     # pingsx — 成人视频
+  R-playboy:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/playboy.mrs"}                    # playboy.com — 成人杂志 / 内容平台
+  R-pornhub:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pornhub.mrs"}                    # pornhub.com — 全球最大成人视频平台
+  R-pornpros:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pornpros.mrs"}                   # pornpros.com — 美国成人制片公司
+  R-realitykings:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/realitykings.mrs"}               # realitykings.com — 美国成人制片公司
+  R-redtube:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/redtube.mrs"}                    # redtube.com — 成人视频平台
+  R-sehuatang:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/sehuatang.mrs"}                  # 色花堂 — 华人成人论坛 / 图片
+  R-smtiaojiaoshi:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/smtiaojiaoshi.mrs"}              # 丝袜调教师 — 成人视频 / 内容
+  R-spankbang:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spankbang.mrs"}                  # spankbang.com — 成人视频平台
+  R-swag:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/swag.mrs"}                       # swag.live — 台湾成人直播 / 视频平台
+  R-theporndude:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/theporndude.mrs"}                # theporndude.com — 成人网站导航 / 评测
+  R-tube8:               {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tube8.mrs"}                      # tube8.com — 成人视频平台（MindGeek 旗下）
 
-  R-xhamster:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xhamster.mrs"}                   # xhamster.com — 成人视频平台
-  R-xhamster-ads:       {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xhamster@ads.mrs"}               # xHamster 广告域名 → 拦截
+  R-xhamster:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xhamster.mrs"}                   # xhamster.com — 成人视频平台
+  R-xhamster-ads:        {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xhamster@ads.mrs"}               # xHamster 广告域名 → 拦截
 
-  R-xingkongwuxianmedia: {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xingkongwuxianmedia.mrs"}        # 星空无限传媒 — 国产成人视频制作公司
-  R-xnxx:               {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xnxx.mrs"}                       # xnxx.com — 成人视频平台
-  R-xvideos:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xvideos.mrs"}                    # xvideos.com — 成人视频平台
+  R-xingkongwuxianmedia: {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xingkongwuxianmedia.mrs"}        # 星空无限传媒 — 国产成人视频制作公司
+  R-xnxx:                {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xnxx.mrs"}                       # xnxx.com — 成人视频平台
+  R-xvideos:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xvideos.mrs"}                    # xvideos.com — 成人视频平台
 
-  R-youjizz:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youjizz.mrs"}                    # youjizz.com — 成人视频平台
-  R-youporn:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youporn.mrs"}                    # youporn.com — 成人视频平台（MindGeek 旗下）
+  R-youjizz:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youjizz.mrs"}                    # youjizz.com — 成人视频平台
+  R-youporn:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youporn.mrs"}                    # youporn.com — 成人视频平台（MindGeek 旗下）
 
   # ── 漫画、图片与阅读社区 ──
-  R-18comic:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/18comic.mrs"}                    # 18comic.vip — 禁漫天堂（成人漫画）
-  R-boylove:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/boylove.mrs"}                    # boylove — BL 成人漫画 / 小说
-  R-ehentai:            {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ehentai.mrs"}                    # e-hentai.org — 成人同人漫画聚合
+  R-18comic:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/18comic.mrs"}                    # 18comic.vip — 禁漫天堂（成人漫画）
+  R-boylove:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/boylove.mrs"}                    # boylove — BL 成人漫画 / 小说
+  R-ehentai:            {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ehentai.mrs"}                    # e-hentai.org — 成人同人漫画聚合
 
-  R-hentaichen:         {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hentaichen.mrs"}                 # hentaichen — 中文成人漫画
-  R-hentaivn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hentaivn.mrs"}                   # hentaivn — 越南语成人漫画
+  R-hentaichen:         {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hentaichen.mrs"}                 # hentaichen — 中文成人漫画
+  R-hentaivn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hentaivn.mrs"}                   # hentaivn — 越南语成人漫画
 
-  R-metart:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/metart.mrs"}                     # metart.com — 艺术写真 / 成人图片平台
-  R-nudevista:          {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nudevista.mrs"}                  # nudevista.com — 成人图片 / 视频搜索引擎
-  R-truyen-hentai:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/truyen-hentai.mrs"}              # truyen-hentai — 越南语成人漫画
-  R-xingrz:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xingrz.mrs"}                     # xingrz — 成人图片 / 漫画
+  R-metart:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/metart.mrs"}                     # metart.com — 艺术写真 / 成人图片平台
+  R-nudevista:          {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nudevista.mrs"}                  # nudevista.com — 成人图片 / 视频搜索引擎
+  R-truyen-hentai:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/truyen-hentai.mrs"}              # truyen-hentai — 越南语成人漫画
+  R-xingrz:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xingrz.mrs"}                     # xingrz — 成人图片 / 漫画
 
   # ── 游戏平台与制作公司 ──
-  R-awempire:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/awempire.mrs"}                   # awempire.com — 成人娱乐集团（旗下多品牌）
-  R-dmm-porn:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dmm-porn.mrs"}                   # DMM 成人内容 — 日本成人数字内容平台
+  R-awempire:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/awempire.mrs"}                   # awempire.com — 成人娱乐集团（旗下多品牌）
+  R-dmm-porn:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dmm-porn.mrs"}                   # DMM 成人内容 — 日本成人数字内容平台
 
-  R-illgames:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illgames.mrs"}                   # illgames — 日本成人游戏制作商（前 Illusion）
-  R-illusion-nonoff:    {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illusion-nonofficial.mrs"}       # Illusion 非官方资源站
-  R-illusion:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illusion.mrs"}                   # Illusion — 日本知名成人游戏制作商
+  R-illgames:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illgames.mrs"}                   # illgames — 日本成人游戏制作商（前 Illusion）
+  R-illusion-nonoff:    {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illusion-nonofficial.mrs"}       # Illusion 非官方资源站
+  R-illusion:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/illusion.mrs"}                   # Illusion — 日本知名成人游戏制作商
 
-  R-mindgeek-porn:      {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mindgeek-porn.mrs"}              # MindGeek 成人内容（旗下含 PH / RedTube / YouPorn）
-  R-mindgeek:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mindgeek.mrs"}                   # mindgeek.com — 成人娱乐集团（Aylo 前身）
+  R-mindgeek-porn:      {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mindgeek-porn.mrs"}              # MindGeek 成人内容（旗下含 PH / RedTube / YouPorn）
+  R-mindgeek:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/mindgeek.mrs"}                   # mindgeek.com — 成人娱乐集团（Aylo 前身）
 
-  R-nutaku:             {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nutaku.mrs"}                     # nutaku.net — 成人游戏平台
-  R-pinkcore:           {<<: *domain, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pinkcore.mrs"}                   # pinkcore — 成人内容
+  R-nutaku:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nutaku.mrs"}                     # nutaku.net — 成人游戏平台
+  R-pinkcore:           {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pinkcore.mrs"}                   # pinkcore — 成人内容
 
 # =======================================================
 # 8. 分流规则 Rules
@@ -660,9 +668,9 @@ rule-providers:
 rules:
 
   # ══════════════════════════════════════════
-  # 0.My VPS
+  # 0.R-custom
   # ══════════════════════════════════════════
-
+  - RULE-SET,R-custom,Proxy
 
   # ══════════════════════════════════════════
   # 1.REJECT
@@ -670,9 +678,9 @@ rules:
   - RULE-SET,R-icloudprivaterelay,REJECT-DROP                      # iCloud 私有中继
   - RULE-SET,R-reject,REJECT-DROP
   - RULE-SET,R-reject-ip,REJECT-DROP,no-resolve
-  #- RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
-  #- RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
-  #- RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
+  - RULE-SET,R-ads,REJECT-DROP                                     # 全量广告拦截
+  - RULE-SET,R-ads-add,REJECT-DROP                                 # 增强广告拦截
+  - RULE-SET,R-ads-add-ip,REJECT-DROP,no-resolve                   # 增强广告拦截 IP
   - RULE-SET,R-httpdns-cn,REJECT-DROP                              # 国内 HTTPDNS 劫持
   - RULE-SET,R-win-spy,REJECT-DROP                                 # Windows 隐私追踪
 
@@ -796,7 +804,7 @@ rules:
   - RULE-SET,R-speedtest,Speedtest                                 # Speedtest
 
   # ── Nodeseek ──
-  - RULE-SET,R-nodeseek,Final                                      # NodeSeek
+  - RULE-SET,R-nodeseek,Proxy                                      # NodeSeek
 
   # ── YouTube ──
   - RULE-SET,R-youtube,YouTube                                     # YouTube
