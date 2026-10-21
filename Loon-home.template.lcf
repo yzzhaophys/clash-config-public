@@ -77,9 +77,16 @@ Final = select,♾️.Route-[Final.Fallback],DIRECT,REJECT,img-url=https://raw.g
 FINAL,Final
 
 [Remote Rule]
-# Matches home.yaml rules, including its three commented RULE-SET lines.
+# Rule sections follow home.yaml.
 # @sync-home:rules:start
+# ══════════════════════════════════════════
+# 0.R-custom
+# ══════════════════════════════════════════
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom.list, policy=Proxy, tag=R-custom, enabled=true
+
+# ══════════════════════════════════════════
+# 1.REJECT
+# ══════════════════════════════════════════
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-icloudprivaterelay.list, policy=REJECT-DROP, tag=R-icloudprivaterelay, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-reject.list, policy=REJECT-DROP, tag=R-reject, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-reject-ip.list, policy=REJECT-DROP, tag=R-reject-ip, enabled=true
@@ -88,13 +95,27 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-ads-add.lis
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-ads-add-ip.list, policy=REJECT-DROP, tag=R-ads-add-ip, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-httpdns-cn.list, policy=REJECT-DROP, tag=R-httpdns-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-win-spy.list, policy=REJECT-DROP, tag=R-win-spy, enabled=true
+
+# ══════════════════════════════════════════
+# 2.LAN
+# ══════════════════════════════════════════
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-private-ip.list, policy=DIRECT, tag=R-private-ip, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-private.list, policy=DIRECT, tag=R-private, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-fakeipfilter.list, policy=DIRECT, tag=R-fakeipfilter, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-connectivity.list, policy=DIRECT, tag=R-connectivity, enabled=true
+
+# ══════════════════════════════════════════
+# 3.Proxy
+# ══════════════════════════════════════════
+
+# ── OpenAI ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-openai.list, policy=OpenAI, tag=R-openai, enabled=true
+
+# ── Anthropic ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-anthropic.list, policy=Anthropic, tag=R-anthropic, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-anthropic-ip.list, policy=Anthropic, tag=R-anthropic-ip, enabled=true
+
+# ── AI ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-perplexity.list, policy=AI, tag=R-perplexity, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-groq.list, policy=AI, tag=R-groq, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cerebras.list, policy=AI, tag=R-cerebras, enabled=true
@@ -104,19 +125,33 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-elevenlabs.
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-comfy.list, policy=AI, tag=R-comfy, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-comfy-launcher.list, policy=AI, tag=R-comfy-launcher, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-ai.list, policy=AI, tag=R-ai, enabled=true
+
+# ── Crypto ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-crypto.list, policy=Crypto, tag=R-crypto, enabled=true
+
+# ── GitHub ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-github.list, policy=GitHub, tag=R-github, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-github1s.list, policy=GitHub, tag=R-github1s, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-github-copilot.list, policy=GitHub, tag=R-github-copilot, enabled=true
+
+# ── Discord ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-discord.list, policy=Discord, tag=R-discord, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-discord-ip.list, policy=Discord, tag=R-discord-ip, enabled=true
+
+# ── Telegram ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-telegram.list, policy=Telegram, tag=R-telegram, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-telegram-ip.list, policy=Telegram, tag=R-telegram-ip, enabled=true
+
+# ── Social ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-reddit.list, policy=Social, tag=R-reddit, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-tumblr.list, policy=Social, tag=R-tumblr, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-line.list, policy=Social, tag=R-line, enabled=true
+
+# ── Meta ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-meta-ads.list, policy=REJECT-DROP, tag=R-meta-ads, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-meta.list, policy=Meta, tag=R-meta, enabled=true
+
+# ── Elon Musk ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-x-ads.list, policy=REJECT-DROP, tag=R-x-ads, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-twitter-ads.list, policy=REJECT-DROP, tag=R-twitter-ads, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-xai.list, policy=X, tag=R-xai, enabled=true
@@ -127,14 +162,20 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-spacex.list
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-neuralink.list, policy=X, tag=R-neuralink, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-theboringcompany.list, policy=X, tag=R-theboringcompany, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-tesla.list, policy=X, tag=R-tesla, enabled=true
+
+# ── TikTok / 字节跳动 ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-tiktok.list, policy=TikTok, tag=R-tiktok, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bytedance-ai-%21cn.list, policy=TikTok, tag=R-bytedance-ai-!cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bytedance-%21cn.list, policy=TikTok, tag=R-bytedance-!cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-douyin.list, policy=CN, tag=R-douyin, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-douyin-ip.list, policy=CN, tag=R-douyin-ip, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bytedance.list, policy=CN, tag=R-bytedance, enabled=true
+
+# ── Netflix ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-netflix.list, policy=Netflix, tag=R-netflix, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-netflix-ip.list, policy=Netflix, tag=R-netflix-ip, enabled=true
+
+# ── Media ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-hulu.list, policy=Media, tag=R-hulu, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-primevideo.list, policy=Media, tag=R-primevideo, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-dazn.list, policy=Media, tag=R-dazn, enabled=true
@@ -144,15 +185,25 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-vimeo.list,
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-twitch.list, policy=Media, tag=R-twitch, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-rumble.list, policy=Media, tag=R-rumble, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-plex.list, policy=Media, tag=R-plex, enabled=true
+
+# ── Spotify ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-spotify-ads.list, policy=REJECT-DROP, tag=R-spotify-ads, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-spotify.list, policy=Spotify, tag=R-spotify, enabled=true
+
+# ── Steam ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-steam-cn.list, policy=Steam, tag=R-steam-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-steam.list, policy=Steam, tag=R-steam, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-steamunlocked.list, policy=Steam, tag=R-steamunlocked, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-steaminventory.list, policy=Steam, tag=R-steaminventory, enabled=true
+
+# ── Epic ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-epicgames.list, policy=Epic, tag=R-epicgames, enabled=true
+
+# ── TapTap ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-taptap.list, policy=TapTap, tag=R-taptap, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-taptap-%21cn.list, policy=TapTap, tag=R-taptap-!cn, enabled=true
+
+# ── Bilibili ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-%21cn.list, policy=Bilibili, tag=R-bilibili-!cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-cdn-%21cn.list, policy=Bilibili, tag=R-bilibili-cdn-!cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-biliintl.list, policy=Bilibili, tag=R-biliintl, enabled=true
@@ -160,9 +211,17 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili.li
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-ip.list, policy=Bilibili, tag=R-bilibili-ip, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-game.list, policy=Bilibili, tag=R-bilibili-game, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-cdn.list, policy=Bilibili, tag=R-bilibili-cdn, enabled=true
+
+# ── Speedtest ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-speedtest.list, policy=Speedtest, tag=R-speedtest, enabled=true
+
+# ── Nodeseek ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nodeseek.list, policy=Proxy, tag=R-nodeseek, enabled=true
+
+# ── YouTube ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-youtube.list, policy=YouTube, tag=R-youtube, enabled=true
+
+# ── Google ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-google-play-cn.list, policy=Google, tag=R-google-play-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-firebase-cn.list, policy=Google, tag=R-firebase-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-amp-cn.list, policy=Google, tag=R-amp-cn, enabled=true
@@ -180,14 +239,22 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-dart.list, 
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-v8.list, policy=Google, tag=R-v8, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-goproxy.list, policy=Google, tag=R-goproxy, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-amp.list, policy=Google, tag=R-amp, enabled=true
+
+# ── Cloudflare ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cloudflare-cn.list, policy=CN, tag=R-cloudflare-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cloudflare.list, policy=Cloudflare, tag=R-cloudflare, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cloudflare-ipfs.list, policy=Cloudflare, tag=R-cloudflare-ipfs, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cloudflare-ip.list, policy=Cloudflare, tag=R-cloudflare-ip, enabled=true
+
+# ── Aws ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-aws.list, policy=Amazon, tag=R-aws, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-aws-cn.list, policy=CN, tag=R-aws-cn, enabled=true
+
+# ── Microsoft ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-microsoft-cn.list, policy=Microsoft, tag=R-microsoft-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-microsoft.list, policy=Microsoft, tag=R-microsoft, enabled=true
+
+# ── Apple ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-icloud-cn.list, policy=Apple, tag=R-icloud-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-itunes-cn.list, policy=Apple, tag=R-itunes-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apple-pki.list, policy=Apple, tag=R-apple-pki, enabled=true
@@ -200,14 +267,20 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-itunes.list
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apple.list, policy=Apple, tag=R-apple, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-appleakamai.list, policy=Apple, tag=R-appleakamai, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apple-ip.list, policy=Apple, tag=R-apple-ip, enabled=true
+
+# ── Android ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-android.list, policy=Android, tag=R-android, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-fdroid.list, policy=Android, tag=R-fdroid, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apkpure.list, policy=Android, tag=R-apkpure, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apkmirror.list, policy=Android, tag=R-apkmirror, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-apkcombo.list, policy=Android, tag=R-apkcombo, enabled=true
+
+# ── Adobe ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-adobe-cn.list, policy=Adobe, tag=R-adobe-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-adobe-activation.list, policy=Adobe, tag=R-adobe-activation, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-adobe.list, policy=Adobe, tag=R-adobe, enabled=true
+
+# ── CN App ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-wechat.list, policy=CN, tag=R-wechat, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-wechat-ip.list, policy=CN, tag=R-wechat-ip, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-alipay.list, policy=CN, tag=R-alipay, enabled=true
@@ -227,10 +300,18 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-aliyun.list
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-aliyun-drive.list, policy=CN, tag=R-aliyun-drive, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-alibaba.list, policy=CN, tag=R-alibaba, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-alibabacloud.list, policy=CN, tag=R-alibabacloud, enabled=true
+
+# ── 硬件 / 杂项 ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nvidia-cn.list, policy=CN, tag=R-nvidia-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-intel-cn.list, policy=CN, tag=R-intel-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-synology-cn.list, policy=CN, tag=R-synology-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-amazon-cn.list, policy=CN, tag=R-amazon-cn, enabled=true
+
+# ══════════════════════════════════════════
+# 5.R18 默认注释
+# ══════════════════════════════════════════
+
+# ── 视频、直播与信息聚合 ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-54647.list, policy=R18, tag=R-54647, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-928plus.list, policy=R18, tag=R-928plus, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-akiko.list, policy=R18, tag=R-akiko, enabled=true
@@ -282,6 +363,8 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-xnxx.list, 
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-xvideos.list, policy=R18, tag=R-xvideos, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-youjizz.list, policy=R18, tag=R-youjizz, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-youporn.list, policy=R18, tag=R-youporn, enabled=true
+
+# ── 漫画、图片与阅读社区 ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-18comic.list, policy=R18, tag=R-18comic, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-boylove.list, policy=R18, tag=R-boylove, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-ehentai.list, policy=R18, tag=R-ehentai, enabled=true
@@ -291,6 +374,8 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-metart.list
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nudevista.list, policy=R18, tag=R-nudevista, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-truyen-hentai.list, policy=R18, tag=R-truyen-hentai, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-xingrz.list, policy=R18, tag=R-xingrz, enabled=true
+
+# ── 游戏平台与制作公司 ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-awempire.list, policy=R18, tag=R-awempire, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-dmm-porn.list, policy=R18, tag=R-dmm-porn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-illgames.list, policy=R18, tag=R-illgames, enabled=true
@@ -300,6 +385,10 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-mindgeek-po
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-mindgeek.list, policy=R18, tag=R-mindgeek, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nutaku.list, policy=R18, tag=R-nutaku, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-pinkcore.list, policy=R18, tag=R-pinkcore, enabled=true
+
+# ══════════════════════════════════════════
+# 6.Final
+# ══════════════════════════════════════════
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-cdn-cn.list, policy=DIRECT, tag=R-cdn-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bank-cn.list, policy=DIRECT, tag=R-bank-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-securities-cn.list, policy=DIRECT, tag=R-securities-cn, enabled=true
@@ -310,6 +399,8 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-games-cn.li
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-getui.list, policy=DIRECT, tag=R-getui, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-globalsign%40cn.list, policy=DIRECT, tag=R-globalsign@cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-digicert%40cn.list, policy=DIRECT, tag=R-digicert@cn, enabled=true
+
+# ── GEO Final ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/geolocation-%21cn.list, policy=Final, tag=geolocation-!cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/geosite-cn.list, policy=DIRECT, tag=geosite-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/geoip-cn.list, policy=DIRECT, tag=geoip-cn, enabled=true

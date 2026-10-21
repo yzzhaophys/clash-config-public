@@ -20,6 +20,7 @@ TEMPLATE = ROOT / "Loon-home.template.lcf"
 LIST_BASE = "https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists"
 PROVIDER_COMMENT = re.compile(r"^(  )#\s*([\w.!@-]+):\s*(\{.*)$")
 RULE_COMMENT = re.compile(r"^(  )#\s*(-\s*RULE-SET,.*)$")
+SOURCE_RULE = re.compile(r"^\s*-\s*RULE-SET\s*,")
 START_GROUPS = "# @sync-home:groups:start"
 END_GROUPS = "# @sync-home:groups:end"
 START_RULES = "# @sync-home:rules:start"
@@ -119,6 +120,32 @@ def render_rules(rules, providers):
     return rendered
 
 
+def render_rule_sections(home: Path, rendered: list[str]) -> list[str]:
+    """Copy standalone home.yaml rule comments around generated remote rules."""
+    lines = home.read_text(encoding="utf-8-sig").splitlines()
+    start = next((i for i, line in enumerate(lines) if line.strip() == "rules:"), None)
+    if start is None:
+        raise ValueError("home.yaml lacks rules")
+    source = lines[start + 1:]
+    positions = [i for i, line in enumerate(source)
+                 if SOURCE_RULE.match(line) or RULE_COMMENT.match(line)]
+    if len(positions) != len(rendered):
+        raise ValueError("home.yaml rule lines do not match parsed RULE-SET references")
+    rows = []
+    rule_index = 0
+    for line in source[:positions[-1] + 1]:
+        if SOURCE_RULE.match(line) or RULE_COMMENT.match(line):
+            rows.append(rendered[rule_index])
+            rule_index += 1
+        elif line.lstrip().startswith("#"):
+            rows.append(line.strip())
+        elif not line.strip():
+            rows.append("")
+    while rows and not rows[0]:
+        rows.pop(0)
+    return rows
+
+
 def replace_block(lines, start_marker, end_marker, rows, section):
     start = [i for i, x in enumerate(lines) if x.strip() == start_marker]
     end = [i for i, x in enumerate(lines) if x.strip() == end_marker]
@@ -161,7 +188,8 @@ def render(home: Path, template: Path, lists_dir: Path | None = None):
                 f"{len(actual - expected)} extra"
             )
     groups = render_groups(data.get("proxy-groups"))
-    rules = render_rules(data.get("rules"), data.get("rule-providers"))
+    rule_entries = render_rules(data.get("rules"), data.get("rule-providers"))
+    rules = render_rule_sections(home, rule_entries)
     original = template.read_text(encoding="utf-8")
     lines = original.splitlines(keepends=True)
     for marker in DYNAMIC_MARKERS:
@@ -171,7 +199,7 @@ def render(home: Path, template: Path, lists_dir: Path | None = None):
     lines = replace_block(lines, START_RULES, END_RULES, rules, "[Remote Rule]")
     result = "".join(lines)
     validate_public_template(result)
-    return result, len(groups), len(rules)
+    return result, len(groups), len(rule_entries)
 
 
 def main():

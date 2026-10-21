@@ -403,17 +403,16 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 
 完整 Loon 配置使用公开 `Loon-home.template.lcf` 的六个 `# @generate:` 标记，
 分别填入 Proxy、Proxy Chain 和 Route、Line、Chain、DirectExit 四层基础组。
-DNS、MitM 域名等其他行原样保留。当前模板的 30 个业务组
+DNS、MitM 域名等其他行原样保留。模板的业务组
 由 `sync_loon_template.py` 按 `home.yaml` 的名称、顺序、成员和图标生成；`[Remote Rule]` 按 `home.yaml` 的
-233 条 `RULE-SET` 引用顺序，使用公开的 `yzzhaophys/loon-rules` 仓库中同名 `.list`。
+`RULE-SET` 引用顺序和独立分组注释，使用公开的 `yzzhaophys/loon-rules` 仓库中同名 `.list`。
 该仓库直接按公开 `home.yaml` 中的地址下载上游 YAML：原本使用 MRS 的规则取上游同名 YAML，
-再转换并发布 234 个 `.list`；所有规则成功后才更新，失败时保留旧列表。
-其中包括 3 条已注释的规则源及规则引用；模板中这 3 条也设置为 `enabled=true`，
-因此它们在 Loon 中会生效。未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅。
+再转换并发布同名 `.list`；所有规则成功后才更新，失败时保留旧列表。
+未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅。
 `[Rule]` 的 `FINAL` 指向与 Mihomo 同名的 `Final` 业务组。以后修改 `home.yaml` 的
 业务组或 `rules` 时，运行 `python3 sync_loon_template.py`；推送 `home.yaml` 到主分支后，
 GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的模板。
-如新增规则集尚未发布，该次同步会失败并保留旧模板；每天的定时任务会重试。
+如新增规则集尚未发布，工作流会保留旧模板并等待每天的定时任务重试。
 节点生成器不会改写这些固定内容。模板不包含
 `ca-p12` 和 `ca-passphrase`；每台设备导入后须在 Loon 中生成 CA，
 再在系统中安装并信任该证书，才能使用 MitM。节点变化后可运行：

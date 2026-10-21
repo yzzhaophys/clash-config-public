@@ -14,8 +14,12 @@ rule-providers:
   R-one: {behavior: domain}
   # R-two: {behavior: ipcidr}
 rules:
+  # ── First group ──
   - RULE-SET,R-one,AI
+
+  # ── Second group ──
   #- RULE-SET,R-two,REJECT-DROP,no-resolve
+  # ── Final ──
   - MATCH,Final
 """
 
@@ -63,6 +67,11 @@ class SyncLoonTemplateTests(unittest.TestCase):
             self.assertIn("AI = select,DIRECT,REJECT,img-url=https://example.com/icon.png", result)
             self.assertIn("/R-one.list, policy=AI, tag=R-one, enabled=true", result)
             self.assertIn("/R-two.list, policy=REJECT-DROP, tag=R-two, enabled=true", result)
+            remote = result.split(sync.START_RULES, 1)[1].split(sync.END_RULES, 1)[0]
+            self.assertLess(remote.index("# ── First group ──"), remote.index("/R-one.list"))
+            self.assertLess(remote.index("# ── Second group ──"), remote.index("/R-two.list"))
+            self.assertNotIn("# ── Final ──", remote)
+            self.assertNotIn("#- RULE-SET", remote)
             self.assertIn("[General]\nip-mode = v4-only", result)
             self.assertIn("[Mitm]\nhostname = example.com", result)
             self.assertIn("# @generate:route", result)
