@@ -34,6 +34,10 @@ SENSITIVE_KEY = re.compile(
 )
 
 
+class PendingRuleLists(ValueError):
+    """The published rule lists have not caught up with home.yaml yet."""
+
+
 def home_data(path: Path):
     lines = path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
     provider_start = next((i for i, x in enumerate(lines) if x.strip() == "rule-providers:"), None)
@@ -152,7 +156,7 @@ def render(home: Path, template: Path, lists_dir: Path | None = None):
         expected = {f"{name}.list" for name in data.get("rule-providers", {})}
         actual = {path.name for path in lists_dir.glob("*.list")}
         if not expected or expected != actual:
-            raise ValueError(
+            raise PendingRuleLists(
                 f"rule lists are not synchronized: {len(expected - actual)} missing, "
                 f"{len(actual - expected)} extra"
             )
@@ -175,14 +179,22 @@ def main():
     parser.add_argument("--home", type=Path, default=HOME)
     parser.add_argument("--template", type=Path, default=TEMPLATE)
     parser.add_argument("--lists-dir", type=Path, help="require the published list names to match home.yaml")
+    parser.add_argument("--wait-for-lists", action="store_true", help="succeed without changes while published lists catch up")
     parser.add_argument("--check", action="store_true", help="fail if the template needs updating")
     args = parser.parse_args()
+    if args.wait_for_lists and args.lists_dir is None:
+        parser.error("--wait-for-lists requires --lists-dir")
     if args.template.is_symlink() or args.template.stat().st_nlink != 1:
         parser.error("template cannot be a symlink or hardlink")
     if args.home.resolve() == args.template.resolve():
         parser.error("home and template must be different files")
     try:
         content, groups, rules = render(args.home, args.template, args.lists_dir)
+    except PendingRuleLists as exc:
+        if args.wait_for_lists:
+            print(f"Waiting for published Loon lists: {exc}")
+            return
+        parser.error(str(exc))
     except (OSError, UnicodeError, ValueError) as exc:
         parser.error(str(exc))
     old = args.template.read_text(encoding="utf-8")

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -98,6 +100,34 @@ class SyncLoonTemplateTests(unittest.TestCase):
             (lists / "R-two.list").write_text("IP-CIDR,192.0.2.0/24\n", encoding="utf-8")
             _, groups, rules = sync.render(home, template, lists)
             self.assertEqual((groups, rules), (1, 2))
+
+    def test_cli_waits_without_changing_template_then_syncs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home.yaml"
+            template = root / "template.lcf"
+            lists = root / "lists"
+            lists.mkdir()
+            home.write_text(HOME, encoding="utf-8")
+            template.write_text(TEMPLATE, encoding="utf-8")
+            (lists / "R-one.list").write_text("DOMAIN,example.com\n", encoding="utf-8")
+            command = [sys.executable, str(Path(sync.__file__)), "--home", str(home),
+                       "--template", str(template), "--lists-dir", str(lists),
+                       "--wait-for-lists"]
+            waiting = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(waiting.returncode, 0, waiting.stderr)
+            self.assertIn("Waiting for published Loon lists", waiting.stdout)
+            self.assertEqual(template.read_text(encoding="utf-8"), TEMPLATE)
+            (lists / "R-two.list").write_text("IP-CIDR,192.0.2.0/24\n", encoding="utf-8")
+            synced = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(synced.returncode, 0, synced.stderr)
+            self.assertIn("Updated template", synced.stdout)
+            self.assertIn("/R-two.list", template.read_text(encoding="utf-8"))
+            home.write_text(HOME.replace("R-one: {behavior: domain}",
+                                         "R-one: {behavior: domain}\n  R-one: {behavior: domain}"),
+                            encoding="utf-8")
+            invalid = subprocess.run(command, capture_output=True, text=True)
+            self.assertNotEqual(invalid.returncode, 0)
 
     def test_rejects_private_content_in_public_template(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -440,7 +440,8 @@ GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的
 
 `loon-rules` 位于另一个 GitHub 仓库，当前按每天定时任务或手动触发更新 `.list`；
 本仓库在 `home.yaml` 推送后尝试同步模板，另在规则仓库日常构建后定时重试。
-新规则的 `.list` 尚未发布时，模板不会提前引用它；可手动触发 `loon-rules` 的更新工作流加快发布。
+新规则的 `.list` 尚未发布时，工作流成功结束并保留旧模板，待规则发布后定时重试；
+可手动触发 `loon-rules` 更新工作流，再触发本仓库模板工作流加快发布。
 仅修改本地 `home.yaml` 不会触发 GitHub Actions；本地可先运行
 `python3 ../loon-rules/build.py --home home.yaml --output ../loon-rules/lists`，再运行
 `python3 sync_loon_template.py --lists-dir ../loon-rules/lists`，最后生成完整 Loon 配置。
