@@ -32,7 +32,7 @@ bypass-tun=10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12
 
 [Proxy Group]
 # @sync-home:groups:start
-Speedtest = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/speedtest.png
+Proxy = select,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/proxy.png
 OpenAI = select,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/chatgpt.png
 Anthropic = select,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/claude.png
 AI = select,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/ai.png
@@ -59,6 +59,7 @@ Bilibili = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.
 Steam = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/steam.png
 Epic = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/epic.png
 TapTap = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/taptap.png
+Speedtest = select,DIRECT,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/speedtest.png
 R18 = select,🏠.Route-[US.HomeIP.Preferred],🏠.Route-[JP.HomeIP.Preferred],🏠.Route-[SG.HomeIP.Preferred],🌏.Route-[EastAsia],🌏.Route-[SoutheastAsia],🌎.Route-[Americas],🌏.Route-[Oceania],🌍.Route-[Europe],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/r18.png
 CN = select,DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/cn.png
 Final = select,♾️.Route-[Final.Fallback],DIRECT,REJECT,img-url=https://raw.githubusercontent.com/uhovohu/clash/main/icons/final.png
@@ -78,6 +79,7 @@ FINAL,Final
 [Remote Rule]
 # Matches home.yaml rules, including its three commented RULE-SET lines.
 # @sync-home:rules:start
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom.list, policy=Proxy, tag=R-custom, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-icloudprivaterelay.list, policy=REJECT-DROP, tag=R-icloudprivaterelay, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-reject.list, policy=REJECT-DROP, tag=R-reject, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-reject-ip.list, policy=REJECT-DROP, tag=R-reject-ip, enabled=true
@@ -159,7 +161,7 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-ip
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-game.list, policy=Bilibili, tag=R-bilibili-game, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bilibili-cdn.list, policy=Bilibili, tag=R-bilibili-cdn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-speedtest.list, policy=Speedtest, tag=R-speedtest, enabled=true
-https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nodeseek.list, policy=Final, tag=R-nodeseek, enabled=true
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-nodeseek.list, policy=Proxy, tag=R-nodeseek, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-youtube.list, policy=YouTube, tag=R-youtube, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-google-play-cn.list, policy=Google, tag=R-google-play-cn, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-firebase-cn.list, policy=Google, tag=R-firebase-cn, enabled=true
