@@ -130,7 +130,6 @@ dns:
   direct-nameserver:                         # 直连兜底 专职负责解析走 DIRECT 分流规则的域名
     - 223.5.5.5
     - 119.29.29.29
-  direct-nameserver-follow-policy: true      # 直连解析遵循 nameserver-policy
   nameserver:                                # 默认 DNS：使用 DoH，出口跟随 Proxy 策略组
   # - 8.8.8.8#Proxy&disable-qtype-65=true
   # - 1.1.1.1#Proxy&disable-qtype-65=true
