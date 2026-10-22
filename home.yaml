@@ -59,15 +59,15 @@ sniffer:
       ports: [443]                           # 嗅探 HTTPS/TLS 加密流量，通过读取握手包中的 SNI 获取真实域名
     QUIC:
       ports: [443]                           # 嗅探 QUIC HTTP/3 协议流量
-  skip-domain:                               # 嗅探豁免名 遇到以下域名直接放行不拆包，防止破坏特殊协议导致断连
-    - "rule-set:R-private"                   # 局域网 / 私有域名：必须返回真实 IP，否则本地服务无法访问
-    - "rule-set:R-fakeipfilter"              # 标准 Fake-IP 豁免表 NTP / STUN / 音乐 / 游戏等
-    - "rule-set:R-connectivity"              # 连通性探测：返回假 IP 会导致 Windows/macOS 报断网
-    - "rule-set:R-cdn-cn"                    # 国内 CDN：需要真实 IP 做就近调度
-    - "rule-set:R-bank-cn"                   # 国内银行：假 IP 会触发证书校验失败
+  skip-domain:                               # 以下域名跳过嗅探，连接仍按分流规则处理
+    - "rule-set:R-private"                   # 局域网 / 私有域名
+    - "rule-set:R-fakeipfilter"              # NTP / STUN / 音乐 / 游戏等
+    - "rule-set:R-connectivity"              # 连通性检测
+    - "rule-set:R-cdn-cn"                    # 国内 CDN
+    - "rule-set:R-bank-cn"                   # 国内银行
     - "rule-set:R-securities-cn"             # 国内证券
     - "rule-set:R-finance-cn"                # 国内金融
-    - "rule-set:R-ntp-cn"                    # 国内 NTP：假 IP 导致时间同步失败
+    - "rule-set:R-ntp-cn"                    # 国内 NTP
     - "rule-set:R-icloud-cn"                 # iCloud 国内节点 云上贵州
     - "rule-set:R-itunes-cn"                 # iTunes 国内节点
     - "rule-set:R-apple-pki"                 # Apple 证书服务
@@ -80,7 +80,7 @@ sniffer:
     - "rule-set:R-apple"                     # Apple 全家桶
     - "rule-set:R-wechat"
 
-  skip-dst-address:                          # 目的地址豁免 遇到以下 IP 地址直接放行不拆包，防止破坏特殊协议导致断连
+  skip-dst-address:                          # 以下目标 IP 跳过嗅探，连接仍按分流规则处理
     - "rule-set:R-sniffer-skip-ip"
     - "rule-set:R-private-ip"                # 局域网 / 私有 IP 地址列表
     - "rule-set:R-telegram-ip"               # Telegram 服务器 IP 地址列表
@@ -93,14 +93,14 @@ sniffer:
 tun:
   enable: true                               # 开启 TUN 虚拟网卡
   stack: mixed                               # 混合网络栈：TCP 走 system (高性能)，UDP 走 gVisor (高兼容)
-  dns-hijack: ["udp://any:53", "tcp://any:53"]   # 双重劫持标准 DNS 端口，彻底防泄漏
+  dns-hijack: ["udp://any:53", "tcp://any:53"]   # 将进入 TUN 的 TCP/UDP 53 端口请求交给内置 DNS
   #device: nikki                             #使用nikki，混入全部不修改的情况，开启接口指定为nikki
 
-  #使用仅内核自行修改下面三项为true 路由控制 使用 GUI 客户端保持 false，纯内核命令行运行改为 true
+  #路由相关选项需结合操作系统及客户端最终运行配置设置
   auto-route: false                          # 不自动修改系统路由表，交由外层客户端管理，防冲突
   auto-redirect: false                       # 不自动配置重定向流量规则
   auto-detect-interface: false               # 不自动探测物理出口网卡
-  strict-route: false                        # 严格路由限制 开启后物理网卡被锁死，GUI 环境建议 false
+  strict-route: false                        # 严格路由开关；当前为兼容 WSL2 保持关闭
 
 # =======================================================
 # 5. DNS
@@ -112,8 +112,8 @@ dns:
   cache-algorithm: arc                       # DNS 缓存淘汰算法 ARC 相比传统 LRU 命中率更高
   listen: 0.0.0.0:1053                       # DNS 服务监听端口
   ipv6: false                                # 关闭 IPv6 解析 保持与全局设置一致
-  respect-rules: true                        # DNS 请求遵循分流规则，由规则决定 DNS 查询走向而非固定出口
-  prefer-h3: false                           # 是否优先使用 DoH/DoT 的 HTTP/3 传输，关闭以保证兼容性
+  respect-rules: true                        # DNS 连接遵循路由规则；显式指定的 #Proxy 等出口优先
+  prefer-h3: false                           # 是否优先使用 HTTP/3 连接 DoH 服务器
 
   # ── Fake-IP ──
   enhanced-mode: fake-ip                     # 开启 Fake-IP 增强模式 秒回假 IP，极大提升网络响应速度
@@ -121,30 +121,30 @@ dns:
   fake-ip-filter-mode: blacklist             # 黑名单过滤模式 名单内的域名不返回假 IP，要求真实解析
 
   # ── DNS ──
-  default-nameserver:                        # 基础启动 用于最底层解析下方 proxy-server-nameserver 本身及代理节点的域名
+  default-nameserver:                        # 引导 DNS：用于解析 DNS 服务器的域名
     - 223.5.5.5
     - 223.6.6.6
-  proxy-server-nameserver:                   # 节点专线 专职负责解析 “节点” 和 “订阅链接” 的真实 IP
+  proxy-server-nameserver:                   # 专门用于解析代理节点的域名
     - https://223.5.5.5/dns-query
     - https://doh.pub/dns-query
   direct-nameserver:                         # 直连兜底 专职负责解析走 DIRECT 分流规则的域名
     - 223.5.5.5
     - 119.29.29.29
-  nameserver:                                # 国外兜底 处理所有未知的兜底域名，防止 DNS 污染 附带节点选择强制走代理出境
-    # 使用明文 DNS 地址，因大部分家宽不支持 DoH 解析，有需求的用户可以自行替换为 https://1.1.1.1/dns-query#Final&disable-qtype-65=true 或 https://8.8.8.8/dns-query#Final&disable-qtype-65=true
-  # - 8.8.8.8#Final&disable-qtype-65=true
-  # - 1.1.1.1#Final&disable-qtype-65=true
-    - https://1.1.1.1/dns-query#Final&disable-qtype-65=true
-    - https://8.8.8.8/dns-query#Final&disable-qtype-65=true
+  direct-nameserver-follow-policy: true      # 直连解析遵循 nameserver-policy
+  nameserver:                                # 默认 DNS：使用 DoH，出口跟随 Proxy 策略组
+  # - 8.8.8.8#Proxy&disable-qtype-65=true
+  # - 1.1.1.1#Proxy&disable-qtype-65=true
+    - https://1.1.1.1/dns-query#Proxy&disable-qtype-65=true
+    - https://8.8.8.8/dns-query#Proxy&disable-qtype-65=true
   # ── DNS 分流 ──
   nameserver-policy:
-    "rule-set:R-private": [system]                                      # 局域网 / 私有域名：必须返回真实 IP，否则本地服务无法访问
-    "rule-set:R-fakeipfilter": [system, 223.5.5.5, 119.29.29.29]        # Fake-IP 豁免域名 → 系统 DNS，确保返回真实 IP
-    "rule-set:R-connectivity": [system, 223.5.5.5, 119.29.29.29]        # 连通性检测 微软/苹果 → 系统 DNS，防止误报"无网络"
-    "rule-set:R-cdn-cn": [system, 223.5.5.5, 119.29.29.29]              # 国内 CDN → 系统 DNS，获得最近节点 IP
-    "rule-set:R-bank-cn": [system, 223.5.5.5, 119.29.29.29]             # 国内银行 → 系统 DNS，防止 DNS 污染导致证书异常
-    "rule-set:R-securities-cn": [system, 223.5.5.5, 119.29.29.29]       # 国内证券 → 系统 DNS
-    "rule-set:R-finance-cn": [system, 223.5.5.5, 119.29.29.29]          # 国内金融 → 系统 DNS
+    "rule-set:R-private": [system]                                      # 局域网 / 私有域名：使用系统 DNS 解析
+    "rule-set:R-fakeipfilter": [system, 223.5.5.5, 119.29.29.29]        # Fake-IP 豁免域名 → 使用系统 DNS 与国内公共 DNS
+    "rule-set:R-connectivity": [system, 223.5.5.5, 119.29.29.29]        # 连通性检测 微软/苹果 → 使用系统 DNS 与国内公共 DNS
+    "rule-set:R-cdn-cn": [system, 223.5.5.5, 119.29.29.29]              # 国内 CDN → 使用系统 DNS 与国内公共 DNS
+    "rule-set:R-bank-cn": [system, 223.5.5.5, 119.29.29.29]             # 国内银行 → 使用系统 DNS 与国内公共 DNS
+    "rule-set:R-securities-cn": [system, 223.5.5.5, 119.29.29.29]       # 国内证券 → 使用系统 DNS 与国内公共 DNS
+    "rule-set:R-finance-cn": [system, 223.5.5.5, 119.29.29.29]          # 国内金融 → 使用系统 DNS 与国内公共 DNS
     "rule-set:R-ntp-cn": [system, 223.5.5.5, 119.29.29.29]              # 国内 NTP
     "rule-set:R-wechat": [system, 223.5.5.5, 119.29.29.29]              # 微信
     "rule-set:R-alipay": [system, 223.5.5.5, 119.29.29.29]              # 支付宝
@@ -166,14 +166,14 @@ dns:
   fake-ip-filter:
     - "+.aitacoo.com"
     - "+.yzznode.com"
-    - "rule-set:R-private"                   # 局域网 / 私有域名：必须返回真实 IP，否则本地服务无法访问
+    - "rule-set:R-private"                   # 局域网 / 私有域名：使用真实 IP
     - "rule-set:R-fakeipfilter"              # 标准 Fake-IP 豁免表 NTP / STUN / 音乐 / 游戏等
-    - "rule-set:R-connectivity"              # 连通性探测：返回假 IP 会导致 Windows/macOS 报断网
-    - "rule-set:R-cdn-cn"                    # 国内 CDN：需要真实 IP 做就近调度
-    - "rule-set:R-bank-cn"                   # 国内银行：假 IP 会触发证书校验失败
+    - "rule-set:R-connectivity"              # 连通性检测：使用真实 IP 以兼容相关服务
+    - "rule-set:R-cdn-cn"                    # 国内 CDN：使用真实 IP
+    - "rule-set:R-bank-cn"                   # 银行服务：使用真实 IP 以兼容相关应用
     - "rule-set:R-securities-cn"             # 国内证券
     - "rule-set:R-finance-cn"                # 国内金融
-    - "rule-set:R-ntp-cn"                    # 国内 NTP：假 IP 导致时间同步失败
+    - "rule-set:R-ntp-cn"                    # 国内 NTP：使用真实 IP
     - "rule-set:R-wechat"
     - "rule-set:R-alipay"
     - "rule-set:R-netease"
