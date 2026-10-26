@@ -21,6 +21,7 @@ LIST_BASE = "https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists"
 PROVIDER_COMMENT = re.compile(r"^(  )#\s*([\w.!@-]+):\s*(\{.*)$")
 RULE_COMMENT = re.compile(r"^(  )#\s*(-\s*RULE-SET,.*)$")
 SOURCE_RULE = re.compile(r"^\s*-\s*RULE-SET\s*,")
+HOME_UDP_443_RULE = "AND,((NETWORK,UDP),(DST-PORT,443)),REJECT"
 START_GROUPS = "# @sync-home:groups:start"
 END_GROUPS = "# @sync-home:groups:end"
 START_RULES = "# @sync-home:rules:start"
@@ -98,6 +99,8 @@ def render_rules(rules, providers):
     for rule in rules:
         if not isinstance(rule, str):
             raise ValueError("rules must contain strings")
+        if rule == HOME_UDP_443_RULE:
+            continue  # Loon keeps this policy in [General] as disable-udp-ports.
         fields = [part.strip() for part in rule.split(",")]
         if fields[0] == "MATCH":
             if len(fields) != 2 or fields[1] != "Final":
@@ -118,6 +121,28 @@ def render_rules(rules, providers):
     if not rendered:
         raise ValueError("no RULE-SET rules")
     return rendered
+
+
+def validate_udp_443_mapping(rules, template_content):
+    """Require the public Loon template to mirror home.yaml's UDP/443 block."""
+    home_count = rules.count(HOME_UDP_443_RULE)
+    if home_count > 1:
+        raise ValueError("duplicate UDP/443 rule in home.yaml")
+    section = ""
+    values = []
+    for line in template_content.splitlines():
+        entry = line.strip()
+        if entry.startswith("[") and entry.endswith("]"):
+            section = entry
+        elif section == "[General]" and not entry.startswith(("#", ";")):
+            key, separator, value = entry.partition("=")
+            if separator and key.strip() == "disable-udp-ports":
+                values.append(value.split("#", 1)[0])
+    if len(values) > 1:
+        raise ValueError("duplicate disable-udp-ports in Loon template")
+    loon_has_port = bool(values and "443" in [part.strip() for part in values[0].split(",")])
+    if bool(home_count) != loon_has_port:
+        raise ValueError("home.yaml UDP/443 rule and Loon [General] disable-udp-ports=443 differ")
 
 
 def render_rule_sections(home: Path, rendered: list[str]) -> list[str]:
@@ -191,6 +216,7 @@ def render(home: Path, template: Path, lists_dir: Path | None = None):
     rule_entries = render_rules(data.get("rules"), data.get("rule-providers"))
     rules = render_rule_sections(home, rule_entries)
     original = template.read_text(encoding="utf-8")
+    validate_udp_443_mapping(data["rules"], original)
     lines = original.splitlines(keepends=True)
     for marker in DYNAMIC_MARKERS:
         if sum(x.strip() == marker for x in lines) != 1:
