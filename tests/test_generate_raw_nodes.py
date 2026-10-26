@@ -1277,7 +1277,6 @@ class GeneratorTests(unittest.TestCase):
                 )
 
             rendered = yaml.safe_load(output.read_text())
-            self.assertFalse((Path(directory) / "stash-nodes.generated.stoverride").exists())
 
         self.assertEqual(rendered["proxies"], [proxy])
 

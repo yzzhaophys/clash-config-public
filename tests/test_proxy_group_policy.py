@@ -42,6 +42,12 @@ class ProxyGroupPolicyTests(unittest.TestCase):
             with self.subTest(rule=rule):
                 self.assertIn(target, targets)
 
+    def test_udp_443_is_rejected_before_proxy_rules(self):
+        rules = self.config["rules"]
+        rule = "AND,((NETWORK,UDP),(DST-PORT,443)),REJECT"
+        self.assertEqual(rules.count(rule), 1)
+        self.assertLess(rules.index(rule), rules.index("RULE-SET,R-openai,OpenAI"))
+
     def test_automatic_groups_have_bounded_health_checks(self):
         automatic = [group for group in self.groups.values() if group["type"] != "select"]
         self.assertTrue(automatic)
