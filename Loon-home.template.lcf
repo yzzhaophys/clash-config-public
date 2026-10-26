@@ -2,7 +2,6 @@
 ip-mode=v4-only
 ipv6-vif=off
 dns-server=system
-disable-udp-ports=443
 sni-sniffing=true
 disable-stun=true
 dns-reject-mode=LoopbackIP

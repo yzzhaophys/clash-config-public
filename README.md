@@ -55,11 +55,6 @@ Clash Verge 使用 `home.yaml` 和节点生成器输出的 `proxies` 片段；�
 校验节点筛选并生成 Loon 基础组，不会自动合并或重载正在运行的 Clash Verge 配置。Loon 可单独使用生成的
 `loon-nodes.conf`，或显式指定公开模板生成带固定规则的完整配置。
 
-`home.yaml` 在 LAN 规则之后、Proxy 业务规则之前拒绝 UDP 目的端口 443，覆盖常见的 QUIC/HTTP/3 流量。
-该条件按网络类型和端口匹配，因此其他 UDP/443 流量也会被拒绝；使用非 443 端口的 QUIC 不会匹配这条规则。
-公开 Loon 模板在 `[General]` 中使用 `disable-udp-ports=443`；同步脚本检查它与 `home.yaml` 的这条规则同时存在。
-Loon 的设置作用于所有进入客户端的 UDP/443，`home.yaml` 则先匹配 LAN 规则，因此两者对 LAN 流量的处理范围不同。
-
 ## 要求
 
 - Python 3.10+

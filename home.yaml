@@ -694,7 +694,6 @@ rules:
   # ══════════════════════════════════════════
   # 3.Proxy
   # ══════════════════════════════════════════
-  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT                      # QUIC UDP
 
   # ── OpenAI ──
   - RULE-SET,R-openai,OpenAI                                       # OpenAI

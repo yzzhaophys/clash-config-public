@@ -55,40 +55,6 @@ hostname = example.com
 
 
 class SyncLoonTemplateTests(unittest.TestCase):
-    def test_udp_443_rule_requires_matching_general_setting(self):
-        home_text = HOME.replace(
-            "  - RULE-SET,R-one,AI\n",
-            "  - RULE-SET,R-one,AI\n"
-            "  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT\n",
-        )
-        template_text = TEMPLATE.replace(
-            "ip-mode = v4-only\n", "ip-mode = v4-only\ndisable-udp-ports = 80,443\n"
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            home = root / "home.yaml"
-            template = root / "template.lcf"
-            home.write_text(home_text, encoding="utf-8")
-            template.write_text(template_text, encoding="utf-8")
-            result, groups, rules = sync.render(home, template)
-            self.assertEqual((groups, rules), (1, 2))
-            self.assertIn("disable-udp-ports = 80,443", result)
-            self.assertNotIn("AND,((NETWORK,UDP)", result)
-
-            template.write_text(TEMPLATE, encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "disable-udp-ports=443"):
-                sync.render(home, template)
-            self.assertEqual(template.read_text(encoding="utf-8"), TEMPLATE)
-
-            home.write_text(HOME, encoding="utf-8")
-            template.write_text(template_text, encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "disable-udp-ports=443"):
-                sync.render(home, template)
-
-            home.write_text(home_text.replace("DST-PORT,443", "DST-PORT,8443"), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "unsupported rule"):
-                sync.render(home, template)
-
     def test_sync_includes_commented_rule_and_preserves_static_sections(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
