@@ -1218,6 +1218,8 @@ def loon_vless(proxy: dict[str, Any]) -> str:
     uuid = require_nonempty_string(proxy.get('uuid'), 'VLESS uuid', trim=False)
     fields = ["VLESS", *loon_server_fields(proxy), loon_quote(uuid)]
     options = loon_transport_options(proxy)
+    if 'client-fingerprint' in proxy:
+        options.append(loon_option('tls-profile', proxy['client-fingerprint']))
 
     reality = proxy.get("reality-opts") or {}
     if reality and not isinstance(reality, dict):
@@ -1343,7 +1345,7 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
     common = {'name', 'type', 'server', 'port', 'udp'}
     supported = {
         'vless': {'uuid', 'flow', 'tls', 'network', 'ws-opts', 'http-opts',
-                  'reality-opts', 'sni', 'servername', 'skip-cert-verify', 'alpn', 'encryption'},
+                  'reality-opts', 'sni', 'servername', 'skip-cert-verify', 'alpn', 'encryption', 'client-fingerprint'},
         'hysteria2': {'password', 'sni', 'servername', 'skip-cert-verify',
                       'fast-open', 'salamander-password', 'obfs', 'obfs-password'},
         'ss': {'cipher', 'password', 'plugin', 'plugin-opts'},
@@ -1358,6 +1360,10 @@ def loon_node_body(proxy: dict[str, Any]) -> str:
         if key in proxy and not isinstance(proxy[key], str):
             raise ValueError(f'Loon {key} 必须是字符串')
     if protocol == 'vless':
+        if 'client-fingerprint' in proxy:
+            # Loon documents tls-profile=chrome. Keep unsupported fingerprints explicit.
+            if proxy['client-fingerprint'] != 'chrome' or proxy.get('tls') is not True:
+                raise ValueError('Loon client-fingerprint 仅支持 TLS/Reality 的 chrome → tls-profile=chrome')
         if 'flow' in proxy and (not isinstance(proxy['flow'], str)
                                 or '\n' in proxy['flow'] or '\r' in proxy['flow']):
             raise ValueError('Loon flow 必须是有效字符串')

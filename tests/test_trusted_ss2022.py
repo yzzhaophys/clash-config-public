@@ -37,3 +37,21 @@ class TrustedSS2022Tests(unittest.TestCase):
                 before = target.read_bytes()
                 self.assertNotEqual(manager.main(['merge', '--target', str(target), '--source', str(source), '--apply']), 0)
                 self.assertEqual(target.read_bytes(), before)
+
+
+class LoonRealityProfileTests(unittest.TestCase):
+    def test_reality_chrome_maps_to_documented_tls_profile(self):
+        proxy = {'type': 'vless', 'server': '192.0.2.1', 'port': 31080,
+                 'uuid': '13fd5eb8-8676-4d5b-a320-bc4fd8a7ac00', 'network': 'tcp',
+                 'tls': True, 'flow': 'xtls-rprx-vision', 'servername': 'fixture.test',
+                 'client-fingerprint': 'chrome', 'reality-opts': {'public-key': 'fixture-public', 'short-id': '0123'}}
+        body = generator.loon_node_body(proxy)
+        self.assertIn('tls-profile=chrome', body)
+        self.assertIn('31080', body)
+        self.assertIn('public-key=', body)
+        self.assertIn('short-id=0123', body)
+        for fingerprint in ('firefox', '', False):
+            with self.subTest(fingerprint=fingerprint), self.assertRaises(ValueError):
+                generator.loon_node_body({**proxy, 'client-fingerprint': fingerprint})
+        del proxy['client-fingerprint']
+        self.assertNotIn('tls-profile=', generator.loon_node_body(proxy))

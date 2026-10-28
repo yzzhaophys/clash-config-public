@@ -586,3 +586,10 @@ Mihomo 对 DNS policy 引用的 `classical` 规则集会提示只匹配其中的
 不得将设备证书复制进模板。
 
 修改规则或节点后，应重新验证生成配置的加载、Loon App 中的规则命中及实际网络连通。
+
+
+### VLESS/Reality 指纹转换
+
+VLESS TLS/Reality 的 `client-fingerprint: chrome` 明确导出为 Loon 的 `tls-profile=chrome`，
+依据 [Loon 单节点文档](https://nsloon.app/docs/Node/)。缺失时不补默认；其他指纹或未启用 TLS
+的指纹声明仍明确拒绝并报告，避免静默丢失握手参数。此规则适用于受管和 trusted 节点。
