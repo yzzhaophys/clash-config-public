@@ -312,8 +312,8 @@ def _normalize_remove_selector(
     normalized_protocol = (
         str(protocol).strip().lower() if protocol is not None else None
     )
-    if normalized_protocol not in {None, "vless", "hysteria2", "socks5"}:
-        raise TrustedNodesError("删除目标 protocol 必须是 vless、hysteria2 或 socks5")
+    if normalized_protocol not in {None, "vless", "hysteria2", "socks5", "ss"}:
+        raise TrustedNodesError("删除目标 protocol 必须是 vless、hysteria2、socks5 或 ss")
     return normalized_id, normalized_protocol
 
 
@@ -628,7 +628,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     remove.add_argument("--id", required=True, help="要退役的稳定节点 id")
     remove.add_argument(
         "--protocol",
-        choices=("vless", "hysteria2", "socks5"),
+        choices=("vless", "hysteria2", "socks5", "ss"),
         help="只删除指定协议；省略时删除该 id 的全部协议",
     )
     remove.add_argument(

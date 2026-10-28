@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import json
 import os
@@ -229,6 +230,15 @@ def require_proxy_credentials(
             proxy["cipher"] = require_nonempty_string(
                 proxy.get("cipher"), f"{field}.cipher", trim=False,
             )
+            if proxy["cipher"].startswith("2022-"):
+                sizes = {"2022-blake3-aes-128-gcm": 16, "2022-blake3-aes-256-gcm": 32,
+                         "2022-blake3-chacha20-poly1305": 32}
+                try:
+                    raw = base64.b64decode(proxy["password"], validate=True)
+                    if len(raw) != sizes.get(proxy["cipher"]) or base64.b64encode(raw).decode() != proxy["password"]:
+                        raise ValueError
+                except (ValueError, TypeError):
+                    raise ValueError(f"{field}: SS2022 cipher 或 Base64 密钥长度无效") from None
     elif protocol == "socks5" and authenticated_socks5:
         require_socks5_credentials(proxy, field)
 
@@ -310,6 +320,7 @@ def node_name(
         "vless": "VLESS",
         "hysteria2": "H2",
         "socks5": "SOCKS5",
+        "ss": "SS",
     }.get(protocol, protocol.upper() or "NODE")
     descriptions = {
         "Core": f"{cn}核心节点",
@@ -813,7 +824,7 @@ def normalize_trusted_nodes(
     are supported as optional, authenticated client-facing nodes for
     special/NAT hosts.
     """
-    allowed_protocols = {"vless", "hysteria2", "socks5"}
+    allowed_protocols = {"vless", "hysteria2", "socks5", "ss"}
     seen: set[tuple[str, str]] = set()
     normalized: list[dict[str, Any]] = []
 
@@ -842,7 +853,7 @@ def normalize_trusted_nodes(
         protocol = str(proxy.get("type", "")).strip().lower()
         if protocol not in allowed_protocols:
             raise ValueError(
-                f"{field}.proxy.type 只支持 vless、hysteria2 或 socks5，"
+                f"{field}.proxy.type 只支持 vless、hysteria2、socks5 或 ss，"
                 f"当前值为 {protocol or '<empty>'}"
             )
         server = require_nonempty_string(
@@ -885,11 +896,11 @@ def normalize_trusted_nodes(
         ).strip().lower()
         if relay_protocol not in allowed_protocols:
             raise ValueError(
-                f"{field}.relay-protocol 必须是 vless、hysteria2 或 socks5"
+                f"{field}.relay-protocol 必须是 vless、hysteria2、socks5 或 ss"
             )
         if chain_exit_protocol not in allowed_protocols:
             raise ValueError(
-                f"{field}.chain-exit-protocol 必须是 vless、hysteria2 或 socks5"
+                f"{field}.chain-exit-protocol 必须是 vless、hysteria2、socks5 或 ss"
             )
         if allow_relay and relay_protocol != protocol:
             raise ValueError(

@@ -254,11 +254,18 @@ allow-direct-exit: false
 
 多台 NAT 节点应合并到同一个 `trusted-nodes.yaml`，不要直接覆盖已有文件。使用仓库内的
 `manage_trusted_nodes.py` 先预览、再按 `id + proxy.type` 应用：同一物理节点可以分别登记
-VLESS、Hysteria2 和 SOCKS5；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
+VLESS、Hysteria2、SOCKS5 和 Shadowsocks（ss）；新组合会追加，已有组合原位更新，其他节点保留。应用时会创建 0600
 时间戳备份并进行锁定和原子替换。判断节点是否变化时递归比较值及类型，
 嵌套参数的 `false` → `0` 或整数 → 浮点数也算更新。
 目标文件和包含凭据的临时源文件都必须禁止 group/other 访问；
 源文件与目标文件不能指向同一个文件，包括硬链接别名。
+SS2022 trusted 节点使用 `proxy.type: ss`，保留 `cipher`、`password` 和显式 `udp`。
+AES-128/256-GCM 分别校验 16/32 字节规范 Base64 密钥；2022 ChaCha20 使用 32 字节。
+不接受普通口令代替 SS2022 密钥。Mihomo/Loon 输出保留完整方法名及 UDP 字段，
+客户端须支持该方法；配置生成不代表真实网络或整条代理链已验收。
+导入仍先预览再加 `--apply`，删除可用 `remove --id <id> --protocol ss` 先预览再确认；
+失败保持原 inventory，恢复按下方已有备份流程，不自动重载客户端。
+
 日常维护运行：
 
 ```bash
