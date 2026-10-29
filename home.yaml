@@ -165,6 +165,7 @@ dns:
   fake-ip-filter:
     - "+.aitacoo.com"
     - "+.yzznode.com"
+    - "rule-set:R-custom-direct"
     - "rule-set:R-private"                   # 局域网 / 私有域名：使用真实 IP
     - "rule-set:R-fakeipfilter"              # 标准 Fake-IP 豁免表 NTP / STUN / 音乐 / 游戏等
     - "rule-set:R-connectivity"              # 连通性检测：使用真实 IP 以兼容相关服务
@@ -235,7 +236,7 @@ proxy-groups:
   - {name: R18,         type: select, proxies: [ '🏠.Route-[US.HomeIP.Preferred]' , '🏠.Route-[JP.HomeIP.Preferred]' , '🏠.Route-[SG.HomeIP.Preferred]' , '🌏.Route-[EastAsia]'            , '🌏.Route-[SoutheastAsia]'       , '🌎.Route-[Americas]'            , '🌏.Route-[Oceania]'             , '🌍.Route-[Europe]'              , 'DIRECT'                        , 'REJECT'                        ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/r18.png"}         # 成人内容
 
   # ── CN / Final ──
-  - {name: CN,          type: select, proxies: [ 'DIRECT'                         , 'REJECT'                         ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/cn.png"}          # 默认国内直连
+  - {name: CN,          type: select, proxies: [ 'DIRECT'                         , 'REJECT'                                                            ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/cn.png"}          # 默认国内直连
   - {name: Final,       type: select, proxies: [ '♾️.Route-[Final.Fallback]'      , 'DIRECT'                         , 'REJECT'                         ], icon: "https://raw.githubusercontent.com/uhovohu/clash/main/icons/final.png"}       # 未匹配流量
 
   # ── Regions ──
@@ -314,7 +315,8 @@ rule-providers:
   # ══════════════════════════════════════════
   # 0.R-custom
   # ══════════════════════════════════════════
-  R-custom:              {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/custom.yaml"}
+  R-custom-proxy:        {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/proxy.yaml"}
+  R-custom-direct:       {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/direct.yaml"}
 
   # ══════════════════════════════════════════
   # 1.REJECT
@@ -669,7 +671,8 @@ rules:
   # ══════════════════════════════════════════
   # 0.R-custom
   # ══════════════════════════════════════════
-  - RULE-SET,R-custom,Proxy
+  - RULE-SET,R-custom-proxy,Proxy
+  - RULE-SET,R-custom-direct,DIRECT
 
   # ══════════════════════════════════════════
   # 1.REJECT
@@ -694,7 +697,6 @@ rules:
   # ══════════════════════════════════════════
   # 3.Proxy
   # ══════════════════════════════════════════
-
   # ── OpenAI ──
   - RULE-SET,R-openai,OpenAI                                       # OpenAI
 

@@ -559,6 +559,10 @@ DNS 上游、解析策略和规则集映射以 `home.yaml` 当前内容为准；
 或 WSL 中运行。迁移时应带齐共享 Python 模块并安装 PyYAML。
 
 当前 `home.yaml` 的 `rule-providers` 直接引用上游 URL。
+自定义代理域名维护在 `rules/proxy.yaml`，自定义直连域名维护在 `rules/direct.yaml`，
+两者均使用 domain 格式的 `payload`；无规则时使用 `payload: []`。
+`R-custom-proxy` 优先于 `R-custom-direct`，重复域名会优先走代理；直连规则集同时加入
+Fake-IP 豁免。新增或改名规则文件须与 `home.yaml` 一起发布，再更新 `loon-rules` 并同步 Loon 模板。
 
 ## 维护与验证
 

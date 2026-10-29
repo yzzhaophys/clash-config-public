@@ -1,0 +1,6 @@
+# 嘉信理财（Charles Schwab），包含各域名的子域名。
+payload:
+  - "+.schwab.com"
+  - "+.schwab.com.hk"
+  - "+.schwab.com.sg"
+  - "+.schwabcdn.com"

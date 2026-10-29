@@ -82,7 +82,8 @@ FINAL,Final
 # ══════════════════════════════════════════
 # 0.R-custom
 # ══════════════════════════════════════════
-https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom.list, policy=Proxy, tag=R-custom, enabled=true
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-proxy.list, policy=Proxy, tag=R-custom-proxy, enabled=true
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-direct.list, policy=DIRECT, tag=R-custom-direct, enabled=true
 
 # ══════════════════════════════════════════
 # 1.REJECT
@@ -107,7 +108,6 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-connectivit
 # ══════════════════════════════════════════
 # 3.Proxy
 # ══════════════════════════════════════════
-
 # ── OpenAI ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-openai.list, policy=OpenAI, tag=R-openai, enabled=true
 
