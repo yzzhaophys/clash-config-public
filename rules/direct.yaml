@@ -1,14 +1,2 @@
 # 自定义直连域名，包含主域名及其所有子域名。
-payload:
-  # 嘉信理财（Charles Schwab）
-  - "+.schwab.com"
-  - "+.schwab.com.hk"
-  - "+.schwab.com.sg"
-  - "+.schwabcdn.com"
-  # 汇丰（HSBC）：集团、香港、中国内地、澳门、新加坡、英国
-  - "+.hsbc.com"
-  - "+.hsbc.com.hk"
-  - "+.hsbc.com.cn"
-  - "+.hsbc.com.mo"
-  - "+.hsbc.com.sg"
-  - "+.hsbc.co.uk"
+payload: []
