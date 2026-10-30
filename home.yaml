@@ -249,7 +249,7 @@ proxy-groups:
   # ── Regions ──
   - { name : '🏠.Route-[US.HomeIP.Preferred]' , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇺🇸.Line-[US.HomeIP]' , '🇺🇸.Line-[US]' ] }  # 代理链优先，直出备用；在各自子组内自动选择节点
   - { name : '🏠.Route-[JP.HomeIP.Preferred]' , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇯🇵.Line-[JP.HomeIP]' , '🇯🇵.Line-[JP]' ] }
-  - { name : '🏠.Route-[SG.HomeIP.Preferred]' , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇸🇬.Line-[SG.HomeIP]' , '🇸🇬.Line-[SG]' ] }
+  - { name : '🏠.Route-[SG.HomeIP.Preferred]' , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇸🇬.Line-[SG.HomeIP]' , '🇸🇬.Line-[SG]' , '♾️.Route-[Final.Fallback]' ] }
   - { name : '🏠.Route-[HK.HomeIP.Preferred]' , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇭🇰.Line-[HK.HomeIP]' , '🇭🇰.Line-[HK]' ] }
   - { name : '🌏.Route-[EastAsia]'            , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇯🇵.Line-[JP]'        , '🇭🇰.Line-[HK]' , '🇹🇼.Line-[TW]' ] }  #
   - { name : '🌏.Route-[SoutheastAsia]'       , url : 'https://www.gstatic.com/generate_204' , expected-status : 204 , max-failed-times : 2 , type : 'fallback' , interval : 90  , timeout : 5000 , lazy : true , proxies : [ '🇸🇬.Line-[SG]'        , '🇲🇾.Line-[MY]' ] }
@@ -354,8 +354,8 @@ rule-providers:
   # 3.Proxy
   # ══════════════════════════════════════════
   # ── Bank ──
-  R-bankUS:              {<<: *yaml,    url: "https://cdn.jsdelivr.net/gh/Accademia/Additional_Rule_For_Clash@latest/Bank/BankUS_Domain.yaml"}                 # BankUS
-  R-bankHK:              {<<: *yaml,    url: "https://cdn.jsdelivr.net/gh/Accademia/Additional_Rule_For_Clash@latest/Bank/BankHK_Domain.yaml"}                 # BankHK
+  R-bankUS:              {<<: *yaml,    url: "https://raw.githubusercontent.com/Accademia/Additional_Rule_For_Clash/main/Bank/BankUS_Domain.yaml"}                 # BankUS
+  R-bankHK:              {<<: *yaml,    url: "https://raw.githubusercontent.com/Accademia/Additional_Rule_For_Clash/main/Bank/BankHK_Domain.yaml"}                 # BankHK
 
   # ── YouTube ──
   R-youtube:             {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"}                        # YouTube
