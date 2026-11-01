@@ -683,12 +683,6 @@ rule-providers:
 rules:
 
   # ══════════════════════════════════════════
-  # 0.R-custom
-  # ══════════════════════════════════════════
-  - RULE-SET,R-custom-proxy,Proxy
-  - RULE-SET,R-custom-direct,DIRECT
-
-  # ══════════════════════════════════════════
   # 1.REJECT
   # ══════════════════════════════════════════
   - RULE-SET,R-icloudprivaterelay,REJECT-DROP                      # iCloud 私有中继
@@ -711,6 +705,10 @@ rules:
   # ══════════════════════════════════════════
   # 3.Proxy
   # ══════════════════════════════════════════
+  # ── R-custom ──
+  - RULE-SET,R-custom-direct,DIRECT
+  - RULE-SET,R-custom-proxy,Proxy
+
   # ── Bank ──
   - RULE-SET,R-bankUS,BankUS
   - RULE-SET,R-bankHK,BankHK
