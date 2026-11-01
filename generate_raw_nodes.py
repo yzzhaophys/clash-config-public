@@ -267,8 +267,11 @@ def host_capabilities(host_dir: Path, env: dict[str, str]) -> dict[str, Any]:
     allowed_protocols = {"vless", "hysteria2"}
     if relay_protocol not in allowed_protocols:
         raise ValueError("VPS_CLASH_RELAY_PROTOCOL 必须是 vless 或 hysteria2")
-    if chain_exit_protocol not in allowed_protocols:
-        raise ValueError("VPS_CLASH_CHAIN_EXIT_PROTOCOL 必须是 vless 或 hysteria2")
+    chain_exit_protocols = [part.strip() for part in chain_exit_protocol.split(",")]
+    if (not chain_exit_protocols or any(part not in allowed_protocols | {"ss"} for part in chain_exit_protocols)
+            or len(chain_exit_protocols) != len(set(chain_exit_protocols))):
+        raise ValueError("VPS_CLASH_CHAIN_EXIT_PROTOCOL 必须是互不重复的 vless、hysteria2 或 ss")
+    chain_exit_protocol = ",".join(chain_exit_protocols)
     return {
         "region": region,
         "allow_relay": allow_relay,
@@ -626,6 +629,32 @@ def xray_nodes(host_dir: Path, env: dict[str, str], counters: dict[tuple[str, st
         for inbound_index, inbound in enumerate(inbounds):
             if not isinstance(inbound, dict):
                 raise ValueError(f"{file}: inbounds[{inbound_index}] 必须是映射")
+            if inbound.get("protocol") == "shadowsocks":
+                field = f"{file}: inbounds[{inbound_index}]"
+                settings = inbound.get("settings")
+                if not isinstance(settings, dict):
+                    raise ValueError(f"{field}.settings 必须是映射")
+                network = settings.get("network", "tcp")
+                if not isinstance(network, str) or network not in {"tcp", "udp", "tcp,udp", "udp,tcp"}:
+                    raise ValueError(f"{field}.settings.network 必须是 tcp、udp 或 tcp,udp")
+                config = {
+                    "type": "ss",
+                    "server": require_nonempty_string(env.get("VPS_HOST"), f"{field}.VPS_HOST"),
+                    "port": parse_port(inbound.get("port"), f"{field}.port"),
+                    "cipher": settings.get("method"),
+                    "password": settings.get("password"),
+                    "udp": "udp" in network.split(","),
+                }
+                require_proxy_credentials(config, "ss", field)
+                key = (region, "ss")
+                idx = counters.get(key, 0)
+                counters[key] = idx + 1
+                out.append(attach_capabilities({
+                    "name": node_name(region, "ss", idx, role,
+                                      allow_direct_exit=capabilities["allow_direct_exit"]),
+                    **config,
+                }, capabilities))
+                continue
             if inbound.get("protocol") != "vless":
                 continue
             settings = inbound.get("settings", {})
@@ -1743,7 +1772,9 @@ def chain_candidates(proxies: list[dict[str, Any]]) -> list[tuple[dict[str, Any]
             continue
         if not exit_proxy.get("_allow-chain-exit", True):
             continue
-        if exit_proxy.get("_chain-exit-protocol") not in {None, str(exit_proxy.get("type", "")).lower()}:
+        declared_exit_protocols = exit_proxy.get("_chain-exit-protocol")
+        if (declared_exit_protocols is not None
+                and str(exit_proxy.get("type", "")).lower() not in str(declared_exit_protocols).split(",")):
             continue
         for dialer in proxies:
             dialer_meta = node_meta(dialer["name"])

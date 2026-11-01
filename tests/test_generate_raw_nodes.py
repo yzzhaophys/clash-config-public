@@ -13,6 +13,37 @@ import generate_raw_nodes as generator
 
 
 class GeneratorTests(unittest.TestCase):
+    def test_managed_xray_ss2022_supports_multiple_chain_exit_protocols(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            host_dir = Path(directory) / "vps-us"
+            source = host_dir / "secrets" / "xray-inbounds.json"
+            source.parent.mkdir(parents=True)
+            source.write_text(json.dumps({"inbounds": [{
+                "protocol": "shadowsocks", "port": 1080,
+                "settings": {"method": "2022-blake3-aes-128-gcm",
+                             "password": "AAAAAAAAAAAAAAAAAAAAAA==", "network": "tcp,udp"},
+            }]}))
+            env = {"VPS_CLASH_REGION": "us", "VPS_HOST": "us.example",
+                   "VPS_CLASH_ALLOW_RELAY": "false",
+                   "VPS_CLASH_CHAIN_EXIT_PROTOCOL": "hysteria2,ss"}
+            nodes = generator.xray_nodes(host_dir, env, {})
+            self.assertEqual(len(nodes), 1)
+            self.assertEqual(nodes[0]["type"], "ss")
+            self.assertTrue(nodes[0]["udp"])
+            relay = {"name": generator.node_name("jp", "hysteria2", 0, "Core"),
+                     "type": "hysteria2", "_allow-relay": True,
+                     "_relay-protocol": "hysteria2", "_physical-node-id": "jp-relay"}
+            self.assertEqual(len(generator.chain_candidates([nodes[0], relay])), 1)
+
+            source.write_text(json.dumps({"inbounds": [{
+                "protocol": "shadowsocks", "port": 1080,
+                "settings": {"method": "2022-blake3-aes-128-gcm",
+                             "password": "invalid-secret", "network": "tcp,udp"},
+            }]}))
+            with self.assertRaisesRegex(ValueError, "SS2022 cipher") as error:
+                generator.xray_nodes(host_dir, env, {})
+            self.assertNotIn("invalid-secret", str(error.exception))
+
     def test_same_region_general_chain_can_use_a_distinct_landing(self) -> None:
         dialer = {
             "name": generator.node_name("us", "vless", 0, "Core"),

@@ -143,6 +143,11 @@ vps_clash_relay_protocol: vless
 vps_clash_chain_exit_protocol: vless
 ```
 
+`vps_clash_chain_exit_protocol` 可用逗号同时声明多个实际入站协议：`vless`、
+`hysteria2`、`ss`。例如 US 同时提供 HY2 与 SS2022 时写为 `hysteria2,ss`；
+生成器分别选用对应协议的节点作为链出口。受管 Xray 的 Shadowsocks 入站会导出为 SS 节点，
+SS2022 密钥和 UDP 参数按实际入站保留。
+
 `host_vars` 和 trusted inventory 都不再配置 ShowIP、Download 能力；生成器不再读取
 这两个字段，也不会为节点或代理链生成 `[ShowIP=true]` / `[Download=true]` 标记。
 
@@ -442,13 +447,8 @@ Loon 策略组只列出本次实际导出的节点和代理链。DirectExit 和 
 DNS、MitM 域名等其他行原样保留。模板的业务组
 由 `sync_loon_template.py` 按 `home.yaml` 的名称、顺序、成员和图标生成；`[Remote Rule]` 按 `home.yaml` 的
 `RULE-SET` 引用顺序和独立分组注释，使用公开的 `yzzhaophys/loon-rules` 仓库中同名 `.list`。
-该仓库直接按公开 `home.yaml` 中的地址下载上游 YAML：原本使用 MRS 的规则取上游同名 YAML，
-再转换并发布同名 `.list`；所有规则成功后才更新，失败时保留旧列表。
-未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅。
-`[Rule]` 的 `FINAL` 指向与 Mihomo 同名的 `Final` 业务组。以后修改 `home.yaml` 的
-业务组或 `rules` 时，运行 `python3 sync_loon_template.py`；推送 `home.yaml` 到主分支后，
-GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的模板。
-如新增规则集尚未发布，工作流会保留旧模板并等待每天的定时任务重试。
+未用于 `rules` 的 `R-sniffer-skip-ip.list` 不加入分流订阅；`[Rule]` 的 `FINAL` 指向与 Mihomo
+同名的 `Final` 业务组。
 节点生成器不会改写这些固定内容。模板不包含
 `ca-p12` 和 `ca-passphrase`；每台设备导入后须在 Loon 中生成 CA，
 再在系统中安装并信任该证书，才能使用 MitM。节点变化后可运行：
@@ -473,13 +473,15 @@ GitHub Actions 在 `loon-rules` 发布同名 `.list` 后自动提交更新后的
 手工编辑生成文件不会回写模板，下一次生成会覆盖这些编辑。
 公开模板不得加入凭据和设备 CA；完整输出包含节点凭据，必须保持私有。
 
-`loon-rules` 位于另一个 GitHub 仓库，当前按每天定时任务或手动触发更新 `.list`；
-本仓库在 `home.yaml` 推送后尝试同步模板，另在规则仓库日常构建后定时重试。
-新规则的 `.list` 尚未发布时，工作流成功结束并保留旧模板，待规则发布后定时重试；
-可手动触发 `loon-rules` 更新工作流，再触发本仓库模板工作流加快发布。
-仅修改本地 `home.yaml` 不会触发 GitHub Actions；本地可先运行
-`python3 ../loon-rules/build.py --home home.yaml --output ../loon-rules/lists`，再运行
-`python3 sync_loon_template.py --lists-dir ../loon-rules/lists`，最后生成完整 Loon 配置。
+Loon 规则列表和模板通过两个工作流更新。`loon-rules` 每日或手动从 `home.yaml` 中定义的地址下载
+上游 YAML（MRS 提供者使用同名 YAML），全部规则转换成功后才发布列表，失败时保留旧列表；它不会因本仓库推送而运行。
+本仓库模板工作流在 `home.yaml` 推送后及每日运行；只有所需 `.list` 全部存在时才同步模板，缺少列表时保留旧模板。
+要立即更新，先运行 `loon-rules` 列表工作流，再运行本仓库模板工作流。本地修改可依次运行：
+
+```bash
+python3 ../loon-rules/build.py --home home.yaml --output ../loon-rules/lists
+python3 sync_loon_template.py --lists-dir ../loon-rules/lists
+```
 
 模板模式会在写入私有输出前读取 `home.yaml`，检查策略组引用没有断链，并用实际生成的
 节点名和代理链名匹配 `DirectExit`、`Chain` 筛选表达式。
