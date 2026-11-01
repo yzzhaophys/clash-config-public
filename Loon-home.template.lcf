@@ -82,12 +82,6 @@ FINAL,Final
 # Rule sections follow home.yaml.
 # @sync-home:rules:start
 # ══════════════════════════════════════════
-# 0.R-custom
-# ══════════════════════════════════════════
-https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-proxy.list, policy=Proxy, tag=R-custom-proxy, enabled=true
-https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-direct.list, policy=DIRECT, tag=R-custom-direct, enabled=true
-
-# ══════════════════════════════════════════
 # 1.REJECT
 # ══════════════════════════════════════════
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-icloudprivaterelay.list, policy=REJECT-DROP, tag=R-icloudprivaterelay, enabled=true
@@ -110,6 +104,10 @@ https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-connectivit
 # ══════════════════════════════════════════
 # 3.Proxy
 # ══════════════════════════════════════════
+# ── R-custom ──
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-direct.list, policy=DIRECT, tag=R-custom-direct, enabled=true
+https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-custom-proxy.list, policy=Proxy, tag=R-custom-proxy, enabled=true
+
 # ── Bank ──
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bankUS.list, policy=BankUS, tag=R-bankUS, enabled=true
 https://raw.githubusercontent.com/yzzhaophys/loon-rules/main/lists/R-bankHK.list, policy=BankHK, tag=R-bankHK, enabled=true
