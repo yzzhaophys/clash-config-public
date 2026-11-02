@@ -324,12 +324,6 @@ rule-anchor:
 rule-providers:
 
   # ══════════════════════════════════════════
-  # 0.R-custom
-  # ══════════════════════════════════════════
-  R-custom-proxy:        {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/proxy.yaml"}
-  R-custom-direct:       {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/direct.yaml"}
-
-  # ══════════════════════════════════════════
   # 1.REJECT
   # ══════════════════════════════════════════
   R-icloudprivaterelay:  {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/icloudprivaterelay.yaml"}                  # iCloud私有中继 → REJECT
@@ -353,6 +347,10 @@ rule-providers:
   # ══════════════════════════════════════════
   # 3.Proxy
   # ══════════════════════════════════════════
+  # ── R-custom ──
+  R-custom-proxy:        {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/proxy.yaml"}
+  R-custom-direct:       {<<: *yaml,    url: "https://raw.githubusercontent.com/yzzhaophys/clash-config-public/main/rules/direct.yaml"}
+
   # ── Bank ──
   R-bankUS:              {<<: *yaml,    url: "https://raw.githubusercontent.com/Accademia/Additional_Rule_For_Clash/main/Bank/BankUS_Domain.yaml"}                 # BankUS
   R-bankHK:              {<<: *yaml,    url: "https://raw.githubusercontent.com/Accademia/Additional_Rule_For_Clash/main/Bank/BankHK_Domain.yaml"}                 # BankHK
