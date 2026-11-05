@@ -1112,7 +1112,7 @@ class GeneratorTests(unittest.TestCase):
             self.assertIn("[Proxy Group]\n", content)
             self.assertIn("🇯🇵.DirectExit-[JP] = url-test,jp.vless,", content)
             self.assertIn("🇺🇸.Chain-[US] = url-test,chain.us.landing.socks5.via.jp.vless,", content)
-            self.assertIn("🇺🇸.Line-[US] = fallback,🇺🇸.Chain-[US],", content)
+            self.assertIn("🇺🇸.Line-[US] = url-test,🇺🇸.Chain-[US],", content)
             self.assertIn("♾️.Route-[Final.Fallback] = fallback,🇭🇰.Line-[HK],🇯🇵.Line-[JP],", content)
             self.assertLess(content.index("♾️.Route-[Final.Fallback] ="), content.index("🇺🇸.Line-[US] ="))
             self.assertLess(content.index("🇺🇸.Line-[US] ="), content.index("🇺🇸.Chain-[US] ="))

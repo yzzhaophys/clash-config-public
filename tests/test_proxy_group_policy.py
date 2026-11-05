@@ -52,13 +52,27 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertEqual(group["max-failed-times"], 2)
                 self.assertEqual(group["url"], "https://www.gstatic.com/generate_204")
                 self.assertEqual(group["expected-status"], 204)
-                if group["type"] == "url-test":
+                name = group["name"]
+                is_homeip = ".HomeIP]" in name
+                if ".Line-[" in name:
+                    self.assertEqual(group["type"], "url-test")
                     self.assertEqual(group["interval"], 300)
+                    self.assertEqual(group["timeout"], 4000)
+                    self.assertEqual(group["tolerance"], 150 if is_homeip else 100)
+                elif ".Chain-[" in name:
+                    self.assertEqual(group["type"], "url-test")
+                    self.assertEqual(group["interval"], 600 if is_homeip else 300)
                     self.assertEqual(group["timeout"], 3000)
-                    self.assertEqual(group["tolerance"], 50)
+                    self.assertEqual(group["tolerance"], 150 if is_homeip else 100)
+                elif ".DirectExit-[" in name:
+                    self.assertEqual(group["type"], "url-test")
+                    self.assertEqual(group["interval"], 600 if is_homeip else 300)
+                    self.assertEqual(group["timeout"], 3000)
+                    self.assertEqual(group["tolerance"], 100)
                 else:
+                    self.assertEqual(group["type"], "fallback")
                     self.assertEqual(group["interval"], 90)
-                    self.assertIn(group["timeout"], {4000, 5000})
+                    self.assertEqual(group["timeout"], 5000)
 
     def test_select_groups_do_not_schedule_health_checks(self):
         for group in self.groups.values():
@@ -119,8 +133,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 line = self.groups[f"{flag}.Line-[{region}]"]
                 chain = f"{flag}.Chain-[{region}]"
                 direct = f"{flag}.DirectExit-[{region}]"
-                expected = [chain, direct] if region in {"US", "JP", "SG"} else [direct, chain]
-                self.assertEqual(line["proxies"], expected)
+                self.assertEqual(line["proxies"], [direct, chain])
 
     def test_homeip_preferred_routes_follow_configured_fallbacks(self):
         for region, flag in {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬"}.items():

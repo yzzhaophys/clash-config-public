@@ -361,8 +361,8 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
   `DirectExit-[地区.HomeIP]` 组。两类组都排除代理链和 `[Direct=false]` 节点。
 - `Chain-[地区]` 匹配以该地区为最终出口的 `PrxChain`；US、JP、SG 的 HomeIP 链使用独立的
   `Chain-[地区.HomeIP]` 组。其他地区当前没有 HomeIP 专用策略组。
-- US、JP、SG 的普通 Line 先尝试代理链，再回退到同地区直出；其他地区先直出，再尝试代理链。
-  HomeIP Line 使用对应的 HomeIP 代理链和 HomeIP 直出节点。
+- 各地区 Line 都使用 `url-test`：普通 Line 按 DirectExit、Chain 顺序列出，HomeIP Line 使用同地区
+  HomeIP DirectExit 和 Chain。`url-test` 根据健康检查结果和容差选择线路，成员顺序不代表优先或回退顺序。
 - US、JP、SG 提供 HomeIP Preferred Route：先走同地区 HomeIP Line，失效时回退普通 Line；
   SG 还会回退到 `♾️.Route-[Final.Fallback]`。Americas Route 先走美国普通 Line，再尝试美国 HomeIP Line。
   EastAsia、Oceania、Europe Route 在本地区线路之后引用 `♾️.Route-[Final.Fallback]`；
@@ -376,8 +376,11 @@ SOCKS5 使用 `proxy.type: socks5`，必须配置 `username` 和 `password`，�
 
 | 组层级 | 策略 | 当前检查参数 |
 | --- | --- | --- |
-| Chain / DirectExit 节点池 | `url-test` | 300 秒、3000 毫秒超时、50 毫秒容差 |
-| 地区 Line | `fallback` | 90 秒、4000 毫秒超时 |
+| 普通 Chain / DirectExit 节点池 | `url-test` | 300 秒、3000 毫秒超时、100 毫秒容差 |
+| HomeIP Chain 节点池 | `url-test` | 600 秒、3000 毫秒超时、150 毫秒容差 |
+| HomeIP DirectExit 节点池 | `url-test` | 600 秒、3000 毫秒超时、100 毫秒容差 |
+| 普通地区 Line | `url-test` | 300 秒、4000 毫秒超时、100 毫秒容差 |
+| HomeIP Line | `url-test` | 300 秒、4000 毫秒超时、150 毫秒容差 |
 | 地区与大区 Route | `fallback` | 90 秒、5000 毫秒超时 |
 | 业务入口 | `select` | 保留手动选择，不执行周期健康检查 |
 
