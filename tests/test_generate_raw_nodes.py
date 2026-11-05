@@ -596,7 +596,7 @@ class GeneratorTests(unittest.TestCase):
                                     "security": "reality",
                                     "realitySettings": {
                                         "serverNames": ["edge.example"],
-                                        "publicKey": "public-key",
+                                        "publicKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
                                         "shortIds": ["01"],
                                         "fingerprint": "firefox",
                                     },
@@ -614,7 +614,8 @@ class GeneratorTests(unittest.TestCase):
             )
 
         self.assertEqual(nodes[0]["flow"], "xtls-rprx-vision")
-        self.assertEqual(nodes[0]["reality-opts"]["public-key"], "public-key")
+        self.assertEqual(nodes[0]["reality-opts"]["public-key"],
+                         "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8")
 
     def test_tls_xray_node_requires_explicit_connection_host(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -865,12 +866,15 @@ class GeneratorTests(unittest.TestCase):
                 "tls": True,
                 "udp": True,
                 "servername": "edge.example",
-                "reality-opts": {"public-key": "public-key", "short-id": "01"},
+                "reality-opts": {
+                    "public-key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+                    "short-id": "01",
+                },
             }
         )
 
         self.assertIn("flow=xtls-rprx-vision", body)
-        self.assertIn("public-key=\"public-key\"", body)
+        self.assertIn("public-key=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\"", body)
         self.assertNotIn("client-fingerprint", body)
         self.assertNotIn("block-quic", body)
 

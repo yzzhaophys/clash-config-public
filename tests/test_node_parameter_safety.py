@@ -18,6 +18,7 @@ from node_io import load_yaml
 
 
 UUID = '11111111-1111-4111-8111-111111111111'
+REALITY_PUBLIC_KEY = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8'
 
 
 def trusted(identity='test', protocol='vless'):
@@ -342,14 +343,16 @@ class ConversionTests(unittest.TestCase):
                 xray_options(data, client, 'fixture')
         for key in ('shortIds', 'serverNames'):
             with self.subTest(reality=key), self.assertRaises(ValueError):
-                convert({'security': 'reality', 'realitySettings': {'publicKey': 'key', key: ['bad\nvalue']}})
+                convert({'security': 'reality', 'realitySettings': {
+                    'publicKey': REALITY_PUBLIC_KEY, key: ['bad\nvalue']}})
 
     def test_mapped_empty_and_false_values_are_preserved(self):
         result = convert({'security': 'tls', 'tlsSettings': {
-            'serverName': '', 'alpn': [], 'allowInsecure': False, 'fingerprint': ''}})
-        for key, value in {'servername': '', 'alpn': [], 'skip-cert-verify': False,
+            'alpn': [], 'allowInsecure': False, 'fingerprint': ''}})
+        for key, value in {'alpn': [], 'skip-cert-verify': False,
                            'client-fingerprint': ''}.items():
             self.assertEqual(result[key], value)
+        self.assertNotIn('servername', result)
         result = convert({'network': 'ws', 'wsSettings': {
             'headers': {}, 'host': '', 'path': '', 'maxEarlyData': 0, 'earlyDataHeaderName': ''}})
         self.assertEqual(result['ws-opts'], {'headers': {'Host': ''}, 'path': '',
@@ -388,17 +391,54 @@ class ConversionTests(unittest.TestCase):
             convert({'security': 'reality', 'realitySettings': {'privateKey': 'SECRET', 'serverNames': ['s.example']}})
         self.assertNotIn('SECRET', str(caught.exception))
 
-    def test_reality_preserves_empty_short_id_and_omits_fingerprint(self):
+    def test_reality_selects_first_valid_parameters_and_omits_fingerprint(self):
         result = convert({'security': 'reality', 'realitySettings': {
-            'publicKey': 'public', 'privateKey': 'SECRET', 'shortIds': ['', 'aa'],
+            'publicKey': REALITY_PUBLIC_KEY, 'privateKey': 'SECRET', 'shortIds': ['01', 'aa'],
             'serverNames': ['s.example', 'alternate.example'],
         }})
-        self.assertEqual(result['reality-opts'], {'public-key': 'public', 'short-id': ''})
+        self.assertEqual(result['reality-opts'], {'public-key': REALITY_PUBLIC_KEY, 'short-id': '01'})
         self.assertEqual(result['servername'], 's.example')
         self.assertNotIn('client-fingerprint', result)
         self.assertNotIn('flow', result)
         self.assertNotIn('SECRET', json.dumps(result))
         self.assertTrue(result['_conversion-audit']['server-only'])
+        self.assertEqual(len(result['_conversion-audit']['derived']), 2)
+
+    def test_reality_requires_valid_key_short_id_and_dns_server_names(self):
+        valid = {'security': 'reality', 'realitySettings': {
+            'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01'], 'serverNames': ['s.example']}}
+        bad_settings = [
+            {'publicKey': REALITY_PUBLIC_KEY, 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01']},
+            {'publicKey': '', 'shortIds': ['01'], 'serverNames': ['s.example']},
+            {'publicKey': 'not-a-public-key', 'shortIds': ['01'],
+             'serverNames': ['s.example']},
+            {'publicKey': None, 'shortIds': ['01'], 'serverNames': ['s.example']},
+            {'publicKey': 123, 'shortIds': ['01'], 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': [], 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': [''], 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['0'], 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': [123], 'serverNames': ['s.example']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01'], 'serverNames': []},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01'], 'serverNames': ['']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01'], 'serverNames': ['192.0.2.1']},
+            {'publicKey': REALITY_PUBLIC_KEY, 'shortIds': ['01'], 'serverNames': [None]},
+            {'publicKey': {'private': 'DO_NOT_ECHO'}, 'shortIds': ['01'],
+             'serverNames': ['s.example']},
+        ]
+        self.assertEqual(convert(valid)['servername'], 's.example')
+        for settings in bad_settings:
+            with self.subTest(settings=settings), self.assertRaises(ValueError) as caught:
+                convert({'security': 'reality', 'realitySettings': settings})
+            self.assertNotIn('DO_NOT_ECHO', str(caught.exception))
+
+    def test_tls_server_name_must_be_a_dns_domain(self):
+        self.assertEqual(convert({'security': 'tls', 'tlsSettings': {
+            'serverName': 'edge.example'}})['servername'], 'edge.example')
+        for value in ('', '192.0.2.1', None, {'secret': 'DO_NOT_ECHO'}, 'bad\nvalue'):
+            with self.subTest(server_name=value), self.assertRaises(ValueError) as caught:
+                convert({'security': 'tls', 'tlsSettings': {'serverName': value}})
+            self.assertNotIn('DO_NOT_ECHO', str(caught.exception))
 
     def test_xray_keeps_explicit_connection_address(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -498,10 +538,15 @@ class LoonTests(unittest.TestCase):
         base = {'name': 'test', 'type': 'vless', 'server': 'node.example',
                 'port': 443, 'uuid': UUID}
         for extra in ({'network': {}}, {'encryption': []}, {'tls': None},
-                      {'sni': None}, {'sni': 'bad\nvalue'},
+                      {'sni': None}, {'sni': ''}, {'sni': '192.0.2.1'},
+                      {'servername': None}, {'servername': ''}, {'servername': 'bad\nvalue'},
+                      {'servername': 'one.example', 'sni': 'two.example'},
                       {'alpn': [{'invalid': True}]}, {'alpn': 123}, {'flow': 123},
                       {'reality-opts': {'public-key': 123}},
-                      {'reality-opts': {'public-key': 'key', 'short-id': 123}}):
+                      {'tls': True, 'servername': 'node.example', 'reality-opts': {
+                          'public-key': REALITY_PUBLIC_KEY, 'short-id': 123}},
+                      {'tls': True, 'reality-opts': {
+                          'public-key': REALITY_PUBLIC_KEY, 'short-id': '01'}}):
             with self.subTest(extra=extra), tempfile.TemporaryDirectory() as tmp:
                 count, chain_count, skipped = g.write_loon([base | extra], Path(tmp) / 'loon.conf')
                 self.assertEqual(count, 0)
@@ -518,7 +563,8 @@ class LoonTests(unittest.TestCase):
         cases = [{'client-fingerprint': 'chrome'}, {'smux': {'enabled': False}},
                  {'encryption': 'unsupported'}, {'network': 'ws', 'ws-opts': {'max-early-data': 0}},
                  {'network': 'ws', 'ws-opts': {'headers': {'X-Test': 'v'}}},
-                 {'reality-opts': {'public-key': 'key', 'extra': 'value'}}]
+                 {'tls': True, 'servername': 'node.example', 'reality-opts': {
+                     'public-key': REALITY_PUBLIC_KEY, 'short-id': '01', 'extra': 'value'}}]
         for extra in cases:
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 g.loon_node_body(base | extra)
@@ -526,7 +572,8 @@ class LoonTests(unittest.TestCase):
     def test_loon_preserves_false_values_and_no_invented_flow(self):
         body = g.loon_node_body({'type': 'vless', 'server': 'node.example', 'port': 443,
                                  'uuid': UUID, 'tls': True, 'udp': False, 'skip-cert-verify': False,
-                                 'reality-opts': {'public-key': 'key', 'short-id': ''}})
+                                 'servername': 'node.example',
+                                 'reality-opts': {'public-key': REALITY_PUBLIC_KEY, 'short-id': '01'}})
         self.assertIn('udp=false', body)
         self.assertIn('skip-cert-verify=false', body)
         self.assertNotIn('flow=', body)

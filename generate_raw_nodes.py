@@ -14,7 +14,8 @@ from typing import Any
 
 import yaml
 from node_io import load_yaml
-from node_conversion import xray_options, hysteria_options
+from node_conversion import (hysteria_options, validate_vless_client_parameters,
+                             xray_options)
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -220,6 +221,8 @@ def require_proxy_credentials(
     """Validate credentials required to produce a usable client node."""
     if protocol in {"vless", "vmess"}:
         proxy["uuid"] = require_nonempty_string(proxy.get("uuid"), f"{field}.uuid", trim=False)
+        if protocol == "vless":
+            validate_vless_client_parameters(proxy, field)
     elif protocol in {"hysteria2", "trojan", "ss"}:
         proxy["password"] = require_nonempty_string(
             proxy.get("password"),
@@ -1245,6 +1248,7 @@ def loon_transport_options(proxy: dict[str, Any]) -> list[str]:
 
 def loon_vless(proxy: dict[str, Any]) -> str:
     uuid = require_nonempty_string(proxy.get('uuid'), 'VLESS uuid', trim=False)
+    validate_vless_client_parameters(proxy, 'Loon VLESS')
     fields = ["VLESS", *loon_server_fields(proxy), loon_quote(uuid)]
     options = loon_transport_options(proxy)
     if 'client-fingerprint' in proxy:
@@ -1253,15 +1257,11 @@ def loon_vless(proxy: dict[str, Any]) -> str:
     reality = proxy.get("reality-opts") or {}
     if reality and not isinstance(reality, dict):
         raise ValueError("reality-opts 必须是映射")
-    public_key = reality.get("public-key") if isinstance(reality, dict) else None
-    if public_key:
-        options.extend(
-            [
-                f"public-key={loon_quote(public_key)}",
-            ]
-        )
-        if "short-id" in reality:
-            options.append(loon_option("short-id", reality["short-id"]))
+    if "reality-opts" in proxy:
+        options.extend([
+            f"public-key={loon_quote(reality['public-key'])}",
+            loon_option("short-id", reality["short-id"]),
+        ])
 
     if 'flow' in proxy:
         options.append(loon_option('flow', proxy['flow']))

@@ -506,9 +506,10 @@ python3 sync_loon_template.py --lists-dir ../loon-rules/lists
   转换 VLESS 时必须核对原导出的 `password` 认证值与节点记录 `uuid`，不能按同名字段猜测。
   转换前保留私密原件；结构和内核加载通过后仍需真实代理链请求验收。
 - Xray 支持 TCP、WS、gRPC、H2 的显式参数映射；WS 保留 path、Host、headers
-  和 early-data。REALITY 必须提供客户端公钥，不会把服务端私钥写入输出。
+  和 early-data。REALITY 必须提供有效客户端公钥、非空 short-id 与 DNS servername；IP 地址
+  不能作为 SNI，缺字段或格式无效时停止生成，不会把服务端私钥写入输出。
   每个 inbound 继续选择第一个客户端账号；多个允许的 REALITY SNI / short-id
-  选择第一项。这些选择都会记录在审计中。
+  选择第一项，所有候选 SNI 都必须是域名。这些选择都会记录在审计中。
 - Hysteria2 保留 Salamander 混淆类型与密码。连接地址来自 `VPS_HOST`，与 TLS SNI
   分开处理；未显式提供 SNI 时，可从已有证书的 `live/<域名>/` 路径推导 SNI，
   该推导会记入审计。用户名、密码的首尾空格原样保留，换行和非法类型会被拒绝。
@@ -517,6 +518,9 @@ python3 sync_loon_template.py --lists-dir ../loon-rules/lists
 - 生成器通过 `--trusted-nodes-file` 或 `CLASH_TRUSTED_NODES_FILE` 显式指定文件时，
   该文件必须存在；路径错误会在生成前停止，
   避免把缺失的 trusted 节点误当作空列表而覆盖现有输出。
+- VLESS 的 `servername` / `sni`（含 TLS 与 Reality）必须是 DNS 域名，不能填写 IP。
+  Reality 客户端必须同时提供有效 `public-key`、非空 `short-id` 和 `servername`；Clash 与 Loon
+  都拒绝输出缺字段的 Reality 节点。
 - Loon 仅导出可完整表达的节点；不支持的协议或字段会跳过整条节点并列出原因，
   不会静默丢弃字段。请检查终端的导出数量与跳过清单；全部节点跳过时 `[Proxy]`
   仅保留段标题。代理链沿用本次 Clash 选择的结果，仅过滤不支持的入口或端点。

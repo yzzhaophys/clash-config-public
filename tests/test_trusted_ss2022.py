@@ -44,7 +44,8 @@ class LoonRealityProfileTests(unittest.TestCase):
         proxy = {'type': 'vless', 'server': '192.0.2.1', 'port': 31080,
                  'uuid': '13fd5eb8-8676-4d5b-a320-bc4fd8a7ac00', 'network': 'tcp',
                  'tls': True, 'flow': 'xtls-rprx-vision', 'servername': 'fixture.test',
-                 'client-fingerprint': 'chrome', 'reality-opts': {'public-key': 'fixture-public', 'short-id': '0123'}}
+                 'client-fingerprint': 'chrome', 'reality-opts': {
+                     'public-key': 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8', 'short-id': '0123'}}
         body = generator.loon_node_body(proxy)
         self.assertIn('tls-profile=chrome', body)
         self.assertIn('31080', body)

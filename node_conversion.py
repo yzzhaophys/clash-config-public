@@ -4,7 +4,9 @@ Already-client-side Clash inventories are copied by the generator instead of
 being passed through these server configuration converters.
 """
 
+import base64
 import copy
+import re
 from typing import Any
 from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
@@ -39,6 +41,54 @@ def string(value: Any, field: str, *, empty: bool = False) -> str:
     if not isinstance(value, str) or (not empty and not value) or '\n' in value or '\r' in value:
         raise ValueError(f'{field} 必须是有效字符串')
     return value
+
+
+def domain_name(value: Any, field: str) -> str:
+    """Require an ASCII DNS name, rejecting IP literals and malformed labels."""
+    value = string(value, field)
+    pattern = (r'(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+'
+               r'[A-Za-z](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?')
+    if len(value) > 253 or re.fullmatch(pattern, value) is None:
+        raise ValueError(f'{field} 必须是 DNS 域名，不能使用 IP 地址')
+    return value
+
+
+def reality_public_key(value: Any, field: str) -> str:
+    value = string(value, field)
+    try:
+        if re.fullmatch(r'[A-Za-z0-9_-]{43}', value) is None:
+            raise ValueError
+        raw = base64.urlsafe_b64decode(value + '=')
+        if len(raw) != 32 or base64.urlsafe_b64encode(raw).decode().rstrip('=') != value:
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ValueError(f'{field} 必须是规范的 32 字节 Reality 公钥') from None
+    return value
+
+
+def reality_short_id(value: Any, field: str) -> str:
+    value = string(value, field)
+    if re.fullmatch(r'(?:[0-9a-f]{2}){1,8}', value) is None:
+        raise ValueError(f'{field} 必须是 1–8 字节的小写十六进制 short ID')
+    return value
+
+
+def validate_vless_client_parameters(proxy: dict, field: str) -> None:
+    """Reject incomplete Reality client settings and IP-valued SNI before export."""
+    for key in ('servername', 'sni'):
+        if key in proxy:
+            domain_name(proxy[key], f'{field}.{key}')
+    if 'servername' in proxy and 'sni' in proxy and proxy['servername'] != proxy['sni']:
+        raise ValueError(f'{field}: sni 与 servername 不一致')
+    if 'reality-opts' not in proxy:
+        return
+    reality = mapping(proxy['reality-opts'], f'{field}.reality-opts')
+    if proxy.get('tls') is not True:
+        raise ValueError(f'{field}: Reality 节点必须显式启用 tls')
+    reality_public_key(reality.get('public-key'), f'{field}.reality-opts.public-key')
+    reality_short_id(reality.get('short-id'), f'{field}.reality-opts.short-id')
+    if 'servername' not in proxy:
+        raise ValueError(f'{field}: Reality 节点缺少 servername DNS 域名')
 
 
 def validate_fields(data: dict, field: str, *, strings=(), lists=(),
@@ -178,6 +228,8 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
                      {'certificates', 'rejectUnknownSni'}, f'{field}.tlsSettings', audit)
         validate_fields(tls, f'{field}.tlsSettings', strings=('serverName', 'fingerprint'),
                         lists=('alpn',), booleans=('allowInsecure',))
+        if 'serverName' in tls:
+            domain_name(tls['serverName'], f'{field}.tlsSettings.serverName')
         copy_fields(tls, out, {'serverName': 'servername', 'alpn': 'alpn',
                               'allowInsecure': 'skip-cert-verify', 'fingerprint': 'client-fingerprint'})
     elif security == 'reality':
@@ -186,18 +238,28 @@ def xray_options(inbound: dict, client: dict, field: str) -> dict:
                      {'privateKey', 'show', 'dest', 'target', 'xver', 'minClientVer',
                       'maxClientVer', 'maxTimeDiff', 'limitFallbackUpload', 'limitFallbackDownload'},
                      f'{field}.realitySettings', audit)
-        public = string(reality.get('publicKey'), f'{field}.realitySettings.publicKey 缺失；请提供客户端 inventory，私钥不会导出')
+        public = reality_public_key(
+            reality.get('publicKey'),
+            f'{field}.realitySettings.publicKey 缺失；请提供客户端 inventory，私钥不会导出',
+        )
         opts = {'public-key': public}
         validate_fields(reality, f'{field}.realitySettings', strings=('fingerprint',),
                         lists=('shortIds', 'serverNames'))
-        for source, target in [('shortIds', 'short-id'), ('serverNames', 'servername')]:
-            if source in reality:
-                choices = reality[source]
-                if not isinstance(choices, list) or not choices or any(not isinstance(v, str) for v in choices):
-                    raise ValueError(f'{field}.realitySettings.{source} 必须是非空字符串列表')
-                # A client sends one accepted ID/SNI, not the server's whole list.
-                (opts if source == 'shortIds' else out)[target] = choices[0]
-                audit['derived'].append(f'reality {source}: first accepted value of {len(choices)}')
+        short_ids = reality.get('shortIds')
+        server_names = reality.get('serverNames')
+        if not isinstance(short_ids, list) or not short_ids:
+            raise ValueError(f'{field}.realitySettings.shortIds 必须是非空列表')
+        if not isinstance(server_names, list) or not server_names:
+            raise ValueError(f'{field}.realitySettings.serverNames 必须是非空 DNS 域名列表')
+        for index, value in enumerate(short_ids):
+            reality_short_id(value, f'{field}.realitySettings.shortIds[{index}]')
+        for index, value in enumerate(server_names):
+            domain_name(value, f'{field}.realitySettings.serverNames[{index}]')
+        # A client sends one accepted ID/SNI, not the server's whole list.
+        opts['short-id'] = short_ids[0]
+        out['servername'] = server_names[0]
+        audit['derived'].append(f'reality shortIds: first accepted value of {len(short_ids)}')
+        audit['derived'].append(f'reality serverNames: first accepted value of {len(server_names)}')
         out['reality-opts'] = opts
         copy_fields(reality, out, {'fingerprint': 'client-fingerprint'})
     out['_conversion-audit'] = audit
