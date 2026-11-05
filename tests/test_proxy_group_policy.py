@@ -135,6 +135,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
         expected = {
             "🌏.Route-[EastAsia]": [
                 "🇯🇵.Line-[JP]", "🇭🇰.Line-[HK]", "🇹🇼.Line-[TW]",
+                "♾️.Route-[Final.Fallback]",
             ],
             "🌏.Route-[SoutheastAsia]": [
                 "🇸🇬.Line-[SG]", "🇲🇾.Line-[MY]",
