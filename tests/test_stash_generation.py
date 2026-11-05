@@ -70,7 +70,8 @@ class StashGenerationTests(unittest.TestCase):
         self.assertNotIn('🇫🇷.DirectExit-[FR]', groups)
         self.assertNotIn('🇫🇷.Line-[FR]', groups)
         self.assertEqual(groups['🇺🇸.Line-[US]']['proxies'], ['🇺🇸.Chain-[US]'])
-        self.assertEqual(groups['🌏.Route-[EastAsia]']['proxies'], ['🇯🇵.Line-[JP]'])
+        self.assertEqual(groups['🌏.Route-[EastAsia]']['proxies'],
+                         ['🇯🇵.Line-[JP]', '♾️.Route-[Final.Fallback]'])
         self.assertEqual(groups['🌍.Route-[Europe]']['proxies'],
                          ['♾️.Route-[Final.Fallback]'])
         home_groups = generator.load_mihomo_proxy_groups()
