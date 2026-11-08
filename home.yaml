@@ -506,7 +506,7 @@ rule-providers:
   R-cloudflare-cn:       {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare-cn.mrs"}                  # Cloudflare中国域名 → DIRECT
 
   # ── Oracle ──
-  R-oracle:              {<<: *domain,  url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/oracle.yaml"}                              # Oracle
+  R-oracle:              {<<: *domain,  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/oracle.mrs"}                         # Oracle
 
   # ── Aws ──
   R-aws:                 {<<: *yaml,    url: "https://raw.githubusercontent.com/uhovohu/clash/refs/heads/main/Rules/aws.yaml"}                                 # AWS
