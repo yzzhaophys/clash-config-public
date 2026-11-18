@@ -50,7 +50,7 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertIn(group["type"], {"url-test", "fallback"})
                 self.assertIs(group["lazy"], True)
                 self.assertEqual(group["max-failed-times"], 2)
-                self.assertEqual(group["url"], "https://www.gstatic.com/generate_204")
+                self.assertEqual(group["url"], "http://www.gstatic.com/generate_204")
                 self.assertEqual(group["expected-status"], 204)
                 name = group["name"]
                 is_homeip = ".HomeIP]" in name
@@ -136,37 +136,37 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 self.assertEqual(line["proxies"], [direct, chain])
 
     def test_homeip_preferred_routes_follow_configured_fallbacks(self):
-        for region, flag in {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬"}.items():
+        for region, flag in {"US": "🇺🇸", "JP": "🇯🇵", "SG": "🇸🇬", "HK": "🇭🇰"}.items():
             name = f"🏠.Route-[{region}.HomeIP.Preferred]"
             with self.subTest(route=name):
                 expected = [f"{flag}.Line-[{region}.HomeIP]", f"{flag}.Line-[{region}]"]
-                if region == "SG":
-                    expected.append("♾️.Route-[Final.Fallback]")
                 self.assertEqual(self.groups[name]["proxies"], expected)
 
-    def test_region_routes_follow_configured_fallbacks(self):
+    def test_region_routes_follow_configured_members(self):
         expected = {
             "🌏.Route-[EastAsia]": [
-                "🇯🇵.Line-[JP]", "🇭🇰.Line-[HK]", "🇹🇼.Line-[TW]",
-                "♾️.Route-[Final.Fallback]",
+                "🇯🇵.Line-[JP]", "🇭🇰.Line-[HK]", "🇰🇷.Line-[KR]", "🇹🇼.Line-[TW]",
             ],
             "🌏.Route-[SoutheastAsia]": [
-                "🇸🇬.Line-[SG]", "🇲🇾.Line-[MY]",
+                "🇲🇾.Line-[MY]", "🇮🇩.Line-[ID]", "🇮🇳.Line-[IN]", "🇸🇬.Line-[SG]",
             ],
+            "🌏.Route-[WestAsia]": ["🇦🇪.Line-[AE]"],
             "🌎.Route-[Americas]": [
-                "🇺🇸.Line-[US]", "🇺🇸.Line-[US.HomeIP]",
+                "🇺🇸.Line-[US]",
             ],
             "🌏.Route-[Oceania]": [
-                "🇦🇺.Line-[AU]", "♾️.Route-[Final.Fallback]",
+                "🇦🇺.Line-[AU]",
             ],
             "🌍.Route-[Europe]": [
                 "🇬🇧.Line-[UK]", "🇩🇪.Line-[DE]", "🇳🇱.Line-[NL]",
-                "🇫🇷.Line-[FR]", "♾️.Route-[Final.Fallback]",
+                "🇫🇷.Line-[FR]",
             ],
         }
         for name, members in expected.items():
             with self.subTest(route=name):
-                self.assertEqual(self.groups[name]["proxies"], members)
+                group = self.groups[name]
+                self.assertEqual(group["type"], "select")
+                self.assertEqual(group["proxies"], members)
 
 
 if __name__ == "__main__":
