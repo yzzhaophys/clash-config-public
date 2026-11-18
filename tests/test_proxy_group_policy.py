@@ -55,10 +55,10 @@ class ProxyGroupPolicyTests(unittest.TestCase):
                 name = group["name"]
                 is_homeip = ".HomeIP]" in name
                 if ".Line-[" in name:
-                    self.assertEqual(group["type"], "url-test")
-                    self.assertEqual(group["interval"], 300)
-                    self.assertEqual(group["timeout"], 4000)
-                    self.assertEqual(group["tolerance"], 150 if is_homeip else 100)
+                    self.assertEqual(group["type"], "fallback")
+                    self.assertEqual(group["interval"], 90)
+                    self.assertEqual(group["timeout"], 5000)
+                    self.assertNotIn("tolerance", group)
                 elif ".Chain-[" in name:
                     self.assertEqual(group["type"], "url-test")
                     self.assertEqual(group["interval"], 600 if is_homeip else 300)
